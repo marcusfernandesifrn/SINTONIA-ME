@@ -1,7 +1,9 @@
 """
-SINTONIA — Máquinas Elétricas · Módulo 1
-Introdução à Conversão Eletromecânica de Energia: Circuitos Magnéticos
-Baseado em: CEEI – IME – Magnéticos (Prof. Marcus Fernandes, IFRN-CNAT)
+🔋 Circuitos Magnéticos
+Disciplina: Máquinas Elétricas
+Curso: Engenharia de Energia
+Instituição: IFRN — Campus Natal-Central (CNAT)
+Autor: Marcus V A Fernandes · marcus.fernandes@ifrn.edu.br · v1.0
 """
 
 import streamlit as st
@@ -11,47 +13,84 @@ import matplotlib.patches as mpatches
 from matplotlib.patches import Rectangle
 import plotly.graph_objects as go
 import io
+import base64
 import schemdraw
 import schemdraw.elements as elm
+import warnings
 
 
 def run():
-    # ── Paleta (cores escuras — legíveis em fundo claro/transparente) ────────
+
+    warnings.filterwarnings("ignore")
+
+    # ── Paleta de cores ───────────────────────────────────────────────────────
     AZ = "#3d8ef0"; RX = "#6c47ff"; VD = "#1f9d55"; LR = "#e07b00"
     CI = "#0097a7"; TX = "#1a1f2b"; CZ = "#6b7280"
 
-    # ── CSS ──────────────────────────────────────────────────────────────────
-    CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap');
-.mod-header{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.1rem}
-.mod-sub{font-size:.88rem;opacity:.50;margin-bottom:1.4rem}
-.sec-title{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;margin:2rem 0 .6rem;
-           padding-bottom:.3rem;border-bottom:2px solid rgba(61,142,240,.25)}
-.subsec{font-family:'Syne',sans-serif;font-size:.98rem;font-weight:700;margin:1.4rem 0 .4rem;color:#3d8ef0}
-.eq-box{background:rgba(61,142,240,.07);border-left:3px solid #3d8ef0;
-        border-radius:0 8px 8px 0;padding:.65rem 1rem;margin:.55rem 0}
-.def-box{background:rgba(108,71,255,.07);border-left:3px solid #6c47ff;
-         border-radius:0 8px 8px 0;padding:.65rem 1rem;margin:.55rem 0}
-.nota-box{background:rgba(224,123,0,.08);border-left:3px solid #e07b00;
-          border-radius:0 8px 8px 0;padding:.65rem 1rem;margin:.55rem 0}
-.ref-item{font-size:.82rem;opacity:.65;line-height:1.7;margin:.15rem 0}
-.fig-cap{font-size:.78rem;opacity:.55;text-align:center;margin-top:-.4rem;margin-bottom:.6rem}
-</style>"""
+    # ── CSS responsivo — injetado uma única vez ───────────────────────────────
+    # No desktop (>768 px) cada figura fica centralizada com largura controlada.
+    # Em telas estreitas (≤768 px, mobile/vertical) a figura ocupa 100% da tela.
+    st.markdown("""
+    <style>
+    .fig-wrap {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+    }
+    .fig-wrap > div {
+        width: 100%;
+    }
+    @media (min-width: 769px) {
+        .fig-wrap > div {
+            width: var(--fw, 65%);
+            max-width: var(--fw, 65%);
+        }
+    }
+    .fig-wrap img,
+    .fig-wrap [data-testid="stImage"] img {
+        width: 100% !important;
+        height: auto !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-    # ── Helpers de figura (matplotlib → PNG transparente) ─────────────────────
-    def _buf(fig):
+    # ── Helper de exibição responsivo (figuras matplotlib) ──────────────────────
+    def show_fig(fig, width_frac=0.65):
+        """
+        Renderiza `fig` de forma responsiva:
+          • Desktop (>768 px): figura centralizada com largura = width_frac × 100 %
+          • Mobile  (≤768 px): figura expande para 100 % da tela automaticamente
+        width_frac: 0.0–1.0
+        """
         buf = io.BytesIO()
-        fig.savefig(buf, format="png", dpi=160, bbox_inches="tight",
-                    transparent=True)
-        buf.seek(0); plt.close(fig); return buf
+        fig.savefig(buf, format="png", bbox_inches="tight", dpi=160, transparent=True)
+        plt.close(fig)
+        buf.seek(0)
+        b64 = base64.b64encode(buf.read()).decode()
+        pct = f"{int(width_frac * 100)}%"
+        st.markdown(
+            f'<div class="fig-wrap">'
+            f'<div style="--fw:{pct}">'
+            f'<img src="data:image/png;base64,{b64}" style="width:100%;height:auto;display:block;"/>'
+            f'</div></div>',
+            unsafe_allow_html=True,
+        )
 
-    def _show(fig, caption=""):
-        st.image(_buf(fig), use_container_width=True)
-        if caption:
-            st.markdown(f'<div class="fig-cap">{caption}</div>', unsafe_allow_html=True)
+    def show_png(png_bytes, width_frac=0.55):
+        """Mesmo helper, para bytes PNG já prontos (circuitos schemdraw)."""
+        b64 = base64.b64encode(png_bytes).decode()
+        pct = f"{int(width_frac * 100)}%"
+        st.markdown(
+            f'<div class="fig-wrap">'
+            f'<div style="--fw:{pct}">'
+            f'<img src="data:image/png;base64,{b64}" style="width:100%;height:auto;display:block;"/>'
+            f'</div></div>',
+            unsafe_allow_html=True,
+        )
 
-    def _plot(fig, key=None):
+    def show_plot(fig, key=None, height=None):
+        """Plotly — transparente, com grade leve e fonte escura, responsivo nativo."""
+        if height: fig.update_layout(height=height)
         fig.update_layout(
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
@@ -73,7 +112,7 @@ def run():
         ax.set_aspect("equal"); ax.axis("off")
         return fig, ax
 
-    def _schem_to_png(build_fn, color=TX):
+    def _schem_png(build_fn, color=TX):
         """build_fn(d) monta o circuito; retorna bytes PNG transparente."""
         d = schemdraw.Drawing(transparent=True, show=False)
         d.config(fontsize=12, color=color)
@@ -103,6 +142,7 @@ def run():
         ax.annotate("", xy=(1.15, 0), xytext=(.22, 0),
                     arrowprops=dict(arrowstyle="-|>", color=CI, lw=1.4))
         ax.text(.68, .14, "$r$", fontsize=13, color=CI)
+        ax.set_title("Campo H — regra da mão direita", fontsize=9, color=TX, pad=6)
         fig.tight_layout(); return fig
 
     def fig_ampere_contorno():
@@ -125,6 +165,7 @@ def run():
         ax.text(0, 0, "$N$ espiras", color=TX, fontsize=11, ha="center", va="center", zorder=5)
         ax.text(rm+.25, .6, "$C$", color=LR, fontsize=14, zorder=6)
         ax.text(-2.85, 1.6, "$i$", color=AZ, fontsize=14)
+        ax.set_title("Lei de Ampère — contorno fechado", fontsize=9, color=TX, pad=6)
         fig.tight_layout(); return fig
 
     def fig_campo_r():
@@ -141,6 +182,7 @@ def run():
         ax.text(xp/2+.12, yp/2+.12, "$r$", color=CI, fontsize=14)
         ax.text(1.95, .35, r"$H\cdot 2\pi r = i$", color=TX, fontsize=12)
         ax.text(1.95, -.35, r"$H = \dfrac{i}{2\pi r}$", color=TX, fontsize=12)
+        ax.set_title("Campo H a distância r de um condutor", fontsize=9, color=TX, pad=6)
         fig.tight_layout(); return fig
 
     def fig_circuito_mag():
@@ -163,6 +205,7 @@ def run():
                     arrowprops=dict(arrowstyle="->", color=VD, lw=2.2), zorder=6)
         ax.text(-.32, .15, "$\\phi$", color=VD, fontsize=17, zorder=7)
         ax.text(0, 2.35, "$N$ espiras", color=AZ, fontsize=11, ha="center")
+        ax.set_title("Núcleo toroidal: φ, ℱ e ℛ", fontsize=9, color=TX, pad=6)
         fig.tight_layout(); return fig
 
     def fig_entreferro_geom():
@@ -186,26 +229,25 @@ def run():
         ax.annotate("", xy=(4.8,4.1), xytext=(4.5,4.1),
                     arrowprops=dict(arrowstyle="->", color=VD, lw=1.8))
         ax.text(3.8, 3.7, "$\\phi$", color=VD, fontsize=13)
+        ax.set_title("Geometria do núcleo com entreferro", fontsize=9, color=TX, pad=6)
         fig.tight_layout(); return fig
 
     def fig_frangeamento():
         fig, axes = plt.subplots(1, 2, figsize=(8.6, 4))
         fig.patch.set_alpha(0)
-        # — seção da máquina rotativa —
         ax = axes[0]; ax.set_facecolor("none"); ax.axis("off")
         ax.set_xlim(-3.5, 3.5); ax.set_ylim(-3.5, 3.5); ax.set_aspect("equal")
         ax.set_title("Máquina rotativa (seção)", color=TX, fontsize=10)
         ax.add_patch(plt.Circle((0,0), 3.,  color="#3d8ef022", ec=CZ, lw=1.6, zorder=2))
         ax.add_patch(plt.Circle((0,0), 2.2, color="none",     ec=CZ, lw=1.2, zorder=3))
-        ax.add_patch(plt.Circle((0,0), 1.9, color="#3d8ef022", ec=CZ, lw=1.4, zorder=4))
-        ax.add_patch(plt.Circle((0,0), 1.1, color="none",     ec=CZ, lw=1.,  zorder=5))
-        ax.add_patch(plt.Circle((0,0), .25, color=CZ, zorder=6))
         ring = mpatches.Wedge((0, 0), 2.2, 0, 360, width=2.2-1.9, color=LR, alpha=.30, zorder=3)
         ax.add_patch(ring)
         ax.text(0, 2.6, "Estator", color=TX, fontsize=9, ha="center")
+        ax.add_patch(plt.Circle((0,0), 1.9, color="#3d8ef022", ec=CZ, lw=1.4, zorder=4))
+        ax.add_patch(plt.Circle((0,0), 1.1, color="none",     ec=CZ, lw=1.,  zorder=5))
+        ax.add_patch(plt.Circle((0,0), .25, color=CZ, zorder=6))
         ax.text(0, 1.5, "Rotor",   color=TX, fontsize=9, ha="center")
         ax.text(2.55, .55, "Entreferro\n$\\ell_g$", color=LR, fontsize=8, ha="center")
-        # — frangeamento —
         ax2 = axes[1]; ax2.set_facecolor("none"); ax2.axis("off")
         ax2.set_xlim(0, 10); ax2.set_ylim(0, 8)
         ax2.set_title("Frangeamento no entreferro", color=TX, fontsize=10)
@@ -244,6 +286,7 @@ def run():
         ax.annotate("", xy=(5.1, 4.1), xytext=(4.9, 4.1),
                     arrowprops=dict(arrowstyle="->", color=RX, lw=2.2))
         ax.text(5., 5.5, "$\\phi_{12}$", color=RX, fontsize=13, ha="center")
+        ax.set_title("Indutância mútua entre duas bobinas", fontsize=9, color=TX, pad=6)
         fig.tight_layout(); return fig
 
     def fig_parasita_geom():
@@ -270,6 +313,7 @@ def run():
         ax.annotate("", xy=(x0+1.6, 6.8), xytext=(x0+1.6, 5.5),
                     arrowprops=dict(arrowstyle="-|>", color=VD, lw=2.2))
         ax.text(x0+2.2, 6.2, "$B(t)$", color=VD, fontsize=12)
+        ax.set_title("Correntes parasitas e laminação do núcleo", fontsize=9, color=TX, pad=6)
         fig.tight_layout(); return fig
 
     # ════════════════════════════════════════════════════════════════════════
@@ -282,7 +326,7 @@ def run():
             d.add(elm.Resistor().right().label("$R$", loc="top").color(CI))
             d.add(elm.Line().down())
             d.add(elm.Line().left())
-        return _schem_to_png(build)
+        return _schem_png(build)
 
     def schem_analogia_magnetico():
         def build(d):
@@ -290,7 +334,7 @@ def run():
             d.add(elm.Resistor().right().label("$\\mathcal{R}$", loc="top").color(AZ))
             d.add(elm.Line().down())
             d.add(elm.Line().left())
-        return _schem_to_png(build)
+        return _schem_png(build)
 
     def schem_entreferro():
         def build(d):
@@ -299,7 +343,7 @@ def run():
             d.add(elm.Resistor().right().label("$\\mathcal{R}_g$", loc="top").color(LR))
             d.add(elm.Line().down())
             d.add(elm.Line().left().tox(0))
-        return _schem_to_png(build)
+        return _schem_png(build)
 
     # ════════════════════════════════════════════════════════════════════════
     # FIGURAS — CURVAS (Plotly, interativas e responsivas)
@@ -324,7 +368,6 @@ def run():
             title="Relação B-H: linear vs. ferromagnético",
             xaxis_title="H (A/m)", yaxis_title="B (T)",
             legend=dict(orientation="h", y=-0.25),
-            height=380,
         )
         return fig
 
@@ -349,7 +392,6 @@ def run():
             title="Laço de Histerese B-H",
             xaxis_title="H (A/m)", yaxis_title="B (T)",
             legend=dict(orientation="h", y=-0.25),
-            height=380,
         )
         return fig
 
@@ -370,7 +412,6 @@ def run():
             title="Perdas no Núcleo vs. Frequência",
             xaxis_title="f (Hz)", yaxis_title="Perdas (W/kg)",
             legend=dict(orientation="h", y=-0.25),
-            height=380,
         )
         return fig
 
@@ -386,7 +427,6 @@ def run():
         fig.update_layout(
             title="Energia Armazenada no Campo Magnético",
             xaxis_title="i (A)", yaxis_title="Wₗ (J)",
-            height=340,
         )
         return fig
 
@@ -435,8 +475,8 @@ def run():
                                       showlegend=False))
             fig.update_layout(title="Fluxo vs. Corrente",
                                xaxis_title="i (A)", yaxis_title="φ (mWb)",
-                               height=320, showlegend=False)
-            _plot(fig, key="m1_exp1_fluxo")
+                               showlegend=False)
+            show_plot(fig, key="m1_exp1_fluxo", height=320)
         with c2:
             fig2 = go.Figure()
             fig2.add_trace(go.Scatter(x=H_a, y=B_a, mode="lines",
@@ -446,8 +486,8 @@ def run():
                                        showlegend=False))
             fig2.update_layout(title="Ponto de Operação B-H (linear)",
                                 xaxis_title="H (A/m)", yaxis_title="B (T)",
-                                height=320, showlegend=False)
-            _plot(fig2, key="m1_exp1_bh")
+                                showlegend=False)
+            show_plot(fig2, key="m1_exp1_bh", height=320)
 
         if lg > 0:
             st.info(f"ℛ_c = {Rc:.2e} A·t/Wb  |  ℛ_g = {Rg:.2e} A·t/Wb  |  "
@@ -491,8 +531,8 @@ def run():
             fig.add_hline(y=Bsat, line=dict(color=CZ, dash="dot", width=1))
             fig.update_layout(title="Curva B-H e Ponto de Operação",
                                xaxis_title="H (A/m)", yaxis_title="B (T)",
-                               legend=dict(orientation="h", y=-0.3), height=380)
-            _plot(fig, key="m1_exp2_bh")
+                               legend=dict(orientation="h", y=-0.3))
+            show_plot(fig, key="m1_exp2_bh", height=380)
         with c2:
             fig2 = go.Figure()
             fig2.add_trace(go.Scatter(x=H_a[1:], y=mur_loc[1:], mode="lines",
@@ -502,8 +542,8 @@ def run():
                                        name=f"μᵣ local={mr_op:.0f}"))
             fig2.update_layout(title="Permeabilidade Relativa Local vs. H",
                                 xaxis_title="H (A/m)", yaxis_title="μᵣ local",
-                                showlegend=False, height=380)
-            _plot(fig2, key="m1_exp2_mur")
+                                showlegend=False)
+            show_plot(fig2, key="m1_exp2_mur", height=380)
 
         for col, (lab, val) in zip(st.columns(4), [
             ("B (T)",        f"{B_op:.4f}"),
@@ -513,287 +553,347 @@ def run():
         ]):
             with col: st.metric(lab, val)
 
-    # ════════════════════════════════════════════════════════════════════════
-    # CONTEÚDO DA PÁGINA
-    # ════════════════════════════════════════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # CABEÇALHO
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.title("🔋 Circuitos Magnéticos")
+    st.caption("🎛️ SINTONIA · Máquinas Elétricas · 👤 Marcus V A Fernandes · ✉️ marcus.fernandes@ifrn.edu.br")
+    st.markdown("---")
 
-    st.markdown(CSS, unsafe_allow_html=True)
-    st.markdown('<div class="mod-header">🔋 Circuitos Magnéticos</div>', unsafe_allow_html=True)
-    st.markdown('<div class="mod-sub">MOD 01 &nbsp;·&nbsp; '
-                'Introdução à Conversão Eletromecânica de Energia</div>',
-                unsafe_allow_html=True)
-    st.markdown("""
-Este módulo estabelece os fundamentos eletromagnéticos para o estudo de todas as máquinas elétricas.
-Parte da relação $i$-$H$ (Lei de Ampère) e avança pelos circuitos magnéticos equivalentes,
-indutância, histerese e perdas no núcleo.
-""")
-
-    # ── 1. Relação i-H ────────────────────────────────────────────────────────
-    st.markdown('<div class="sec-title">1 · Relação i–H — Lei Circuital de Ampère</div>',
-                unsafe_allow_html=True)
-    c1, c2 = st.columns([1, 1])
-    with c1:
+    # ── Índice ────────────────────────────────────────────────────────────────────
+    with st.expander("📋 Índice — clique para expandir", expanded=False):
         st.markdown("""
-**Regra da mão direita:** com o polegar no sentido de $i$, os dedos indicam o sentido das linhas de $\\vec{H}$.
+    **[1. Relação i-H — Lei Circuital de Ampère](#1-rela-o-i-h)**
+    - Regra da mão direita
+    - Lei circuital de Ampère e condutor isolado
 
-A **lei circuital de Ampère** estabelece que a integral de linha de $\\vec{H}$ ao longo
-de qualquer contorno fechado $C$ é igual à soma das correntes que atravessam a superfície delimitada:
-""")
-        st.markdown('<div class="eq-box">', unsafe_allow_html=True)
-        st.latex(r"\oint_C \vec{H} \cdot d\vec{l} = \sum_k N_k\, i_k")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("Para um **condutor isolado** a distância $r$:")
-        st.markdown('<div class="eq-box">', unsafe_allow_html=True)
-        st.latex(r"H \cdot 2\pi r = i \quad\Rightarrow\quad H = \frac{i}{2\pi r}")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("Considerando ângulo $\\theta$ entre $\\vec{H}$ e $d\\vec{l}$:")
-        st.markdown('<div class="eq-box">', unsafe_allow_html=True)
-        st.latex(r"\oint \vec{H} \cdot d\vec{l} = \oint H\, dl\, \cos\theta = N\,i")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("Essa relação entre corrente e campo $H$ é a base para definir o "
-                    "**circuito magnético equivalente**, apresentado na Seção 3.")
-    with c2:
-        _show(fig_regra_mao(), "Campo H ao redor de um condutor (regra da mão direita)")
+    **[2. Relação B-H — Permeabilidade Magnética](#2-rela-o-b-h)**
+    - Permeabilidade do vácuo e relativa
+    - Não-linearidade dos materiais ferromagnéticos
 
-    c1, c2 = st.columns([1, 1])
-    with c1:
-        _show(fig_campo_r(), "Campo H a distância r de um condutor isolado")
-    with c2:
-        _show(fig_ampere_contorno(), "Lei de Ampère — contorno fechado num núcleo toroidal")
+    **[3. Circuito Magnético Equivalente](#3-circuito-magn-tico-equivalente)**
+    - Força magnetomotriz, relutância e fluxo
+    - Analogia com o circuito elétrico
+    - 3.1 Presença de entreferro
+    - 3.2 Máquina rotativa e frangeamento
 
-    # ── 2. Relação B-H ────────────────────────────────────────────────────────
-    st.markdown('<div class="sec-title">2 · Relação B–H — Permeabilidade Magnética</div>',
-                unsafe_allow_html=True)
-    c1, c2 = st.columns([1.1, 1])
-    with c1:
-        st.markdown("""
-A **densidade de fluxo magnético** $B$ (T = Wb/m²) relaciona-se com $H$ pela permeabilidade do meio:
-""")
-        st.markdown('<div class="eq-box">', unsafe_allow_html=True)
-        st.latex(r"B = \mu\,H = \mu_0\,\mu_r\,H")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("- $\\mu_0 = 4\\pi\\times10^{-7}$ H/m: permeabilidade do vácuo\n"
-                    "- $\\mu_r$: permeabilidade relativa (adimensional)")
-        st.markdown('<div class="def-box">', unsafe_allow_html=True)
-        st.markdown("""
-**Valores típicos de $\\mu_r$:**
+    **[4. Indutância e Lei de Faraday](#4-indut-ncia-e-lei-de-faraday)**
+    - Fluxo concatenado e indutância própria
+    - Lei de Faraday
+    - 4.1 Indutância mútua e energia armazenada
 
-| Material | $\\mu_r$ |
-|----------|-----------|
-| Ar, vácuo, Cu, Al | ≈ 1 |
-| Ferrite | 100 – 1 000 |
-| Aço elétrico (máquinas) | **2 000 – 6 000** |
-""")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('<div class="nota-box">', unsafe_allow_html=True)
-        st.markdown("⚠️ Para ferromagnéticos, $\\mu_r$ **não é constante**: varia com $H$ "
-                    "(curva de magnetização não-linear) e com a história magnética do material "
-                    "— efeito detalhado na Seção 5 (Histerese).")
-        st.markdown('</div>', unsafe_allow_html=True)
-    with c2:
-        _plot(plotly_BH(), key="m1_fig_bh")
+    **[5. Histerese Magnética](#5-histerese-magn-tica)**
+    - Laço B-H, remanência e coercividade
+    - Perdas por histerese
 
-    # ── 3. Circuito Magnético Equivalente ─────────────────────────────────────
-    st.markdown('<div class="sec-title">3 · Circuito Magnético Equivalente</div>',
-                unsafe_allow_html=True)
-    st.markdown("Combinando Ampère, $B=\\mu H$ e $\\phi=B\\,A$ obtém-se a **lei do circuito magnético**:")
-    c1, c2 = st.columns([1, 1])
-    with c1:
-        st.markdown('<div class="eq-box">', unsafe_allow_html=True)
-        st.latex(r"\mathcal{F} = N\,i \quad \text{(FMM, A·t)}")
-        st.latex(r"\mathcal{R} = \frac{\ell}{\mu\,A} \quad \text{(relutância, A·t/Wb)}")
-        st.latex(r"\phi = \frac{\mathcal{F}}{\mathcal{R}} = \frac{N\,i\,\mu\,A}{\ell}")
-        st.markdown('</div>', unsafe_allow_html=True)
-        _show(fig_circuito_mag(), "Núcleo toroidal: φ, ℱ e ℛ")
-    with c2:
-        st.markdown("**Analogia: circuito elétrico ↔ circuito magnético**")
-        cc1, cc2 = st.columns(2)
-        with cc1:
-            st.image(schem_analogia_eletrico(), use_container_width=True)
-            st.markdown('<div class="fig-cap">Circuito elétrico</div>', unsafe_allow_html=True)
-        with cc2:
-            st.image(schem_analogia_magnetico(), use_container_width=True)
-            st.markdown('<div class="fig-cap">Circuito magnético</div>', unsafe_allow_html=True)
-        st.markdown('<div class="def-box">', unsafe_allow_html=True)
-        st.markdown("""
-| Circuito Elétrico | Circuito Magnético |
-|-------------------|--------------------|
-| FEM $e$ (V) | FMM $\\mathcal{F}=Ni$ (A·t) |
-| Corrente $i$ (A) | Fluxo $\\phi$ (Wb) |
-| Resistência $R$ (Ω) | Relutância $\\mathcal{R}$ (A·t/Wb) |
-| $e = R\\,i$ | $\\mathcal{F} = \\mathcal{R}\\,\\phi$ |
-""")
-        st.markdown('</div>', unsafe_allow_html=True)
+    **[6. Correntes Parasitas e Perdas no Núcleo](#6-correntes-parasitas-e-perdas-no-n-cleo)**
+    - Correntes de Foucault e laminação
+    - Perdas totais no núcleo
 
-    st.markdown('<div class="subsec">3.1 · Presença de Entreferro</div>', unsafe_allow_html=True)
-    c1, c2 = st.columns([1, 1])
-    with c1:
-        st.markdown("Com entreferro $\\ell_g$, as relutâncias somam-se em série:")
-        st.markdown('<div class="eq-box">', unsafe_allow_html=True)
-        st.latex(r"N\,i = (\mathcal{R}_c + \mathcal{R}_g)\,\phi")
-        st.latex(r"\mathcal{R}_c = \frac{\ell_c}{\mu_r\mu_0 A_c}, \quad "
-                 r"\mathcal{R}_g = \frac{\ell_g}{\mu_0 A_g}")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('<div class="nota-box">', unsafe_allow_html=True)
-        st.markdown("⚠️ **Dominância do entreferro:** com $\\mu_r=2000$, 1 mm de ar equivale "
-                    "a 2 m de ferro de mesma seção — o entreferro domina a relutância total.")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.image(schem_entreferro(), use_container_width=True)
-        st.markdown('<div class="fig-cap">Circuito magnético equivalente com entreferro: '
-                    'ℱ em série com ℛ_c e ℛ_g</div>', unsafe_allow_html=True)
-    with c2:
-        _show(fig_entreferro_geom(), "Geometria do núcleo com entreferro")
+    **[🎛️ Exploradores Interativos](#explorador)**
+    - Explorador 1 — Circuito magnético
+    - Explorador 2 — Curva B-H
 
-    st.markdown('<div class="subsec">3.2 · Máquina Rotativa e Frangeamento</div>',
-                unsafe_allow_html=True)
-    c1, c2 = st.columns([1, 1])
-    with c1:
-        st.markdown("""
-Em máquinas rotativas, o entreferro separa estator e rotor.
-O **frangeamento** (_fringing_) alarga as linhas de campo no ar, aumentando a área efetiva $A_g > A_c$.
+    **[Referências](#refer-ncias)**
+    """)
 
-Correção para polo retangular ($a\\times b$):
-""")
-        st.markdown('<div class="eq-box">', unsafe_allow_html=True)
-        st.latex(r"A_g \approx (a + \ell_g)(b + \ell_g)")
-        st.latex(r"\mathcal{R}_g = \frac{\ell_g}{\mu_0 A_g}")
-        st.markdown('</div>', unsafe_allow_html=True)
-    with c2:
-        _show(fig_frangeamento(), "Máquina rotativa e frangeamento no entreferro")
+    st.divider()
 
-    # ── 4. Indutância e Lei de Faraday ────────────────────────────────────────
-    st.markdown('<div class="sec-title">4 · Indutância e Lei de Faraday</div>',
-                unsafe_allow_html=True)
-    c1, c2 = st.columns([1, 1])
-    with c1:
-        st.markdown("O **fluxo concatenado** $\\lambda$ (Wb·t) é o fluxo total em todas as espiras:")
-        st.markdown('<div class="eq-box">', unsafe_allow_html=True)
-        st.latex(r"\lambda = N\,\phi = \frac{N^2}{\mathcal{R}}\,i = L\,i")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("A **indutância** $L$ (H = Wb/A):")
-        st.markdown('<div class="eq-box">', unsafe_allow_html=True)
-        st.latex(r"L = \frac{\lambda}{i} = \frac{N^2}{\mathcal{R}} = \frac{N^2\,\mu\,A}{\ell}")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("A **lei de Faraday** — FEM induzida pela variação de fluxo:")
-        st.markdown('<div class="eq-box">', unsafe_allow_html=True)
-        st.latex(r"e = -\frac{d\lambda}{dt} = -N\frac{d\phi}{dt}")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("Para $L$ constante (sistema linear):")
-        st.markdown('<div class="eq-box">', unsafe_allow_html=True)
-        st.latex(r"e = L\frac{di}{dt}")
-        st.markdown('</div>', unsafe_allow_html=True)
-    with c2:
-        _show(fig_circuito_mag(), "Núcleo com N espiras — base para definição de λ e L")
 
-    st.markdown('<div class="subsec">4.1 · Indutância Mútua e Energia Armazenada</div>',
-                unsafe_allow_html=True)
-    c1, c2 = st.columns([1, 1])
-    with c1:
-        _show(fig_acoplamento(), "Indutância mútua entre duas bobinas acopladas")
-    with c2:
-        st.markdown("Para **duas bobinas acopladas** num mesmo núcleo:")
-        st.markdown('<div class="eq-box">', unsafe_allow_html=True)
-        st.latex(r"\lambda_1 = L_{11}\,i_1 + L_{12}\,i_2")
-        st.latex(r"\lambda_2 = L_{21}\,i_1 + L_{22}\,i_2 \quad (L_{12}=L_{21})")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("""
-- $L_{11}$, $L_{22}$: **indutâncias próprias** (auto-induzidas)
-- $L_{12} = L_{21}$: **indutância mútua** (reciprocidade de Neumann)
-- Análise linear válida para $\\mu$ constante (região linear da curva $B$-$H$)
-""")
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 1 — RELAÇÃO i-H
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("1. Relação i-H — Lei Circuital de Ampère")
 
-    st.markdown("**Energia armazenada no campo magnético:**")
-    c1, c2 = st.columns([1, 1])
-    with c1:
-        st.markdown('<div class="eq-box">', unsafe_allow_html=True)
-        st.latex(r"W_L = \frac{1}{2}\,L\,i^2 = \frac{\lambda^2}{2L} = \frac{1}{2}\,\mathcal{R}\,\phi^2")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('<div class="nota-box">', unsafe_allow_html=True)
-        st.markdown("A variação de $W_L$ com a posição do rotor é o mecanismo de "
-                    "**geração de força e torque eletromagnético** — princípio que será "
-                    "retomado nos módulos sobre máquinas CC, de indução e síncronas.")
-        st.markdown('</div>', unsafe_allow_html=True)
-    with c2:
-        _plot(plotly_energia_indutiva(), key="m1_fig_energia")
+    st.markdown(r"""
+    **Regra da mão direita:** com o polegar no sentido da corrente $i$, os dedos indicam o
+    sentido das linhas de campo $\vec{H}$.
 
-    # ── 5. Histerese ─────────────────────────────────────────────────────────
-    st.markdown('<div class="sec-title">5 · Histerese Magnética</div>', unsafe_allow_html=True)
-    c1, c2 = st.columns([1.1, 1])
-    with c1:
-        _plot(plotly_histerese(), key="m1_fig_hist")
-    with c2:
-        st.markdown("""
-A **histerese** é o fenômeno pelo qual o estado magnético do material depende da história
-de magnetização, não apenas do campo atual $H$. Por isso, magnetização e desmagnetização
-seguem trajetórias distintas no plano $B$-$H$, formando um **laço**.
+    A **lei circuital de Ampère** estabelece que a integral de linha de $\vec{H}$ ao longo de
+    qualquer contorno fechado $C$ é igual à soma das correntes que atravessam a superfície
+    delimitada por esse contorno:
 
-**Grandezas do laço:**
-- $B_r$ (T): **remanência** — $B$ remanescente quando $H=0$
-- $H_c$ (A/m): **coercividade** — campo necessário para anular $B$
-- $B_{sat}$ (T): **saturação** — valor máximo de $B$
+    $$\oint_C \vec{H} \cdot d\vec{l} = \sum_k N_k\, i_k$$
 
-| Tipo | $H_c$ | Aplicação |
-|------|--------|-----------|
-| Mole (_soft_) | baixo | Núcleos de máquinas e transformadores |
-| Duro (_hard_) | alto | Ímãs permanentes |
+    Para um **condutor isolado** percorrido por corrente $i$, a simetria circular permite
+    resolver a integral diretamente, a uma distância $r$ do condutor:
 
-A **área interna do laço** corresponde à energia dissipada como calor em cada ciclo de magnetização:
-""")
-        st.markdown('<div class="eq-box">', unsafe_allow_html=True)
-        st.latex(r"W_h = \oint H\,dB \quad\text{(área do laço)}")
-        st.latex(r"P_h = k_h\,f\,B_{max}^n \quad (n \approx 1{,}6 \text{ a } 2)")
-        st.markdown('</div>', unsafe_allow_html=True)
+    $$H \cdot 2\pi r = i \quad\Rightarrow\quad H = \frac{i}{2\pi r}$$
 
-    # ── 6. Correntes Parasitas ────────────────────────────────────────────────
-    st.markdown('<div class="sec-title">6 · Correntes Parasitas e Perdas no Núcleo</div>',
-                unsafe_allow_html=True)
-    c1, c2 = st.columns([1, 1])
-    with c1:
-        _show(fig_parasita_geom(), "Correntes parasitas e laminação do núcleo")
-    with c2:
-        st.markdown("""
-**Correntes parasitas** (_Eddy currents_) são induzidas no núcleo condutor
-pela variação de $B$ no tempo, formando laços fechados que dissipam energia como calor (efeito Joule).
+    Considerando o ângulo $\theta$ entre $\vec{H}$ e o elemento de percurso $d\vec{l}$, a forma
+    geral da lei é:
 
-**Redução:**
-- Material de **alta resistividade** (ferrite, aço silício): dificulta a circulação das correntes
-- **Laminação**: chapas finas isoladas entre si interrompem os laços de corrente — como
-  $P_e \\propto d^2$, reduzir a espessura $d$ das chapas diminui as perdas rapidamente
+    $$\oint \vec{H} \cdot d\vec{l} = \oint H\, dl\, \cos\theta = N\,i$$
 
-**Perdas por correntes parasitas** (por volume):
-""")
-        st.markdown('<div class="eq-box">', unsafe_allow_html=True)
-        st.latex(r"P_e = k_e\,f^2\,B_{max}^2\,d^2")
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown("**Perdas totais no núcleo** (perdas no ferro):")
-        st.markdown('<div class="eq-box">', unsafe_allow_html=True)
-        st.latex(r"P_c = P_h + P_e = k_h\,f\,B_{max}^n + k_e\,f^2\,B_{max}^2")
-        st.markdown('</div>', unsafe_allow_html=True)
+    Essa relação entre corrente e campo $H$ é a base para definir o **circuito magnético
+    equivalente**, apresentado na Seção 3.
+    """)
 
-    st.markdown('<div class="nota-box">', unsafe_allow_html=True)
-    st.markdown("As perdas no núcleo ocorrem mesmo a vazio, pois dependem "
-                "de $B_{max}$ e $f$, não da corrente de carga.")
-    st.markdown('</div>', unsafe_allow_html=True)
-    _plot(plotly_perdas_nucleo(), key="m1_fig_perdas")
+    show_fig(fig_regra_mao(), 0.45)
 
-    # ── Exploradores ──────────────────────────────────────────────────────────
-    st.markdown('<div class="sec-title">🎛️ Exploradores Interativos</div>',
-                unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        show_fig(fig_campo_r(), 0.95)
+    with col2:
+        show_fig(fig_ampere_contorno(), 0.95)
+
+    st.divider()
+
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 2 — RELAÇÃO B-H
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("2. Relação B-H — Permeabilidade Magnética")
+
+    st.markdown(r"""
+    A **densidade de fluxo magnético** $B$ (T = Wb/m²) relaciona-se com $H$ pela permeabilidade
+    do meio:
+
+    $$B = \mu\,H = \mu_0\,\mu_r\,H$$
+
+    - $\mu_0 = 4\pi\times10^{-7}$ H/m: permeabilidade do vácuo
+    - $\mu_r$: permeabilidade relativa (adimensional)
+
+    | Material | $\mu_r$ |
+    |----------|-----------|
+    | Ar, vácuo, Cu, Al | ≈ 1 |
+    | Ferrite | 100 – 1 000 |
+    | Aço elétrico (máquinas) | **2 000 – 6 000** |
+
+    > ⚠️ Para materiais ferromagnéticos, $\mu_r$ **não é constante**: varia com $H$ (curva de
+    > magnetização não-linear) e com a história magnética do material — efeito detalhado na
+    > Seção 5 (Histerese).
+    """)
+
+    show_plot(plotly_BH(), key="m1_fig_bh", height=380)
+
+    st.divider()
+
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 3 — CIRCUITO MAGNÉTICO EQUIVALENTE
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("3. Circuito Magnético Equivalente")
+
+    st.markdown(r"""
+    Combinando a lei de Ampère, $B=\mu H$ e $\phi=B\,A$, obtém-se a **lei do circuito
+    magnético**, que relaciona força magnetomotriz, relutância e fluxo de forma análoga à
+    lei de Ohm:
+
+    $$\mathcal{F} = N\,i \quad \text{(FMM, A·t)} \qquad
+    \mathcal{R} = \frac{\ell}{\mu\,A} \quad \text{(relutância, A·t/Wb)}$$
+
+    $$\phi = \frac{\mathcal{F}}{\mathcal{R}} = \frac{N\,i\,\mu\,A}{\ell}$$
+    """)
+
+    show_fig(fig_circuito_mag(), 0.5)
+
+    st.markdown("**Analogia: circuito elétrico ↔ circuito magnético**")
+    col1, col2 = st.columns(2)
+    with col1:
+        show_png(schem_analogia_eletrico(), 0.85)
+        st.caption("Circuito elétrico")
+    with col2:
+        show_png(schem_analogia_magnetico(), 0.85)
+        st.caption("Circuito magnético")
+
+    st.markdown(r"""
+    | Circuito Elétrico | Circuito Magnético |
+    |-------------------|--------------------|
+    | FEM $e$ (V) | FMM $\mathcal{F}=Ni$ (A·t) |
+    | Corrente $i$ (A) | Fluxo $\phi$ (Wb) |
+    | Resistência $R$ (Ω) | Relutância $\mathcal{R}$ (A·t/Wb) |
+    | $e = R\,i$ | $\mathcal{F} = \mathcal{R}\,\phi$ |
+    """)
+
+    st.markdown("### 3.1 Presença de Entreferro")
+    st.markdown(r"""
+    Com um entreferro $\ell_g$, as relutâncias do núcleo e do ar somam-se em série:
+
+    $$N\,i = (\mathcal{R}_c + \mathcal{R}_g)\,\phi \qquad
+    \mathcal{R}_c = \frac{\ell_c}{\mu_r\mu_0 A_c}, \quad
+    \mathcal{R}_g = \frac{\ell_g}{\mu_0 A_g}$$
+
+    > ⚠️ **Dominância do entreferro:** com $\mu_r=2000$, 1 mm de ar equivale a 2 m de ferro de
+    > mesma seção — o entreferro domina a relutância total do circuito.
+    """)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        show_fig(fig_entreferro_geom(), 0.95)
+    with col2:
+        show_png(schem_entreferro(), 0.95)
+        st.caption("Circuito equivalente: ℱ em série com ℛc e ℛg")
+
+    st.markdown("### 3.2 Máquina Rotativa e Frangeamento")
+    st.markdown(r"""
+    Em máquinas rotativas, o entreferro separa estator e rotor. O **frangeamento**
+    (_fringing_) alarga as linhas de campo no ar, aumentando a área efetiva $A_g > A_c$.
+    Para um polo retangular de dimensões $a\times b$, uma correção usual é:
+
+    $$A_g \approx (a + \ell_g)(b + \ell_g) \qquad \mathcal{R}_g = \frac{\ell_g}{\mu_0 A_g}$$
+    """)
+
+    show_fig(fig_frangeamento(), 0.75)
+
+    st.divider()
+
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 4 — INDUTÂNCIA E LEI DE FARADAY
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("4. Indutância e Lei de Faraday")
+
+    st.markdown(r"""
+    O **fluxo concatenado** $\lambda$ (Wb·t) é o fluxo total que atravessa todas as $N$ espiras:
+
+    $$\lambda = N\,\phi = \frac{N^2}{\mathcal{R}}\,i = L\,i$$
+
+    A **indutância** $L$ (H = Wb/A) depende apenas da geometria e do material do núcleo:
+
+    $$L = \frac{\lambda}{i} = \frac{N^2}{\mathcal{R}} = \frac{N^2\,\mu\,A}{\ell}$$
+
+    A **lei de Faraday** descreve a FEM induzida pela variação do fluxo concatenado:
+
+    $$e = -\frac{d\lambda}{dt} = -N\frac{d\phi}{dt}$$
+
+    Para $L$ constante (sistema linear), essa relação se reduz à forma mais familiar:
+
+    $$e = L\frac{di}{dt}$$
+    """)
+
+    show_fig(fig_circuito_mag(), 0.5)
+
+    st.markdown("### 4.1 Indutância Mútua e Energia Armazenada")
+
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        show_fig(fig_acoplamento(), 0.95)
+    with col2:
+        st.markdown(r"""
+    Para **duas bobinas acopladas** num mesmo núcleo:
+
+    $$\lambda_1 = L_{11}\,i_1 + L_{12}\,i_2$$
+    $$\lambda_2 = L_{21}\,i_1 + L_{22}\,i_2 \quad (L_{12}=L_{21})$$
+
+    - $L_{11}$, $L_{22}$: **indutâncias próprias** (auto-induzidas)
+    - $L_{12} = L_{21}$: **indutância mútua** (reciprocidade de Neumann)
+    - Análise linear válida para $\mu$ constante (região linear da curva $B$-$H$)
+    """)
+
+    st.markdown(r"""
+    **Energia armazenada no campo magnético:**
+
+    $$W_L = \frac{1}{2}\,L\,i^2 = \frac{\lambda^2}{2L} = \frac{1}{2}\,\mathcal{R}\,\phi^2$$
+
+    > A variação de $W_L$ com a posição do rotor é o mecanismo de **geração de força e torque
+    > eletromagnético** — princípio que será retomado nos módulos sobre máquinas CC, de
+    > indução e síncronas.
+    """)
+
+    show_plot(plotly_energia_indutiva(), key="m1_fig_energia", height=340)
+
+    st.divider()
+
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 5 — HISTERESE MAGNÉTICA
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("5. Histerese Magnética")
+
+    st.markdown(r"""
+    A **histerese** é o fenômeno pelo qual o estado magnético do material depende da história
+    de magnetização, não apenas do campo atual $H$. Por isso, magnetização e desmagnetização
+    seguem trajetórias distintas no plano $B$-$H$, formando um **laço**.
+
+    **Grandezas do laço:**
+    - $B_r$ (T): **remanência** — $B$ remanescente quando $H=0$
+    - $H_c$ (A/m): **coercividade** — campo necessário para anular $B$
+    - $B_{sat}$ (T): **saturação** — valor máximo de $B$
+
+    | Tipo | $H_c$ | Aplicação |
+    |------|--------|-----------|
+    | Mole (_soft_) | baixo | Núcleos de máquinas e transformadores |
+    | Duro (_hard_) | alto | Ímãs permanentes |
+
+    A **área interna do laço** corresponde à energia dissipada como calor em cada ciclo de
+    magnetização:
+
+    $$W_h = \oint H\,dB \quad\text{(área do laço)} \qquad
+    P_h = k_h\,f\,B_{max}^n \quad (n \approx 1{,}6 \text{ a } 2)$$
+    """)
+
+    show_plot(plotly_histerese(), key="m1_fig_hist", height=380)
+
+    st.divider()
+
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 6 — CORRENTES PARASITAS E PERDAS NO NÚCLEO
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("6. Correntes Parasitas e Perdas no Núcleo")
+
+    st.markdown(r"""
+    **Correntes parasitas** (_Eddy currents_) são induzidas no núcleo condutor pela variação
+    de $B$ no tempo, formando laços fechados que dissipam energia como calor (efeito Joule).
+
+    **Redução:**
+    - Material de **alta resistividade** (ferrite, aço silício): dificulta a circulação das
+      correntes
+    - **Laminação**: chapas finas isoladas entre si interrompem os laços de corrente — como
+      $P_e \propto d^2$, reduzir a espessura $d$ das chapas diminui as perdas rapidamente
+
+    **Perdas por correntes parasitas** (por volume):
+
+    $$P_e = k_e\,f^2\,B_{max}^2\,d^2$$
+
+    **Perdas totais no núcleo** (perdas no ferro):
+
+    $$P_c = P_h + P_e = k_h\,f\,B_{max}^n + k_e\,f^2\,B_{max}^2$$
+
+    > As perdas no núcleo ocorrem mesmo a vazio, pois dependem de $B_{max}$ e $f$, não da
+    > corrente de carga.
+    """)
+
+    show_fig(fig_parasita_geom(), 0.6)
+    show_plot(plotly_perdas_nucleo(), key="m1_fig_perdas", height=380)
+
+    st.divider()
+
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # EXPLORADORES INTERATIVOS
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("🎛️ Exploradores Interativos")
+
     tab1, tab2 = st.tabs(["Explorador 1 — Circuito Magnético",
                            "Explorador 2 — Curva B-H"])
     with tab1: exp_circuito()
     with tab2: exp_BH()
 
-    # ── Referências ───────────────────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown("#### 📚 Referências")
-    for r in [
-        "CHAPMAN, S. J. *Fundamentos de Máquinas Elétricas*. McGraw-Hill, 5ª ed., 2013.",
-        "UMANS, S. D. *Máquinas Elétricas de Fitzgerald e Kingsley*. McGraw-Hill, 7ª ed., 2014.",
-        "KOSOW, I. *Máquinas Elétricas e Transformadores*. Globo, 14ª reimp., 2000.",
-        "BIM, E. *Máquinas Elétricas e Acionamento*. Campus Elsevier, 2009.",
-        "SEN, P. C. *Princípios de Máquinas Elétricas e Eletrônica de Potência*. Wiley, 3ª ed., 2013.",
-        "JACOBINA, C.; LIMA, A. M. *Acionamentos de Máquinas Elétricas de Alto Desempenho*. "
-        "XIV CBA, Natal, 2002.",
-    ]:
-        st.markdown(f'<div class="ref-item">• {r}</div>', unsafe_allow_html=True)
+    st.divider()
+
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # REFERÊNCIAS
+    # ═══════════════════════════════════════════════════════════════════════════════
+    with st.expander("Referências", expanded=False):
+        st.markdown("""
+    - **CHAPMAN, S. J.** *Fundamentos de Máquinas Elétricas*. 5ª ed. McGraw-Hill, 2013.
+    - **UMANS, S. D.** *Máquinas Elétricas de Fitzgerald e Kingsley*. 7ª ed. McGraw-Hill, 2014.
+    - **KOSOW, I.** *Máquinas Elétricas e Transformadores*. 14ª reimp. Globo, 2000.
+    - **BIM, E.** *Máquinas Elétricas e Acionamento*. Campus Elsevier, 2009.
+    - **SEN, P. C.** *Princípios de Máquinas Elétricas e Eletrônica de Potência*. 3ª ed. Wiley, 2013.
+    - **JACOBINA, C.; LIMA, A. M.** *Acionamentos de Máquinas Elétricas de Alto Desempenho*. XIV CBA, Natal, 2002.
+    """)
+
+    st.divider()
+
+    st.markdown(
+        "<div style='text-align:center;color:gray;font-size:12px'>"
+        "🔋 Circuitos Magnéticos &nbsp;·&nbsp; 🎛️ SINTONIA — Máquinas Elétricas<br>"
+        "👤 Marcus V A Fernandes &nbsp;·&nbsp; 🏛️ IFRN-CNAT"
+        " &nbsp;·&nbsp; 🏷️ v1.0 &nbsp;·&nbsp; 📅 2026"
+        "</div>",
+        unsafe_allow_html=True,
+    )
