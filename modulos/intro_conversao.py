@@ -9,16 +9,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import Rectangle
+import plotly.graph_objects as go
 import io
 import schemdraw
 import schemdraw.elements as elm
 
 
 def run():
-    # ── Constantes de cor ────────────────────────────────────────────────────
-    AZ = "#3d8ef0"; RX = "#6c47ff"; VD = "#2ecc71"; LR = "#f39c12"
-    CI = "#00bcd4"; CZ = "#aaaaaa"; BR = "#e8e8e8"
-    BG = "#0e1117"; BG2 = "#1a2233"
+    # ── Paleta (cores escuras — legíveis em fundo claro/transparente) ────────
+    AZ = "#3d8ef0"; RX = "#6c47ff"; VD = "#1f9d55"; LR = "#e07b00"
+    CI = "#0097a7"; TX = "#1a1f2b"; CZ = "#6b7280"
 
     # ── CSS ──────────────────────────────────────────────────────────────────
     CSS = """
@@ -33,471 +33,379 @@ def run():
         border-radius:0 8px 8px 0;padding:.65rem 1rem;margin:.55rem 0}
 .def-box{background:rgba(108,71,255,.07);border-left:3px solid #6c47ff;
          border-radius:0 8px 8px 0;padding:.65rem 1rem;margin:.55rem 0}
-.nota-box{background:rgba(243,156,18,.07);border-left:3px solid #f39c12;
+.nota-box{background:rgba(224,123,0,.08);border-left:3px solid #e07b00;
           border-radius:0 8px 8px 0;padding:.65rem 1rem;margin:.55rem 0}
 .ref-item{font-size:.82rem;opacity:.65;line-height:1.7;margin:.15rem 0}
+.fig-cap{font-size:.78rem;opacity:.55;text-align:center;margin-top:-.4rem;margin-bottom:.6rem}
 </style>"""
 
-    # ── Helpers ──────────────────────────────────────────────────────────────
+    # ── Helpers de figura (matplotlib → PNG transparente) ─────────────────────
     def _buf(fig):
         buf = io.BytesIO()
-        fig.savefig(buf, format="png", dpi=130, bbox_inches="tight",
-                    facecolor=fig.get_facecolor())
+        fig.savefig(buf, format="png", dpi=160, bbox_inches="tight",
+                    transparent=True)
         buf.seek(0); plt.close(fig); return buf
 
     def _show(fig, caption=""):
-        st.image(_buf(fig), caption=caption, use_container_width=True)
+        st.image(_buf(fig), use_container_width=True)
+        if caption:
+            st.markdown(f'<div class="fig-cap">{caption}</div>', unsafe_allow_html=True)
 
-    def _base(w=7, h=4):
-        fig, ax = plt.subplots(figsize=(w, h))
-        fig.patch.set_facecolor(BG); ax.set_facecolor(BG)
-        ax.tick_params(colors=CZ)
-        ax.xaxis.label.set_color(CZ); ax.yaxis.label.set_color(CZ)
-        for sp in ax.spines.values(): sp.set_edgecolor("#444")
+    def _plot(fig, key=None):
+        fig.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color=TX, size=12),
+            margin=dict(l=50, r=20, t=40, b=45),
+            autosize=True,
+        )
+        fig.update_xaxes(showgrid=True, gridcolor="rgba(128,128,128,.18)",
+                          zeroline=True, zerolinecolor="rgba(128,128,128,.35)")
+        fig.update_yaxes(showgrid=True, gridcolor="rgba(128,128,128,.18)",
+                          zeroline=True, zerolinecolor="rgba(128,128,128,.35)")
+        st.plotly_chart(fig, use_container_width=True,
+                         config={"displayModeBar": False, "responsive": True},
+                         key=key)
+
+    def _mpl_base(figsize=(5, 4)):
+        fig, ax = plt.subplots(figsize=figsize)
+        fig.patch.set_alpha(0); ax.set_facecolor("none")
+        ax.set_aspect("equal"); ax.axis("off")
         return fig, ax
 
+    def _schem_to_png(build_fn, color=TX):
+        """build_fn(d) monta o circuito; retorna bytes PNG transparente."""
+        d = schemdraw.Drawing(transparent=True, show=False)
+        d.config(fontsize=12, color=color)
+        build_fn(d)
+        return d.get_imagedata("png")
+
     # ════════════════════════════════════════════════════════════════════════
-    # FIGURAS
+    # FIGURAS — GEOMETRIA (matplotlib, fundo transparente)
     # ════════════════════════════════════════════════════════════════════════
 
     def fig_regra_mao():
-        fig, ax = plt.subplots(figsize=(5, 4))
-        fig.patch.set_facecolor(BG); ax.set_facecolor(BG)
+        fig, ax = _mpl_base((4.6, 4))
         ax.set_xlim(-2.5, 2.5); ax.set_ylim(-2.5, 2.5)
-        ax.set_aspect("equal"); ax.axis("off")
         ax.add_patch(plt.Circle((0, 0), .22, color=AZ, zorder=5))
-        ax.plot(0, 0, "w.", ms=10, zorder=6)
-        for r, a in zip([.7, 1.15, 1.65, 2.1], [.9, .75, .65, .55]):
+        ax.plot(0, 0, ".", color="white", ms=8, zorder=6)
+        for r, a in zip([.7, 1.15, 1.65, 2.1], [.95, .8, .65, .5]):
             t = np.linspace(0, 2*np.pi, 300)
-            ax.plot(r*np.cos(t), r*np.sin(t), color=AZ, alpha=a, lw=1.4)
+            ax.plot(r*np.cos(t), r*np.sin(t), color=AZ, alpha=a, lw=1.6)
             idx = 60
             dx = -r*np.sin(t[idx])*.001; dy = r*np.cos(t[idx])*.001
             ax.annotate("", xy=(r*np.cos(t[idx])+dx*300, r*np.sin(t[idx])+dy*300),
                         xytext=(r*np.cos(t[idx]), r*np.sin(t[idx])),
-                        arrowprops=dict(arrowstyle="->", color=AZ, lw=1.2))
+                        arrowprops=dict(arrowstyle="->", color=AZ, lw=1.4))
         ax.annotate("$H$", xy=(1.9*np.cos(np.pi/5), 1.9*np.sin(np.pi/5)),
-                    fontsize=14, color=BR, ha="center")
-        ax.text(0, .38, "$i$", fontsize=13, color=BR, ha="center", va="bottom")
+                    fontsize=15, color=TX, ha="center")
+        ax.text(0, .38, "$i$", fontsize=14, color=TX, ha="center", va="bottom")
         ax.annotate("", xy=(1.15, 0), xytext=(.22, 0),
-                    arrowprops=dict(arrowstyle="-|>", color=CI, lw=1.2))
-        ax.text(.68, .12, "$r$", fontsize=12, color=CI)
-        ax.set_title("Campo $H$ ao redor de um condutor\n(regra da mão direita)",
-                     color=BR, fontsize=9, pad=6)
+                    arrowprops=dict(arrowstyle="-|>", color=CI, lw=1.4))
+        ax.text(.68, .14, "$r$", fontsize=13, color=CI)
         fig.tight_layout(); return fig
 
     def fig_ampere_contorno():
-        fig, ax = plt.subplots(figsize=(6, 4))
-        fig.patch.set_facecolor(BG); ax.set_facecolor(BG)
+        fig, ax = _mpl_base((5.6, 4))
         ax.set_xlim(-3, 3); ax.set_ylim(-2.2, 2.2)
-        ax.set_aspect("equal"); ax.axis("off")
         outer = mpatches.FancyBboxPatch((-2.2, -1.5), 4.4, 3., boxstyle="round,pad=.3",
-                                         lw=1.5, ec=CZ, fc=BG2, zorder=2)
+                                         lw=1.8, ec=CZ, fc="#3d8ef018", zorder=2)
         inner = mpatches.FancyBboxPatch((-1., -.7), 2., 1.4, boxstyle="round,pad=.1",
-                                         lw=1.5, ec=CZ, fc=BG, zorder=3)
+                                         lw=1.8, ec=CZ, fc="none", zorder=3)
         ax.add_patch(outer); ax.add_patch(inner)
         t = np.linspace(0, 2*np.pi, 400); rm = 1.45
-        ax.plot(rm*np.cos(t), rm*np.sin(t)*.85, "--", color=LR, lw=1.5, zorder=4)
+        ax.plot(rm*np.cos(t), rm*np.sin(t)*.85, "--", color=LR, lw=1.8, zorder=4)
         idx = 120
         ax.annotate("", xy=(rm*np.cos(t[idx+3]), rm*.85*np.sin(t[idx+3])),
                     xytext=(rm*np.cos(t[idx]), rm*.85*np.sin(t[idx])),
-                    arrowprops=dict(arrowstyle="->", color=LR, lw=1.5), zorder=5)
+                    arrowprops=dict(arrowstyle="->", color=LR, lw=1.8), zorder=5)
         for x0 in np.linspace(-1.8, 1.8, 8):
-            ax.plot([x0, x0], [1.5, 2.], color=AZ, lw=2, zorder=5)
-            ax.plot([x0, x0], [-2., -1.5], color=AZ, lw=2, zorder=5)
-        ax.text(0, 0, "$N$ espiras", color=BR, fontsize=10, ha="center", va="center", zorder=5)
-        ax.text(rm+.25, .6, "$C$", color=LR, fontsize=13, zorder=6)
-        ax.text(-2.85, 1.6, "$i$", color=AZ, fontsize=13)
-        ax.text(0, -2.1, r"$\oint_C \vec{H}\cdot d\vec{l} = N\,i$",
-                color=BR, fontsize=13, ha="center", va="bottom",
-                bbox=dict(boxstyle="round,pad=.3", fc=BG2, ec=AZ, alpha=.8))
-        ax.set_title("Lei Circuital de Ampère — contorno fechado", color=BR, fontsize=9, pad=6)
+            ax.plot([x0, x0], [1.5, 2.], color=AZ, lw=2.4, zorder=5)
+            ax.plot([x0, x0], [-2., -1.5], color=AZ, lw=2.4, zorder=5)
+        ax.text(0, 0, "$N$ espiras", color=TX, fontsize=11, ha="center", va="center", zorder=5)
+        ax.text(rm+.25, .6, "$C$", color=LR, fontsize=14, zorder=6)
+        ax.text(-2.85, 1.6, "$i$", color=AZ, fontsize=14)
         fig.tight_layout(); return fig
 
     def fig_campo_r():
-        fig, ax = plt.subplots(figsize=(6, 3.5))
-        fig.patch.set_facecolor(BG); ax.set_facecolor(BG)
-        ax.set_xlim(-3, 3); ax.set_ylim(-2, 2); ax.set_aspect("equal"); ax.axis("off")
+        fig, ax = _mpl_base((5.6, 3.6))
+        ax.set_xlim(-3, 3); ax.set_ylim(-2, 2)
         ax.add_patch(plt.Circle((0, 0), .18, color=AZ, zorder=5))
-        ax.plot(0, 0, "w.", ms=8, zorder=6)
+        ax.plot(0, 0, ".", color="white", ms=7, zorder=6)
         for r in [.6, 1., 1.4, 1.8]:
             t = np.linspace(0, 2*np.pi, 300)
-            ax.plot(r*np.cos(t), r*np.sin(t), color=AZ, alpha=max(.3, 1-r*.35), lw=1.3)
+            ax.plot(r*np.cos(t), r*np.sin(t), color=AZ, alpha=max(.35, 1-r*.35), lw=1.5)
         ang = np.pi/4; xp, yp = 1.4*np.cos(ang), 1.4*np.sin(ang)
         ax.annotate("", xy=(xp, yp), xytext=(0, 0),
-                    arrowprops=dict(arrowstyle="-|>", color=CI, lw=1.4))
-        ax.text(xp/2+.1, yp/2+.1, "$r$", color=CI, fontsize=13)
-        ax.text(1.7, .4, r"$\oint \vec{H}\cdot d\vec{l} = H\cdot 2\pi r = i$",
-                color=BR, fontsize=11)
-        ax.text(1.7, -.45, r"$\Rightarrow\quad H = \dfrac{i}{2\pi r}$", color=BR, fontsize=11)
-        ax.set_title("Campo magnético a distância $r$ de um condutor", color=BR, fontsize=9, pad=6)
+                    arrowprops=dict(arrowstyle="-|>", color=CI, lw=1.6))
+        ax.text(xp/2+.12, yp/2+.12, "$r$", color=CI, fontsize=14)
+        ax.text(1.95, .35, r"$H\cdot 2\pi r = i$", color=TX, fontsize=12)
+        ax.text(1.95, -.35, r"$H = \dfrac{i}{2\pi r}$", color=TX, fontsize=12)
         fig.tight_layout(); return fig
 
-    def fig_BH():
-        fig, ax = _base(6, 4)
-        H = np.linspace(0, 2000, 400)
-        B_lin = 4*np.pi*1e-7 * H * 1e3
-        ax.plot(H, B_lin/B_lin.max()*.25, "--", color=CI, lw=1.8,
-                label="Ar / cobre ($\\mu_r=1$)")
-        Bsat = 1.8; mur = 3500
-        B_fe = Bsat*(1 - np.exp(-mur*4*np.pi*1e-7*H/Bsat))
-        ax.plot(H, B_fe, color=AZ, lw=2.2,
-                label="Ferromagnético ($\\mu_r\\approx 2000$–$6000$)")
-        idx = 60
-        ax.annotate("$\\mu$ variável\n(região não-linear)", xy=(H[idx], B_fe[idx]),
-                    xytext=(400, .6), color=LR, fontsize=8,
-                    arrowprops=dict(arrowstyle="->", color=LR))
-        ax.axhline(Bsat, color=CZ, lw=.8, ls=":")
-        ax.text(1800, Bsat+.05, "$B_{sat}$", color=CZ, fontsize=9)
-        ax.set_xlabel("$H$ (A/m)"); ax.set_ylabel("$B$ (T)")
-        ax.legend(fontsize=9, facecolor=BG2, edgecolor=CZ, labelcolor=BR)
-        ax.set_title("Relação $B$-$H$: linear vs. ferromagnético", color=BR, fontsize=9)
-        ax.set_xlim(0, 2000); ax.set_ylim(0, 2.1); fig.tight_layout(); return fig
-
     def fig_circuito_mag():
-        fig, ax = plt.subplots(figsize=(6.5, 4.5))
-        fig.patch.set_facecolor(BG); ax.set_facecolor(BG)
-        ax.set_xlim(-3.5, 3.5); ax.set_ylim(-2.5, 2.5)
-        ax.set_aspect("equal"); ax.axis("off")
+        fig, ax = _mpl_base((5.6, 4.2))
+        ax.set_xlim(-3.3, 3.3); ax.set_ylim(-2.6, 2.6)
         t = np.linspace(0, 2*np.pi, 400); Ro, Ri = 2., 1.1
         ax.fill_between(Ro*np.cos(t), Ro*np.sin(t), Ri*np.cos(t), Ri*np.sin(t),
-                        color="#1a3055", zorder=2)
-        ax.plot(Ro*np.cos(t), Ro*np.sin(t), color=CZ, lw=1.2, zorder=3)
-        ax.plot(Ri*np.cos(t), Ri*np.sin(t), color=CZ, lw=1.2, zorder=3)
+                        color="#3d8ef028", zorder=2)
+        ax.plot(Ro*np.cos(t), Ro*np.sin(t), color=CZ, lw=1.4, zorder=3)
+        ax.plot(Ri*np.cos(t), Ri*np.sin(t), color=CZ, lw=1.4, zorder=3)
         for ang in np.linspace(np.pi*.25, np.pi*.75, 9):
             xc, yc = 1.55*np.cos(ang), 1.55*np.sin(ang)
             ax.add_patch(mpatches.Ellipse((xc, yc), .35, .18,
                                           angle=np.degrees(ang)+90,
-                                          color=AZ, zorder=4, alpha=.85))
+                                          color=AZ, zorder=4, alpha=.9))
         tf = np.linspace(np.pi*.1, np.pi*1.85, 200); rf = 1.55
-        ax.plot(rf*np.cos(tf), rf*np.sin(tf), color=VD, lw=2, zorder=5, alpha=.8)
+        ax.plot(rf*np.cos(tf), rf*np.sin(tf), color=VD, lw=2.2, zorder=5, alpha=.9)
         ax.annotate("", xy=(rf*np.cos(tf[-1]+.05), rf*np.sin(tf[-1]+.05)),
                     xytext=(rf*np.cos(tf[-1]), rf*np.sin(tf[-1])),
-                    arrowprops=dict(arrowstyle="->", color=VD, lw=2), zorder=6)
-        ax.text(-.3, .15, "$\\phi$", color=VD, fontsize=16, zorder=7)
-        ax.text(0, 2.3, "$N$ espiras", color=AZ, fontsize=10, ha="center")
-        ax.text(0, -2.3,
-                r"$\mathcal{F}=N\,i$   $\mathcal{R}=\frac{\ell}{\mu A}$   "
-                r"$\phi=\frac{\mathcal{F}}{\mathcal{R}}$",
-                color=BR, fontsize=10, ha="center", va="top",
-                bbox=dict(boxstyle="round,pad=.4", fc=BG2, ec=AZ, alpha=.85))
-        ax.set_title("Circuito magnético — núcleo toroidal", color=BR, fontsize=9, pad=6)
+                    arrowprops=dict(arrowstyle="->", color=VD, lw=2.2), zorder=6)
+        ax.text(-.32, .15, "$\\phi$", color=VD, fontsize=17, zorder=7)
+        ax.text(0, 2.35, "$N$ espiras", color=AZ, fontsize=11, ha="center")
         fig.tight_layout(); return fig
 
-    def fig_analogia():
-        fig, axes = plt.subplots(1, 2, figsize=(9, 4))
-        fig.patch.set_facecolor(BG)
-        for col, ax in enumerate(axes):
-            ax.set_facecolor(BG); ax.axis("off")
-            titulo = ["Circuito Elétrico", "Circuito Magnético"][col]
-            cor    = [CI, AZ][col]
-            ax.set_title(titulo, color=cor, fontsize=13, fontweight="bold", pad=8)
-            linhas = [("Fonte",    "FEM ($e$)",          "FMM ($\\mathcal{F}=Ni$)"),
-                      ("Produzindo","Corrente ($i$)",     "Fluxo ($\\phi$)"),
-                      ("Limitador","Resistência ($R$)",   "Relutância ($\\mathcal{R}$)"),
-                      ("Lei",      "$e = R\\,i$",         "$\\mathcal{F}=\\mathcal{R}\\,\\phi$")]
-            for k, (nome, el, em) in enumerate(linhas):
-                y = .82 - k*.19; val = el if col == 0 else em
-                ax.text(.08, y, f"{nome}:", color=CZ, fontsize=9,
-                        ha="left", va="center", transform=ax.transAxes)
-                ax.text(.58, y, val, color=BR, fontsize=10,
-                        ha="center", va="center", transform=ax.transAxes,
-                        bbox=dict(boxstyle="round,pad=.25",
-                                  fc=("#1a2a1a" if col == 0 else "#1a3055"),
-                                  ec=(VD if col == 0 else AZ), alpha=.8))
-            ax_ins = ax.inset_axes([.05, .02, .9, .2])
-            ax_ins.set_facecolor(BG); ax_ins.axis("off")
-            with schemdraw.Drawing(canvas=ax_ins) as d:
-                d.config(fontsize=9, color=BR)
-                lbl = "$e$" if col == 0 else "$\\mathcal{F}$"
-                ec  = VD   if col == 0 else AZ
-                V = d.add(elm.SourceV().label(lbl, loc="left").color(ec))
-                d.add(elm.Line().right())
-                d.add(elm.Resistor().label("$R$" if col == 0 else "$\\mathcal{R}$",
-                                            loc="top").color(CI if col == 0 else AZ))
-                d.add(elm.Line().down())
-                d.add(elm.Line().left())
-                d.add(elm.Line().up().toy(V.start))
-        fig.suptitle("Analogia: Circuito Elétrico ↔ Circuito Magnético",
-                     color=BR, fontsize=11, y=1.01)
-        fig.tight_layout(); return fig
-
-    def fig_entreferro():
-        fig, axes = plt.subplots(1, 2, figsize=(10, 4.5))
-        fig.patch.set_facecolor(BG)
-        # — esboço físico —
-        ax = axes[0]; ax.set_facecolor(BG); ax.axis("off")
-        ax.set_xlim(0, 10); ax.set_ylim(0, 8)
-        ax.set_title("Geometria — Núcleo com Entreferro", color=BR, fontsize=9)
-        for pts, c in [([(1,1),(9,1),(9,2.2),(1,2.2)], "#1a3055"),
-                       ([(1,2.2),(2.5,2.2),(2.5,6.4),(1,6.4)], "#1a3055"),
-                       ([(7.5,2.2),(9,2.2),(9,6.4),(7.5,6.4)], "#1a3055"),
-                       ([(1,6.4),(4.5,6.4),(4.5,7.4),(1,7.4)], "#1a3055"),
-                       ([(5.5,6.4),(9,6.4),(9,7.4),(5.5,7.4)], "#1a3055")]:
-            ax.add_patch(plt.Polygon(pts, color=c, ec=CZ, lw=1.2, zorder=2))
-        ax.add_patch(Rectangle((4.5,6.4), 1., 1., color=BG, ec=LR, lw=1.5, ls="--", zorder=3))
-        ax.text(5., 6.1, "Entreferro\n$\\ell_g$", color=LR, fontsize=7, ha="center", va="top")
+    def fig_entreferro_geom():
+        fig, ax = _mpl_base((5.6, 4.4))
+        ax.set_xlim(0, 10); ax.set_ylim(0, 8.2)
+        for pts in [[(1,1),(9,1),(9,2.2),(1,2.2)],
+                    [(1,2.2),(2.5,2.2),(2.5,6.4),(1,6.4)],
+                    [(7.5,2.2),(9,2.2),(9,6.4),(7.5,6.4)],
+                    [(1,6.4),(4.5,6.4),(4.5,7.4),(1,7.4)],
+                    [(5.5,6.4),(9,6.4),(9,7.4),(5.5,7.4)]]:
+            ax.add_patch(plt.Polygon(pts, color="#3d8ef022", ec=CZ, lw=1.5, zorder=2))
+        ax.add_patch(Rectangle((4.5,6.4), 1., 1., color="none", ec=LR, lw=1.8, ls="--", zorder=3))
+        ax.text(5., 6.1, "Entreferro  $\\ell_g$", color=LR, fontsize=9, ha="center", va="top")
         for y0 in np.linspace(2.6, 5.8, 7):
             ax.add_patch(mpatches.Ellipse((1.75, y0), .85, .35,
-                                          color=AZ, zorder=4, alpha=.8))
-        ax.text(.4, 4.2, "$N$\nespiras", color=AZ, fontsize=8, ha="center")
+                                          color=AZ, zorder=4, alpha=.85))
+        ax.text(.45, 4.2, "$N$\nespiras", color=AZ, fontsize=9, ha="center")
         xs = [2.25,2.25,5.,7.75,7.75,5.,4.7]
         ys = [4.1, 6.9,6.9,6.9, 4.1, 4.1,4.1]
-        ax.plot(xs, ys, "--", color=VD, lw=1.5, alpha=.7)
+        ax.plot(xs, ys, "--", color=VD, lw=1.8, alpha=.85)
         ax.annotate("", xy=(4.8,4.1), xytext=(4.5,4.1),
-                    arrowprops=dict(arrowstyle="->", color=VD, lw=1.5))
-        ax.text(3.8, 3.7, "$\\phi$", color=VD, fontsize=12)
-        # — circuito equivalente —
-        ax2 = axes[1]; ax2.set_facecolor(BG); ax2.axis("off")
-        ax2.set_title("Circuito Magnético Equivalente", color=BR, fontsize=9)
-        with schemdraw.Drawing(canvas=ax2) as d:
-            d.config(fontsize=10, color=BR)
-            F = d.add(elm.SourceV().label("$\\mathcal{F}=Ni$", loc="left").color(AZ))
-            d.add(elm.Line().right(1.5))
-            d.add(elm.Resistor().label("$\\mathcal{R}_c$", loc="top").color(CZ))
-            d.add(elm.Line().right(1.5))
-            d.add(elm.Resistor().label("$\\mathcal{R}_g$", loc="top").color(LR))
-            d.add(elm.Line().down(3))
-            d.add(elm.Line().left().tox(F.start))
-            d.add(elm.Line().up().toy(F.start))
-        ax2.text(.5, .08, r"$N\,i = (\mathcal{R}_c+\mathcal{R}_g)\,\phi$",
-                 color=BR, fontsize=11, ha="center", va="bottom", transform=ax2.transAxes,
-                 bbox=dict(boxstyle="round,pad=.4", fc=BG2, ec=AZ, alpha=.8))
-        fig.suptitle("Circuito Magnético com Entreferro", color=BR, fontsize=11)
+                    arrowprops=dict(arrowstyle="->", color=VD, lw=1.8))
+        ax.text(3.8, 3.7, "$\\phi$", color=VD, fontsize=13)
         fig.tight_layout(); return fig
 
     def fig_frangeamento():
-        fig, axes = plt.subplots(1, 2, figsize=(10, 4.5))
-        fig.patch.set_facecolor(BG)
+        fig, axes = plt.subplots(1, 2, figsize=(8.6, 4))
+        fig.patch.set_alpha(0)
         # — seção da máquina rotativa —
-        ax = axes[0]; ax.set_facecolor(BG); ax.axis("off")
+        ax = axes[0]; ax.set_facecolor("none"); ax.axis("off")
         ax.set_xlim(-3.5, 3.5); ax.set_ylim(-3.5, 3.5); ax.set_aspect("equal")
-        ax.set_title("Máquina Elétrica Rotativa (seção)", color=BR, fontsize=9)
-        ax.add_patch(plt.Circle((0,0), 3.,  color="#1a3055", ec=CZ, lw=1.5, zorder=2))
-        ax.add_patch(plt.Circle((0,0), 2.2, color=BG,       ec=CZ, lw=1.,  zorder=3))
-        ax.add_patch(plt.Circle((0,0), 1.9, color="#1a3055", ec=CZ, lw=1.2, zorder=4))
-        ax.add_patch(plt.Circle((0,0), 1.1, color=BG,       ec=CZ, lw=.8,  zorder=5))
+        ax.set_title("Máquina rotativa (seção)", color=TX, fontsize=10)
+        ax.add_patch(plt.Circle((0,0), 3.,  color="#3d8ef022", ec=CZ, lw=1.6, zorder=2))
+        ax.add_patch(plt.Circle((0,0), 2.2, color="none",     ec=CZ, lw=1.2, zorder=3))
+        ax.add_patch(plt.Circle((0,0), 1.9, color="#3d8ef022", ec=CZ, lw=1.4, zorder=4))
+        ax.add_patch(plt.Circle((0,0), 1.1, color="none",     ec=CZ, lw=1.,  zorder=5))
         ax.add_patch(plt.Circle((0,0), .25, color=CZ, zorder=6))
-        t = np.linspace(0, 2*np.pi, 200)
-        ax.fill_between(2.2*np.cos(t), 2.2*np.sin(t),
-                        1.9*np.cos(t), 1.9*np.sin(t), color=LR, alpha=.25, zorder=3)
-        ax.text(0, 2.55, "Estator", color=BR, fontsize=8, ha="center")
-        ax.text(0, 1.5,  "Rotor",   color=BR, fontsize=8, ha="center")
-        ax.text(2.5, .5, "Entreferro\n($\\ell_g$)", color=LR, fontsize=7, ha="center")
+        ring = mpatches.Wedge((0, 0), 2.2, 0, 360, width=2.2-1.9, color=LR, alpha=.30, zorder=3)
+        ax.add_patch(ring)
+        ax.text(0, 2.6, "Estator", color=TX, fontsize=9, ha="center")
+        ax.text(0, 1.5, "Rotor",   color=TX, fontsize=9, ha="center")
+        ax.text(2.55, .55, "Entreferro\n$\\ell_g$", color=LR, fontsize=8, ha="center")
         # — frangeamento —
-        ax2 = axes[1]; ax2.set_facecolor(BG); ax2.axis("off")
+        ax2 = axes[1]; ax2.set_facecolor("none"); ax2.axis("off")
         ax2.set_xlim(0, 10); ax2.set_ylim(0, 8)
-        ax2.set_title("Efeito de Frangeamento no Entreferro", color=BR, fontsize=9)
-        ax2.add_patch(Rectangle((3, 5.5), 4, 2, color="#1a3055", ec=CZ, lw=1.2))
-        ax2.add_patch(Rectangle((3,  .8), 4, 2, color="#1a3055", ec=CZ, lw=1.2))
+        ax2.set_title("Frangeamento no entreferro", color=TX, fontsize=10)
+        ax2.add_patch(Rectangle((3, 5.5), 4, 2, color="#3d8ef022", ec=CZ, lw=1.4))
+        ax2.add_patch(Rectangle((3,  .8), 4, 2, color="#3d8ef022", ec=CZ, lw=1.4))
         for x in np.linspace(3.6, 6.4, 5):
             ax2.annotate("", xy=(x, 5.5), xytext=(x, 2.8),
-                         arrowprops=dict(arrowstyle="-|>", color=VD, lw=1.2, mutation_scale=10))
+                         arrowprops=dict(arrowstyle="-|>", color=VD, lw=1.4, mutation_scale=10))
         for xb in [3., 7.]:
             t2 = np.linspace(0, np.pi, 50)
             side = -1 if xb < 5 else 1
             ax2.plot(xb + side*.5 + (-side)*.7*np.sin(t2),
-                     4.15 + 1.35*np.cos(t2), "--", color=RX, lw=1.3, alpha=.8)
-        ax2.text(5., 4.15, "$\\ell_g$", color=LR, fontsize=12, ha="center")
+                     4.15 + 1.35*np.cos(t2), "--", color=RX, lw=1.6, alpha=.85)
+        ax2.text(5., 4.15, "$\\ell_g$", color=LR, fontsize=13, ha="center")
         ax2.annotate("", xy=(2.2, 5.5), xytext=(7.8, 5.5),
-                     arrowprops=dict(arrowstyle="<->", color=RX, lw=1.2))
-        ax2.text(5., 5.75, "$A_{ef}>A_c$ (frangeamento)", color=RX, fontsize=8, ha="center")
-        ax2.text(5., .2, r"$\mathcal{R}_g=\frac{\ell_g}{\mu_0 A_g}$",
-                 color=BR, fontsize=9, ha="center",
-                 bbox=dict(boxstyle="round,pad=.3", fc=BG2, ec=AZ, alpha=.8))
-        fig.suptitle("Máquina Rotativa e Frangeamento", color=BR, fontsize=11)
+                     arrowprops=dict(arrowstyle="<->", color=RX, lw=1.4))
+        ax2.text(5., 5.8, "$A_{ef}>A_c$", color=RX, fontsize=9, ha="center")
         fig.tight_layout(); return fig
 
-    def fig_indutancia():
-        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-        fig.patch.set_facecolor(BG)
-        ax = axes[0]; ax.set_facecolor(BG); ax.axis("off")
-        ax.set_xlim(0, 10); ax.set_ylim(0, 8)
-        ax.set_title("Fluxo Concatenado $\\lambda=N\\phi$", color=BR, fontsize=9)
-        for pts, c in [([(1,1),(9,1),(9,2),(1,2)], "#1a3055"),
-                       ([(1,2),(2.5,2),(2.5,7),(1,7)], "#1a3055"),
-                       ([(7.5,2),(9,2),(9,7),(7.5,7)], "#1a3055"),
-                       ([(1,7),(9,7),(9,6),(1,6)], "#1a3055")]:
-            ax.add_patch(plt.Polygon(pts, color=c, ec=CZ, lw=1.1, zorder=2))
-        for y0 in np.linspace(2.5, 6., 8):
-            ax.add_patch(mpatches.Ellipse((1.75, y0), 1., .4,
-                                          color=AZ, zorder=4, alpha=.8))
-        ax.text(.5, 4.2, "$N$", color=AZ, fontsize=14, ha="center")
-        ax.plot([2.5, 2.5, 7.5, 7.5, 5.], [4., 6.5, 6.5, 4., 4.],
-                color=VD, lw=2, alpha=.8)
-        ax.annotate("", xy=(5.1, 4.), xytext=(4.8, 4.),
-                    arrowprops=dict(arrowstyle="->", color=VD, lw=2))
-        ax.text(5., 5.2, "$\\phi$", color=VD, fontsize=14, ha="center")
-        ax.text(5., .3,
-                r"$\lambda=N\phi=\frac{N^2}{\mathcal{R}}i=Li$"
-                "\n" r"$L=\frac{N^2}{\mathcal{R}}=\frac{N^2\mu A}{\ell}$",
-                color=BR, fontsize=9, ha="center", va="bottom",
-                bbox=dict(boxstyle="round,pad=.35", fc=BG2, ec=AZ, alpha=.85))
-        ax2 = axes[1]; ax2.set_facecolor(BG); ax2.axis("off")
-        ax2.set_title("Lei de Faraday e Energia", color=BR, fontsize=9)
-        eqs = [(r"$e=-\frac{d\lambda}{dt}=-N\frac{d\phi}{dt}$", "FEM induzida"),
-               (r"$e=L\frac{di}{dt}$",                          "para $L$ constante"),
-               (r"$L=\frac{N^2}{\mathcal{R}}$",                 "Indutância [H = Wb/A]"),
-               (r"$W_L=\frac{1}{2}Li^2$",                       "Energia armazenada")]
-        for k, (eq, desc) in enumerate(eqs):
-            y = .88 - k*.22
-            ax2.text(.5, y, eq, color=BR, fontsize=11, ha="center", va="center",
-                     transform=ax2.transAxes,
-                     bbox=dict(boxstyle="round,pad=.3", fc=BG2, ec=AZ, alpha=.7))
-            ax2.text(.5, y-.09, desc, color=CZ, fontsize=8, ha="center", va="center",
-                     transform=ax2.transAxes, style="italic")
-        fig.suptitle("Indutância e Lei de Faraday", color=BR, fontsize=11)
-        fig.tight_layout(); return fig
-
-    def fig_indutancia_mutua():
-        fig, axes = plt.subplots(1, 2, figsize=(10, 4.5))
-        fig.patch.set_facecolor(BG)
-        ax = axes[0]; ax.set_facecolor(BG); ax.axis("off")
-        ax.set_xlim(0, 10); ax.set_ylim(0, 8)
-        ax.set_title("Indutância Própria e Mútua", color=BR, fontsize=9)
-        for pts, c in [([(0.5,1),(9.5,1),(9.5,2),(0.5,2)], "#1a3055"),
-                       ([(0.5,2),(2.,2),(2.,7),(0.5,7)],   "#1a3055"),
-                       ([(8.,2),(9.5,2),(9.5,7),(8.,7)],   "#1a3055"),
-                       ([(0.5,7),(9.5,7),(9.5,6),(0.5,6)], "#1a3055")]:
-            ax.add_patch(plt.Polygon(pts, color=c, ec=CZ, lw=1.1, zorder=2))
+    def fig_acoplamento():
+        """Duas bobinas acopladas — geometria (para indutância mútua)."""
+        fig, ax = _mpl_base((5.6, 4.2))
+        ax.set_xlim(-0.8, 10.8); ax.set_ylim(0, 8)
+        for pts in [[(0.5,1),(9.5,1),(9.5,2),(0.5,2)],
+                    [(0.5,2),(2.,2),(2.,7),(0.5,7)],
+                    [(8.,2),(9.5,2),(9.5,7),(8.,7)],
+                    [(0.5,7),(9.5,7),(9.5,6),(0.5,6)]]:
+            ax.add_patch(plt.Polygon(pts, color="#3d8ef022", ec=CZ, lw=1.4, zorder=2))
         for y0 in np.linspace(2.5, 5.8, 7):
-            ax.add_patch(mpatches.Ellipse((1.25, y0), 1., .38,
-                                          color=AZ, zorder=4, alpha=.85))
-        ax.text(.05, 4.1, "$N_1\\ i_1$", color=AZ, fontsize=9, ha="left")
+            ax.add_patch(mpatches.Ellipse((1.25, y0), 1., .38, color=AZ, zorder=4, alpha=.9))
+        ax.text(-.7, 4.1, "$N_1\\,i_1$", color=AZ, fontsize=10, ha="left", va="center")
         for y0 in np.linspace(2.5, 5.8, 7):
-            ax.add_patch(mpatches.Ellipse((8.75, y0), 1., .38,
-                                          color=VD, zorder=4, alpha=.85))
-        ax.text(9.6, 4.1, "$N_2\\ i_2$", color=VD, fontsize=9, ha="right")
-        ax.plot([2., 2., 8., 8., 5.], [4.1, 6.5, 6.5, 4.1, 4.1],
-                color=RX, lw=2, alpha=.8)
+            ax.add_patch(mpatches.Ellipse((8.75, y0), 1., .38, color=VD, zorder=4, alpha=.9))
+        ax.text(10.7, 4.1, "$N_2\\,i_2$", color=VD, fontsize=10, ha="right", va="center")
+        ax.plot([2., 2., 8., 8., 5.], [4.1, 6.5, 6.5, 4.1, 4.1], color=RX, lw=2.2, alpha=.9)
         ax.annotate("", xy=(5.1, 4.1), xytext=(4.9, 4.1),
-                    arrowprops=dict(arrowstyle="->", color=RX, lw=2))
-        ax.text(5., 5.4, "$\\phi_{12}$", color=RX, fontsize=12, ha="center")
-        ax.text(5., .3,
-                r"$\lambda_1=L_{11}i_1+L_{12}i_2$" + "\n" +
-                r"$\lambda_2=L_{21}i_1+L_{22}i_2$" + "\n" +
-                "$L_{12}=L_{21}$ (reciprocidade)",
-                color=BR, fontsize=9, ha="center", va="bottom",
-                bbox=dict(boxstyle="round,pad=.35", fc=BG2, ec=RX, alpha=.85))
-        ax2 = axes[1]; ax2.set_facecolor(BG)
-        ax2.set_title("Energia Armazenada $W_L=\\frac{1}{2}Li^2$", color=BR, fontsize=9)
-        i_a = np.linspace(0, 4, 200); W_a = .5*.5*i_a**2
-        ax2.plot(i_a, W_a, color=AZ, lw=2)
-        ax2.fill_between(i_a, W_a, alpha=.15, color=AZ)
-        ax2.set_xlabel("$i$ (A)", color=BR); ax2.set_ylabel("$W_L$ (J)", color=BR)
-        ax2.tick_params(colors=CZ)
-        for sp in ax2.spines.values(): sp.set_edgecolor("#444")
-        ax2.set_facecolor(BG)
-        fig.suptitle("Indutância Mútua e Energia", color=BR, fontsize=11)
+                    arrowprops=dict(arrowstyle="->", color=RX, lw=2.2))
+        ax.text(5., 5.5, "$\\phi_{12}$", color=RX, fontsize=13, ha="center")
         fig.tight_layout(); return fig
 
-    def fig_histerese():
-        fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
-        fig.patch.set_facecolor(BG)
+    def fig_parasita_geom():
+        fig, ax = _mpl_base((6.6, 4.))
+        ax.set_xlim(0, 10); ax.set_ylim(0, 8)
+        ax.add_patch(Rectangle((.3, 1.5), 3.5, 5., color="#3d8ef022", ec=CZ, lw=1.4))
+        ax.text(2.05, 7.1, "Núcleo sólido", color=TX, fontsize=9, ha="center")
+        for cy in [3., 4.5, 6.]:
+            t = np.linspace(0, 2*np.pi, 100)
+            ax.plot(2.05+1.2*np.cos(t), cy+.7*np.sin(t), color=LR, lw=1.7, alpha=.9)
+            ax.annotate("", xy=(2.05+1.2*np.cos(.1), cy+.7*np.sin(.1)),
+                        xytext=(2.05+1.2*np.cos(0), cy+.7*np.sin(0)),
+                        arrowprops=dict(arrowstyle="->", color=LR, lw=1.4))
+        ax.text(2.05, 1., "$i_e$ (parasitas)", color=LR, fontsize=8, ha="center")
+        ax.annotate("", xy=(2.05, 6.8), xytext=(2.05, 5.5),
+                    arrowprops=dict(arrowstyle="-|>", color=VD, lw=2.2))
+        ax.text(2.6, 6.2, "$B(t)$", color=VD, fontsize=12)
+        x0 = 5.5; n = 8; wl = 3.2/n
+        for k in range(n):
+            shade = "#3d8ef033" if k % 2 == 0 else "#3d8ef015"
+            ax.add_patch(Rectangle((x0+k*wl, 1.5), wl*.82, 5., color=shade, ec=CZ, lw=.8))
+        ax.text(x0+1.6, 7.1, "Núcleo laminado", color=TX, fontsize=9, ha="center")
+        ax.text(x0+1.6, 1., "correntes reduzidas", color=VD, fontsize=8, ha="center")
+        ax.annotate("", xy=(x0+1.6, 6.8), xytext=(x0+1.6, 5.5),
+                    arrowprops=dict(arrowstyle="-|>", color=VD, lw=2.2))
+        ax.text(x0+2.2, 6.2, "$B(t)$", color=VD, fontsize=12)
+        fig.tight_layout(); return fig
+
+    # ════════════════════════════════════════════════════════════════════════
+    # FIGURAS — CIRCUITOS (schemdraw, fundo transparente, malha fechada)
+    # ════════════════════════════════════════════════════════════════════════
+
+    def schem_analogia_eletrico():
+        def build(d):
+            d.add(elm.SourceV().up().label("$e$", loc="left").color(VD))
+            d.add(elm.Resistor().right().label("$R$", loc="top").color(CI))
+            d.add(elm.Line().down())
+            d.add(elm.Line().left())
+        return _schem_to_png(build)
+
+    def schem_analogia_magnetico():
+        def build(d):
+            d.add(elm.SourceV().up().label("$\\mathcal{F}=Ni$", loc="left").color(AZ))
+            d.add(elm.Resistor().right().label("$\\mathcal{R}$", loc="top").color(AZ))
+            d.add(elm.Line().down())
+            d.add(elm.Line().left())
+        return _schem_to_png(build)
+
+    def schem_entreferro():
+        def build(d):
+            d.add(elm.SourceV().up().label("$\\mathcal{F}=Ni$", loc="left").color(AZ))
+            d.add(elm.Resistor().right().label("$\\mathcal{R}_c$", loc="top").color(CZ))
+            d.add(elm.Resistor().right().label("$\\mathcal{R}_g$", loc="top").color(LR))
+            d.add(elm.Line().down())
+            d.add(elm.Line().left().tox(0))
+        return _schem_to_png(build)
+
+    # ════════════════════════════════════════════════════════════════════════
+    # FIGURAS — CURVAS (Plotly, interativas e responsivas)
+    # ════════════════════════════════════════════════════════════════════════
+
+    def plotly_BH():
+        H = np.linspace(0, 2000, 400)
+        B_lin = 4*np.pi*1e-7 * H * 1e3
+        B_lin = B_lin / B_lin.max() * .25
+        Bsat = 1.8; mur = 3500
+        B_fe = Bsat*(1 - np.exp(-mur*4*np.pi*1e-7*H/Bsat))
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=H, y=B_lin, mode="lines", name="Ar / cobre (μᵣ≈1)",
+                                  line=dict(color=CI, dash="dash", width=2)))
+        fig.add_trace(go.Scatter(x=H, y=B_fe, mode="lines",
+                                  name="Ferromagnético (μᵣ≈2000–6000)",
+                                  line=dict(color=AZ, width=3)))
+        fig.add_hline(y=Bsat, line=dict(color=CZ, dash="dot", width=1),
+                      annotation_text="B_sat", annotation_font_color=CZ)
+        fig.update_layout(
+            title="Relação B-H: linear vs. ferromagnético",
+            xaxis_title="H (A/m)", yaxis_title="B (T)",
+            legend=dict(orientation="h", y=-0.25),
+            height=380,
+        )
+        return fig
+
+    def plotly_histerese():
         Hmax = 1000; Bsat = 1.7
         def branch(H, hc=200, upper=True):
             s = 1 if upper else -1
             return Bsat * np.tanh((H + s*hc) / (Hmax*.4))
-        Hp = np.linspace(-Hmax, Hmax, 500)
-        Hn = np.linspace(Hmax, -Hmax, 500)
-        for i, (ax, title) in enumerate(zip(axes, ["Laço de Histerese",
-                                                     "Laços para Diferentes Amplitudes"])):
-            ax.set_facecolor(BG)
-            ax.axhline(0, color=CZ, lw=.6); ax.axvline(0, color=CZ, lw=.6)
-            ax.set_xlabel("$H$ (A/m)", color=BR); ax.set_ylabel("$B$ (T)", color=BR)
-            ax.tick_params(colors=CZ)
-            for sp in ax.spines.values(): sp.set_edgecolor("#444")
-            ax.set_xlim(-Hmax, Hmax); ax.set_ylim(-2., 2.)
-            ax.set_title(title, color=BR, fontsize=9)
-            if i == 0:
-                ax.plot(Hp, branch(Hp, upper=True),  color=AZ, lw=2.2, label="Magnetização")
-                ax.plot(Hn, branch(Hn, upper=False), color=RX, lw=2.2, label="Desmagnetização")
-                ax.fill_between(np.concatenate([Hp, Hn]),
-                                np.concatenate([branch(Hp), branch(Hn, upper=False)]),
-                                alpha=.1, color=AZ)
-                ax.annotate("$B_r$", xy=(0, 1.2),  xytext=(200, .6),  color=VD, fontsize=8,
-                            arrowprops=dict(arrowstyle="->", color=VD))
-                ax.annotate("$H_c$", xy=(200, 0), xytext=(350, .45), color=LR, fontsize=8,
-                            arrowprops=dict(arrowstyle="->", color=LR))
-                ax.legend(fontsize=8, facecolor=BG2, edgecolor=CZ, labelcolor=BR,
-                          loc="lower right")
-            else:
-                cores = [CI, AZ, RX, LR]
-                for k, Ha in enumerate([250, 500, 750, Hmax]):
-                    Hp2 = np.linspace(-Ha, Ha, 400)
-                    Hn2 = np.linspace(Ha, -Ha, 400)
-                    hc2 = 200*(Ha/Hmax)**.5
-                    ax.plot(Hp2, Bsat*np.tanh((Hp2+hc2)/(Ha*.45)), color=cores[k], lw=1.6, alpha=.85)
-                    ax.plot(Hn2, Bsat*np.tanh((Hn2-hc2)/(Ha*.45)), color=cores[k], lw=1.6, alpha=.85)
-                ax.text(0, -1.85, "Área do laço ∝ Perda $P_h$ por ciclo",
-                        color=CZ, fontsize=8, ha="center", style="italic")
-        fig.suptitle("Histerese Magnética — Curva $B$-$H$", color=BR, fontsize=11)
-        fig.tight_layout(); return fig
+        Hp = np.linspace(-Hmax, Hmax, 400)
+        Hn = np.linspace(Hmax, -Hmax, 400)
 
-    def fig_parasita():
-        fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
-        fig.patch.set_facecolor(BG)
-        ax = axes[0]; ax.set_facecolor(BG); ax.axis("off")
-        ax.set_xlim(0, 10); ax.set_ylim(0, 8)
-        ax.set_title("Correntes Parasitas e Laminação", color=BR, fontsize=9)
-        ax.add_patch(Rectangle((.3, 1.5), 3.5, 5., color="#1a3055", ec=CZ, lw=1.2))
-        ax.text(2.05, 7., "Núcleo Sólido", color=BR, fontsize=8, ha="center")
-        for cy in [3., 4.5, 6.]:
-            t = np.linspace(0, 2*np.pi, 100)
-            ax.plot(2.05+1.2*np.cos(t), cy+.7*np.sin(t), color=LR, lw=1.5, alpha=.85)
-            ax.annotate("", xy=(2.05+1.2*np.cos(.1), cy+.7*np.sin(.1)),
-                        xytext=(2.05+1.2*np.cos(0), cy+.7*np.sin(0)),
-                        arrowprops=dict(arrowstyle="->", color=LR, lw=1.2))
-        ax.text(2.05, 1., "$i_e$ (correntes\nparasitas)", color=LR, fontsize=7, ha="center")
-        ax.annotate("", xy=(2.05, 6.8), xytext=(2.05, 5.5),
-                    arrowprops=dict(arrowstyle="-|>", color=VD, lw=2))
-        ax.text(2.55, 6.2, "$B$", color=VD, fontsize=12)
-        x0 = 5.5; n = 8; wl = 3.2/n
-        for k in range(n):
-            c = "#1a3055" if k % 2 == 0 else "#0e2240"
-            ax.add_patch(Rectangle((x0+k*wl, 1.5), wl*.82, 5., color=c, ec=CZ, lw=.6))
-        ax.text(x0+1.6, 7., "Núcleo Laminado", color=BR, fontsize=8, ha="center")
-        ax.text(x0+1.6, 1., "Correntes\nreduzidas", color=VD, fontsize=7, ha="center")
-        ax.annotate("", xy=(x0+1.6, 6.8), xytext=(x0+1.6, 5.5),
-                    arrowprops=dict(arrowstyle="-|>", color=VD, lw=2))
-        ax.text(x0+2.15, 6.2, "$B$", color=VD, fontsize=12)
-        ax2 = axes[1]; ax2.set_facecolor(BG)
-        ax2.set_title("Perdas no Núcleo vs. Frequência", color=BR, fontsize=9)
-        f = np.linspace(10, 400, 300); Bm = 1.5
-        Ph = .005*f*Bm**1.8; Pe = .000012*f**2*Bm**2; Pc = Ph + Pe
-        ax2.plot(f, Ph, "--", color=AZ, lw=2.,  label="Histerese $P_h$")
-        ax2.plot(f, Pe, "--", color=LR, lw=2.,  label="Corrente parasita $P_e$")
-        ax2.plot(f, Pc, "-",  color=BR, lw=2.5, label="Total $P_c=P_h+P_e$")
-        ax2.fill_between(f, Ph, alpha=.12, color=AZ)
-        ax2.fill_between(f, Pe, alpha=.12, color=LR)
-        ax2.set_xlabel("$f$ (Hz)", color=BR); ax2.set_ylabel("Perdas (W/kg)", color=BR)
-        ax2.legend(fontsize=8, facecolor=BG2, edgecolor=CZ, labelcolor=BR)
-        ax2.tick_params(colors=CZ)
-        for sp in ax2.spines.values(): sp.set_edgecolor("#444")
-        ax2.set_facecolor(BG)
-        ax2.text(180, .07,
-                 r"$P_c=P_h+P_e$" + "\n" + r"$P_h\propto f B_{max}^n$" + "\n" +
-                 r"$P_e\propto f^2 B_{max}^2$",
-                 color=BR, fontsize=8, va="bottom",
-                 bbox=dict(boxstyle="round,pad=.3", fc=BG2, ec=AZ, alpha=.8))
-        fig.suptitle("Correntes Parasitas e Perdas no Núcleo", color=BR, fontsize=11)
-        fig.tight_layout(); return fig
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=Hp, y=branch(Hp, upper=True), mode="lines",
+                                  name="Magnetização", line=dict(color=AZ, width=3)))
+        fig.add_trace(go.Scatter(x=Hn, y=branch(Hn, upper=False), mode="lines",
+                                  name="Desmagnetização", line=dict(color=RX, width=3)))
+        fig.add_annotation(x=0, y=1.2, text="B_r (remanência)", showarrow=True,
+                            arrowcolor=VD, font=dict(color=VD), ax=80, ay=-30)
+        fig.add_annotation(x=200, y=0, text="H_c (coercividade)", showarrow=True,
+                            arrowcolor=LR, font=dict(color=LR), ax=80, ay=30)
+        fig.update_layout(
+            title="Laço de Histerese B-H",
+            xaxis_title="H (A/m)", yaxis_title="B (T)",
+            legend=dict(orientation="h", y=-0.25),
+            height=380,
+        )
+        return fig
+
+    def plotly_perdas_nucleo():
+        f = np.linspace(10, 400, 200); Bm = 1.5
+        Ph = .005*f*Bm**1.8
+        Pe = .000012*f**2*Bm**2
+        Pc = Ph + Pe
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=f, y=Ph, mode="lines", name="Histerese Pₕ",
+                                  line=dict(color=AZ, dash="dash", width=2)))
+        fig.add_trace(go.Scatter(x=f, y=Pe, mode="lines", name="Corrente parasita Pₑ",
+                                  line=dict(color=LR, dash="dash", width=2)))
+        fig.add_trace(go.Scatter(x=f, y=Pc, mode="lines", name="Total Pc = Pₕ+Pₑ",
+                                  line=dict(color=TX, width=3)))
+        fig.update_layout(
+            title="Perdas no Núcleo vs. Frequência",
+            xaxis_title="f (Hz)", yaxis_title="Perdas (W/kg)",
+            legend=dict(orientation="h", y=-0.25),
+            height=380,
+        )
+        return fig
+
+    def plotly_energia_indutiva():
+        i_a = np.linspace(0, 4, 200)
+        L_val = .5
+        W = .5 * L_val * i_a**2
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=i_a, y=W, mode="lines", name="Wₗ = ½Li²",
+                                  line=dict(color=AZ, width=3), fill="tozeroy",
+                                  fillcolor="rgba(61,142,240,.15)"))
+        fig.update_layout(
+            title="Energia Armazenada no Campo Magnético",
+            xaxis_title="i (A)", yaxis_title="Wₗ (J)",
+            height=340,
+        )
+        return fig
 
     # ════════════════════════════════════════════════════════════════════════
-    # EXPLORADORES
+    # EXPLORADORES (Plotly, totalmente interativos)
     # ════════════════════════════════════════════════════════════════════════
 
     def exp_circuito():
         st.markdown("**Ajuste os parâmetros do circuito magnético:**")
         c1, c2, c3 = st.columns(3)
         with c1:
-            N  = st.slider("Espiras $N$",         10, 1000, 200, step=10)
-            i  = st.slider("Corrente $i$ (A)",    .1,  20.,  2., step=.1)
+            N  = st.slider("Espiras N",         10, 1000, 200, step=10, key="m1_N")
+            i  = st.slider("Corrente i (A)",    .1,  20.,  2., step=.1, key="m1_i")
         with c2:
-            mur  = st.slider("$\\mu_r$",            1, 6000, 2000, step=50)
-            A_c  = st.slider("Seção $A$ (cm²)",    1.,  50.,  10., step=.5)
+            mur  = st.slider("μᵣ",                1, 6000, 2000, step=50, key="m1_mur")
+            A_c  = st.slider("Seção A (cm²)",    1.,  50.,  10., step=.5, key="m1_A")
         with c3:
-            l_c  = st.slider("Comprimento $\\ell$ (cm)", 5., 100., 30., step=1.)
-            lg   = st.slider("Entreferro $\\ell_g$ (mm)", 0.,  10.,   0., step=.1)
+            l_c  = st.slider("Comprimento ℓ (cm)", 5., 100., 30., step=1., key="m1_l")
+            lg   = st.slider("Entreferro ℓg (mm)",  0.,  10.,  0., step=.1, key="m1_lg")
 
         mu0 = 4*np.pi*1e-7
         A = A_c*1e-4; l = l_c*1e-2; lg_m = lg*1e-3
@@ -506,33 +414,41 @@ def run():
 
         cols = st.columns(5)
         for col, (lab, val) in zip(cols, [
-            ("$\\mathcal{F}$ (A·t)", f"{FMM:.1f}"),
-            ("$\\phi$ (mWb)",        f"{phi*1e3:.3f}"),
-            ("$B$ (T)",              f"{B:.4f}"),
-            ("$\\mathcal{R}$ (A·t/Wb)", f"{Rt:.2e}"),
-            ("$W_L$ (mJ)",           f"{WL*1e3:.2f}"),
+            ("ℱ (A·t)", f"{FMM:.1f}"),
+            ("φ (mWb)", f"{phi*1e3:.3f}"),
+            ("B (T)",   f"{B:.4f}"),
+            ("ℛ (A·t/Wb)", f"{Rt:.2e}"),
+            ("Wₗ (mJ)", f"{WL*1e3:.2f}"),
         ]):
             with col: st.metric(lab, val)
 
-        fig, axes = plt.subplots(1, 2, figsize=(9, 3.5))
-        fig.patch.set_facecolor(BG)
         i_a = np.linspace(0, i*1.6+.1, 200); phi_a = N*i_a/Rt
-        for ax_, xs, ys, xl, yl, tit, xv, yv in [
-            (axes[0], i_a, phi_a*1e3, "$i$ (A)", "$\\phi$ (mWb)",
-             "Fluxo vs. Corrente", i, phi*1e3),
-            (axes[1], Hc*i_a/max(i,1e-9), B*i_a/max(i,1e-9),
-             "$H$ (A/m)", "$B$ (T)", "Ponto B-H (linear)", Hc, B),
-        ]:
-            ax_.set_facecolor(BG)
-            ax_.plot(xs, ys, color=AZ, lw=2)
-            ax_.axvline(xv, color=LR, lw=1.5, ls="--", alpha=.8)
-            ax_.axhline(yv, color=LR, lw=1.5, ls="--", alpha=.8)
-            ax_.plot(xv, yv, "o", color=LR, ms=8, zorder=5)
-            ax_.set_xlabel(xl, color=BR); ax_.set_ylabel(yl, color=BR)
-            ax_.set_title(tit, color=BR, fontsize=9)
-            ax_.tick_params(colors=CZ)
-            for sp in ax_.spines.values(): sp.set_edgecolor("#444")
-        fig.tight_layout(); _show(fig)
+        H_a = Hc*i_a/max(i, 1e-9); B_a = B*i_a/max(i, 1e-9)
+
+        c1, c2 = st.columns(2)
+        with c1:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=i_a, y=phi_a*1e3, mode="lines",
+                                      line=dict(color=AZ, width=3)))
+            fig.add_trace(go.Scatter(x=[i], y=[phi*1e3], mode="markers",
+                                      marker=dict(color=LR, size=11),
+                                      showlegend=False))
+            fig.update_layout(title="Fluxo vs. Corrente",
+                               xaxis_title="i (A)", yaxis_title="φ (mWb)",
+                               height=320, showlegend=False)
+            _plot(fig, key="m1_exp1_fluxo")
+        with c2:
+            fig2 = go.Figure()
+            fig2.add_trace(go.Scatter(x=H_a, y=B_a, mode="lines",
+                                       line=dict(color=VD, width=3)))
+            fig2.add_trace(go.Scatter(x=[Hc], y=[B], mode="markers",
+                                       marker=dict(color=LR, size=11),
+                                       showlegend=False))
+            fig2.update_layout(title="Ponto de Operação B-H (linear)",
+                                xaxis_title="H (A/m)", yaxis_title="B (T)",
+                                height=320, showlegend=False)
+            _plot(fig2, key="m1_exp1_bh")
+
         if lg > 0:
             st.info(f"ℛ_c = {Rc:.2e} A·t/Wb  |  ℛ_g = {Rg:.2e} A·t/Wb  |  "
                     f"ℛ_g/ℛ_c = {Rg/Rc:.1f}×  — o entreferro domina!")
@@ -541,61 +457,59 @@ def run():
         st.markdown("**Ajuste os parâmetros da curva de magnetização:**")
         c1, c2 = st.columns(2)
         with c1:
-            mur_max  = st.slider("$\\mu_r$ máxima (pico)",  500, 8000, 3000, step=100)
-            Bsat     = st.slider("$B_{sat}$ (T)",            .5,  2.2,  1.8, step=.05)
+            mur_max = st.slider("μᵣ máxima (pico)", 500, 8000, 3000, step=100, key="m1_murmax")
+            Bsat    = st.slider("B_sat (T)",          .5,  2.2,  1.8, step=.05, key="m1_bsat")
         with c2:
-            H_op     = st.slider("Ponto de operação $H$ (A/m)", 10, 4000, 500, step=10)
-            show_hist = st.checkbox("Mostrar laço de histerese simplificado", value=False)
+            H_op = st.slider("Ponto de operação H (A/m)", 10, 4000, 500, step=10, key="m1_hop")
+            show_hist = st.checkbox("Mostrar laço de histerese simplificado",
+                                     value=False, key="m1_showhist")
 
         mu0 = 4*np.pi*1e-7
-        H_a = np.linspace(0, 5000, 600)
+        H_a = np.linspace(0, 5000, 400)
         def Bmag(H, mr, Bs):
             mi = mr*mu0; a = Bs/mi; return Bs*H/(a+H)
         B_a = Bmag(H_a, mur_max, Bsat); B_op = Bmag(H_op, mur_max, Bsat)
         dBdH = np.gradient(B_a, H_a); mur_loc = dBdH/mu0
         mr_op = float(np.interp(H_op, H_a, mur_loc))
 
-        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-        fig.patch.set_facecolor(BG)
-        ax = axes[0]; ax.set_facecolor(BG)
-        ax.plot(H_a, B_a, color=AZ, lw=2.2, label="$B$-$H$ ferromagnético")
-        if show_hist:
-            Hc2 = H_op*.15
-            ax.plot(H_a, Bmag(H_a-Hc2, mur_max*.8, Bsat),
-                    "--", color=RX, lw=1.4, alpha=.7, label="Laço superior")
-            ax.plot(H_a, Bmag(H_a+Hc2, mur_max*.8, Bsat),
-                    "--", color=LR, lw=1.4, alpha=.7, label="Laço inferior")
-        ax.axvline(H_op, color=LR, lw=1.5, ls="--", alpha=.8)
-        ax.axhline(B_op, color=LR, lw=1.5, ls="--", alpha=.8)
-        ax.plot(H_op, B_op, "o", color=LR, ms=9, zorder=5,
-                label=f"Op. $H$={H_op} A/m, $B$={B_op:.3f} T")
-        ax.plot(H_a, mur_max*mu0*H_a, ":", color=CI, lw=1.3, alpha=.6,
-                label=f"Inclinação inicial $\\mu_r$={mur_max}")
-        ax.axhline(Bsat, color=CZ, lw=.8, ls=":")
-        ax.text(4500, Bsat+.04, "$B_{sat}$", color=CZ, fontsize=8)
-        ax.set_xlabel("$H$ (A/m)", color=BR); ax.set_ylabel("$B$ (T)", color=BR)
-        ax.set_xlim(0, 5000); ax.set_ylim(0, Bsat*1.15)
-        ax.legend(fontsize=8, facecolor=BG2, edgecolor=CZ, labelcolor=BR)
-        ax.tick_params(colors=CZ)
-        for sp in ax.spines.values(): sp.set_edgecolor("#444")
-        ax2 = axes[1]; ax2.set_facecolor(BG)
-        ax2.plot(H_a[1:], mur_loc[1:], color=VD, lw=2)
-        ax2.axvline(H_op, color=LR, lw=1.5, ls="--", alpha=.8)
-        ax2.axhline(mr_op, color=LR, lw=1.5, ls="--", alpha=.8)
-        ax2.plot(H_op, mr_op, "o", color=LR, ms=9, zorder=5,
-                 label=f"$\\mu_r$ local={mr_op:.0f}")
-        ax2.set_xlabel("$H$ (A/m)", color=BR); ax2.set_ylabel("$\\mu_r$ local", color=BR)
-        ax2.set_title("Permeabilidade Relativa vs. $H$", color=BR, fontsize=9)
-        ax2.set_xlim(0, 5000)
-        ax2.legend(fontsize=8, facecolor=BG2, edgecolor=CZ, labelcolor=BR)
-        ax2.tick_params(colors=CZ)
-        for sp in ax2.spines.values(): sp.set_edgecolor("#444")
-        fig.tight_layout(); _show(fig)
+        c1, c2 = st.columns(2)
+        with c1:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=H_a, y=B_a, mode="lines", name="B-H ferromagnético",
+                                      line=dict(color=AZ, width=3)))
+            if show_hist:
+                Hc2 = H_op*.15
+                fig.add_trace(go.Scatter(x=H_a, y=Bmag(H_a-Hc2, mur_max*.8, Bsat),
+                                          mode="lines", name="Laço superior",
+                                          line=dict(color=RX, dash="dash", width=1.6)))
+                fig.add_trace(go.Scatter(x=H_a, y=Bmag(H_a+Hc2, mur_max*.8, Bsat),
+                                          mode="lines", name="Laço inferior",
+                                          line=dict(color=LR, dash="dash", width=1.6)))
+            fig.add_trace(go.Scatter(x=[H_op], y=[B_op], mode="markers",
+                                      marker=dict(color=LR, size=11),
+                                      name=f"Op: H={H_op}, B={B_op:.3f}"))
+            fig.add_hline(y=Bsat, line=dict(color=CZ, dash="dot", width=1))
+            fig.update_layout(title="Curva B-H e Ponto de Operação",
+                               xaxis_title="H (A/m)", yaxis_title="B (T)",
+                               legend=dict(orientation="h", y=-0.3), height=380)
+            _plot(fig, key="m1_exp2_bh")
+        with c2:
+            fig2 = go.Figure()
+            fig2.add_trace(go.Scatter(x=H_a[1:], y=mur_loc[1:], mode="lines",
+                                       line=dict(color=VD, width=3)))
+            fig2.add_trace(go.Scatter(x=[H_op], y=[mr_op], mode="markers",
+                                       marker=dict(color=LR, size=11),
+                                       name=f"μᵣ local={mr_op:.0f}"))
+            fig2.update_layout(title="Permeabilidade Relativa Local vs. H",
+                                xaxis_title="H (A/m)", yaxis_title="μᵣ local",
+                                showlegend=False, height=380)
+            _plot(fig2, key="m1_exp2_mur")
+
         for col, (lab, val) in zip(st.columns(4), [
-            ("$B$ (T)",        f"{B_op:.4f}"),
-            ("$\\mu_r$ local", f"{mr_op:.0f}"),
-            ("$\\mu$ (H/m)",   f"{mr_op*mu0:.2e}"),
-            ("$B/B_{sat}$",    f"{B_op/Bsat*100:.1f}%"),
+            ("B (T)",        f"{B_op:.4f}"),
+            ("μᵣ local",     f"{mr_op:.0f}"),
+            ("μ (H/m)",      f"{mr_op*mu0:.2e}"),
+            ("B/B_sat",      f"{B_op/Bsat*100:.1f}%"),
         ]):
             with col: st.metric(lab, val)
 
@@ -615,7 +529,7 @@ indutância, histerese e perdas no núcleo.
 """)
 
     # ── 1. Relação i-H ────────────────────────────────────────────────────────
-    st.markdown('<div class="sec-title">1 · Relação $i$-$H$ — Lei Circuital de Ampère</div>',
+    st.markdown('<div class="sec-title">1 · Relação i–H — Lei Circuital de Ampère</div>',
                 unsafe_allow_html=True)
     c1, c2 = st.columns([1, 1])
     with c1:
@@ -636,6 +550,8 @@ de qualquer contorno fechado $C$ é igual à soma das correntes que atravessam a
         st.markdown('<div class="eq-box">', unsafe_allow_html=True)
         st.latex(r"\oint \vec{H} \cdot d\vec{l} = \oint H\, dl\, \cos\theta = N\,i")
         st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("Essa relação entre corrente e campo $H$ é a base para definir o "
+                    "**circuito magnético equivalente**, apresentado na Seção 3.")
     with c2:
         _show(fig_regra_mao(), "Campo H ao redor de um condutor (regra da mão direita)")
 
@@ -646,7 +562,7 @@ de qualquer contorno fechado $C$ é igual à soma das correntes que atravessam a
         _show(fig_ampere_contorno(), "Lei de Ampère — contorno fechado num núcleo toroidal")
 
     # ── 2. Relação B-H ────────────────────────────────────────────────────────
-    st.markdown('<div class="sec-title">2 · Relação $B$-$H$ — Permeabilidade Magnética</div>',
+    st.markdown('<div class="sec-title">2 · Relação B–H — Permeabilidade Magnética</div>',
                 unsafe_allow_html=True)
     c1, c2 = st.columns([1.1, 1])
     with c1:
@@ -671,10 +587,11 @@ A **densidade de fluxo magnético** $B$ (T = Wb/m²) relaciona-se com $H$ pela p
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('<div class="nota-box">', unsafe_allow_html=True)
         st.markdown("⚠️ Para ferromagnéticos, $\\mu_r$ **não é constante**: varia com $H$ "
-                    "(curva de magnetização não-linear) e com a história magnética (histerese).")
+                    "(curva de magnetização não-linear) e com a história magnética do material "
+                    "— efeito detalhado na Seção 5 (Histerese).")
         st.markdown('</div>', unsafe_allow_html=True)
     with c2:
-        _show(fig_BH(), "Curva B-H: material linear vs. ferromagnético")
+        _plot(plotly_BH(), key="m1_fig_bh")
 
     # ── 3. Circuito Magnético Equivalente ─────────────────────────────────────
     st.markdown('<div class="sec-title">3 · Circuito Magnético Equivalente</div>',
@@ -689,7 +606,14 @@ A **densidade de fluxo magnético** $B$ (T = Wb/m²) relaciona-se com $H$ pela p
         st.markdown('</div>', unsafe_allow_html=True)
         _show(fig_circuito_mag(), "Núcleo toroidal: φ, ℱ e ℛ")
     with c2:
-        _show(fig_analogia(), "Analogia: circuito elétrico ↔ circuito magnético")
+        st.markdown("**Analogia: circuito elétrico ↔ circuito magnético**")
+        cc1, cc2 = st.columns(2)
+        with cc1:
+            st.image(schem_analogia_eletrico(), use_container_width=True)
+            st.markdown('<div class="fig-cap">Circuito elétrico</div>', unsafe_allow_html=True)
+        with cc2:
+            st.image(schem_analogia_magnetico(), use_container_width=True)
+            st.markdown('<div class="fig-cap">Circuito magnético</div>', unsafe_allow_html=True)
         st.markdown('<div class="def-box">', unsafe_allow_html=True)
         st.markdown("""
 | Circuito Elétrico | Circuito Magnético |
@@ -714,8 +638,11 @@ A **densidade de fluxo magnético** $B$ (T = Wb/m²) relaciona-se com $H$ pela p
         st.markdown("⚠️ **Dominância do entreferro:** com $\\mu_r=2000$, 1 mm de ar equivale "
                     "a 2 m de ferro de mesma seção — o entreferro domina a relutância total.")
         st.markdown('</div>', unsafe_allow_html=True)
+        st.image(schem_entreferro(), use_container_width=True)
+        st.markdown('<div class="fig-cap">Circuito magnético equivalente com entreferro: '
+                    'ℱ em série com ℛ_c e ℛ_g</div>', unsafe_allow_html=True)
     with c2:
-        _show(fig_entreferro(), "Circuito magnético com entreferro")
+        _show(fig_entreferro_geom(), "Geometria do núcleo com entreferro")
 
     st.markdown('<div class="subsec">3.2 · Máquina Rotativa e Frangeamento</div>',
                 unsafe_allow_html=True)
@@ -756,13 +683,13 @@ Correção para polo retangular ($a\\times b$):
         st.latex(r"e = L\frac{di}{dt}")
         st.markdown('</div>', unsafe_allow_html=True)
     with c2:
-        _show(fig_indutancia(), "Indutância, Lei de Faraday e energia armazenada")
+        _show(fig_circuito_mag(), "Núcleo com N espiras — base para definição de λ e L")
 
     st.markdown('<div class="subsec">4.1 · Indutância Mútua e Energia Armazenada</div>',
                 unsafe_allow_html=True)
     c1, c2 = st.columns([1, 1])
     with c1:
-        _show(fig_indutancia_mutua(), "Indutância mútua entre duas bobinas")
+        _show(fig_acoplamento(), "Indutância mútua entre duas bobinas acopladas")
     with c2:
         st.markdown("Para **duas bobinas acopladas** num mesmo núcleo:")
         st.markdown('<div class="eq-box">', unsafe_allow_html=True)
@@ -773,30 +700,36 @@ Correção para polo retangular ($a\\times b$):
 - $L_{11}$, $L_{22}$: **indutâncias próprias** (auto-induzidas)
 - $L_{12} = L_{21}$: **indutância mútua** (reciprocidade de Neumann)
 - Análise linear válida para $\\mu$ constante (região linear da curva $B$-$H$)
-
-**Energia armazenada no campo magnético:**
 """)
+
+    st.markdown("**Energia armazenada no campo magnético:**")
+    c1, c2 = st.columns([1, 1])
+    with c1:
         st.markdown('<div class="eq-box">', unsafe_allow_html=True)
         st.latex(r"W_L = \frac{1}{2}\,L\,i^2 = \frac{\lambda^2}{2L} = \frac{1}{2}\,\mathcal{R}\,\phi^2")
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('<div class="nota-box">', unsafe_allow_html=True)
         st.markdown("A variação de $W_L$ com a posição do rotor é o mecanismo de "
-                    "**geração de força e torque eletromagnético** nas máquinas elétricas.")
+                    "**geração de força e torque eletromagnético** — princípio que será "
+                    "retomado nos módulos sobre máquinas CC, de indução e síncronas.")
         st.markdown('</div>', unsafe_allow_html=True)
+    with c2:
+        _plot(plotly_energia_indutiva(), key="m1_fig_energia")
 
     # ── 5. Histerese ─────────────────────────────────────────────────────────
     st.markdown('<div class="sec-title">5 · Histerese Magnética</div>', unsafe_allow_html=True)
     c1, c2 = st.columns([1.1, 1])
     with c1:
-        _show(fig_histerese(), "Laço de histerese B-H e laços para diferentes amplitudes")
+        _plot(plotly_histerese(), key="m1_fig_hist")
     with c2:
         st.markdown("""
-A **histerese** é o fenômeno pelo qual o estado magnético depende da história
-de magnetização, não apenas do campo atual $H$.
+A **histerese** é o fenômeno pelo qual o estado magnético do material depende da história
+de magnetização, não apenas do campo atual $H$. Por isso, magnetização e desmagnetização
+seguem trajetórias distintas no plano $B$-$H$, formando um **laço**.
 
 **Grandezas do laço:**
 - $B_r$ (T): **remanência** — $B$ remanescente quando $H=0$
-- $H_c$ (A/m): **coercividade** — campo para anular $B$
+- $H_c$ (A/m): **coercividade** — campo necessário para anular $B$
 - $B_{sat}$ (T): **saturação** — valor máximo de $B$
 
 | Tipo | $H_c$ | Aplicação |
@@ -804,7 +737,7 @@ de magnetização, não apenas do campo atual $H$.
 | Mole (_soft_) | baixo | Núcleos de máquinas e transformadores |
 | Duro (_hard_) | alto | Ímãs permanentes |
 
-**Perdas por histerese** (por ciclo, por volume):
+A **área interna do laço** corresponde à energia dissipada como calor em cada ciclo de magnetização:
 """)
         st.markdown('<div class="eq-box">', unsafe_allow_html=True)
         st.latex(r"W_h = \oint H\,dB \quad\text{(área do laço)}")
@@ -814,19 +747,20 @@ de magnetização, não apenas do campo atual $H$.
     # ── 6. Correntes Parasitas ────────────────────────────────────────────────
     st.markdown('<div class="sec-title">6 · Correntes Parasitas e Perdas no Núcleo</div>',
                 unsafe_allow_html=True)
-    c1, c2 = st.columns([1.1, 1])
+    c1, c2 = st.columns([1, 1])
     with c1:
-        _show(fig_parasita(), "Correntes parasitas, laminação e perdas no núcleo")
+        _show(fig_parasita_geom(), "Correntes parasitas e laminação do núcleo")
     with c2:
         st.markdown("""
 **Correntes parasitas** (_Eddy currents_) são induzidas no núcleo condutor
-pela variação de $B$, dissipando energia como calor.
+pela variação de $B$ no tempo, formando laços fechados que dissipam energia como calor (efeito Joule).
 
 **Redução:**
-- Material de **alta resistividade** (ferrite, aço silício)
-- **Laminação**: chapas finas isoladas — $P_e \\propto d^2$
+- Material de **alta resistividade** (ferrite, aço silício): dificulta a circulação das correntes
+- **Laminação**: chapas finas isoladas entre si interrompem os laços de corrente — como
+  $P_e \\propto d^2$, reduzir a espessura $d$ das chapas diminui as perdas rapidamente
 
-**Perdas por correntes parasitas:**
+**Perdas por correntes parasitas** (por volume):
 """)
         st.markdown('<div class="eq-box">', unsafe_allow_html=True)
         st.latex(r"P_e = k_e\,f^2\,B_{max}^2\,d^2")
@@ -835,10 +769,12 @@ pela variação de $B$, dissipando energia como calor.
         st.markdown('<div class="eq-box">', unsafe_allow_html=True)
         st.latex(r"P_c = P_h + P_e = k_h\,f\,B_{max}^n + k_e\,f^2\,B_{max}^2")
         st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('<div class="nota-box">', unsafe_allow_html=True)
-        st.markdown("As perdas no núcleo ocorrem mesmo a vazio, pois dependem de $B_{max}$ "
-                    "e $f$, não da corrente de carga.")
-        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="nota-box">', unsafe_allow_html=True)
+    st.markdown("As perdas no núcleo ocorrem mesmo a vazio, pois dependem "
+                "de $B_{max}$ e $f$, não da corrente de carga.")
+    st.markdown('</div>', unsafe_allow_html=True)
+    _plot(plotly_perdas_nucleo(), key="m1_fig_perdas")
 
     # ── Exploradores ──────────────────────────────────────────────────────────
     st.markdown('<div class="sec-title">🎛️ Exploradores Interativos</div>',
