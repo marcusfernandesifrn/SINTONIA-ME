@@ -557,7 +557,7 @@ def run():
     # CABEÇALHO
     # ═══════════════════════════════════════════════════════════════════════════════
     st.title("🔋 Circuitos Magnéticos")
-    st.caption("🎛️ SINTONIA · Máquinas Elétricas · 👤 Marcus V A Fernandes · ✉️ marcus.fernandes@ifrn.edu.br")
+    st.caption("⚡ SINTONIA · Máquinas Elétricas · 👤 Marcus V A Fernandes · ✉️ marcus.fernandes@ifrn.edu.br")
     st.markdown("---")
 
     # ── Índice ────────────────────────────────────────────────────────────────────
@@ -680,8 +680,9 @@ def run():
     magnético**, que relaciona força magnetomotriz, relutância e fluxo de forma análoga à
     lei de Ohm:
 
-    $$\mathcal{F} = N\,i \quad \text{(FMM, A·t)} \qquad
-    \mathcal{R} = \frac{\ell}{\mu\,A} \quad \text{(relutância, A·t/Wb)}$$
+    $$\mathcal{F} = N\,i \quad \text{(FMM, A·t)}$$
+
+    $$\mathcal{R} = \frac{\ell}{\mu\,A} \quad \text{(relutância, A·t/Wb)}$$
 
     $$\phi = \frac{\mathcal{F}}{\mathcal{R}} = \frac{N\,i\,\mu\,A}{\ell}$$
     """)
@@ -710,9 +711,9 @@ def run():
     st.markdown(r"""
     Com um entreferro $\ell_g$, as relutâncias do núcleo e do ar somam-se em série:
 
-    $$N\,i = (\mathcal{R}_c + \mathcal{R}_g)\,\phi \qquad
-    \mathcal{R}_c = \frac{\ell_c}{\mu_r\mu_0 A_c}, \quad
-    \mathcal{R}_g = \frac{\ell_g}{\mu_0 A_g}$$
+    $$N\,i = (\mathcal{R}_c + \mathcal{R}_g)\,\phi$$
+
+    $$\mathcal{R}_c = \frac{\ell_c}{\mu_r\mu_0 A_c}, \quad \mathcal{R}_g = \frac{\ell_g}{\mu_0 A_g}$$
 
     > ⚠️ **Dominância do entreferro:** com $\mu_r=2000$, 1 mm de ar equivale a 2 m de ferro de
     > mesma seção — o entreferro domina a relutância total do circuito.
@@ -819,8 +820,9 @@ def run():
     A **área interna do laço** corresponde à energia dissipada como calor em cada ciclo de
     magnetização:
 
-    $$W_h = \oint H\,dB \quad\text{(área do laço)} \qquad
-    P_h = k_h\,f\,B_{max}^n \quad (n \approx 1{,}6 \text{ a } 2)$$
+    $$W_h = \oint H\,dB \quad\text{(área do laço)}$$
+
+    $$P_h = k_h\,f\,B_{max}^n \quad (n \approx 1{,}6 \text{ a } 2)$$
     """)
 
     show_plot(plotly_histerese(), key="m1_fig_hist", height=380)
@@ -891,7 +893,7 @@ def run():
 
     st.markdown(
         "<div style='text-align:center;color:gray;font-size:12px'>"
-        "🔋 Circuitos Magnéticos &nbsp;·&nbsp; 🎛️ SINTONIA — Máquinas Elétricas<br>"
+        "🔋 Circuitos Magnéticos &nbsp;·&nbsp; ⚡ SINTONIA — Máquinas Elétricas<br>"
         "👤 Marcus V A Fernandes &nbsp;·&nbsp; 🏛️ IFRN-CNAT"
         " &nbsp;·&nbsp; 🏷️ v1.0 &nbsp;·&nbsp; 📅 2026"
         "</div>",
