@@ -14,6 +14,7 @@ from matplotlib.patches import Rectangle
 import plotly.graph_objects as go
 import io
 import base64
+from PIL import Image
 import schemdraw
 import schemdraw.elements as elm
 import warnings
@@ -335,6 +336,39 @@ def run():
             d.add(elm.Line().down())
             d.add(elm.Line().left())
         return _schem_png(build)
+
+    def fig_analogia_combinada():
+        """Combina os dois circuitos da analogia em uma única figura com painéis de
+        tamanho idêntico, garantindo alinhamento perfeito (o PNG do schemdraw tem fundo
+        branco opaco mesmo com transparent=True, então cada circuito é centralizado em
+        um canvas branco do mesmo tamanho antes de ser posicionado lado a lado)."""
+        img1 = np.array(Image.open(io.BytesIO(schem_analogia_eletrico())).convert("RGBA"))
+        img2 = np.array(Image.open(io.BytesIO(schem_analogia_magnetico())).convert("RGBA"))
+        h1, w1 = img1.shape[:2]; h2, w2 = img2.shape[:2]
+        H, W = max(h1, h2), max(w1, w2)
+
+        def pad_to(img, H, W):
+            h, w = img.shape[:2]
+            canvas = np.full((H, W, 4), 255, dtype=np.uint8)
+            top = (H - h) // 2; left = (W - w) // 2
+            canvas[top:top+h, left:left+w] = img
+            return canvas
+
+        img1p = pad_to(img1, H, W)
+        img2p = pad_to(img2, H, W)
+
+        fig, axes = plt.subplots(1, 2, figsize=(6.4, 3.6))
+        fig.patch.set_alpha(0)
+        for ax, img, title in zip(axes, [img1p, img2p],
+                                    ["Circuito elétrico", "Circuito magnético"]):
+            ax.set_facecolor("none")
+            ax.imshow(img)
+            ax.set_xticks([]); ax.set_yticks([])
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+            ax.set_title(title, fontsize=10, color=TX, pad=8)
+        fig.subplots_adjust(wspace=0.05, left=0.02, right=0.98)
+        return fig
 
     def schem_entreferro():
         def build(d):
@@ -897,13 +931,7 @@ def run():
     show_fig(fig_circuito_mag(), 0.5)
 
     st.markdown("**Analogia: circuito elétrico ↔ circuito magnético**")
-    col1, col2 = st.columns(2)
-    with col1:
-        show_png(schem_analogia_eletrico(), 0.85)
-        st.caption("Circuito elétrico")
-    with col2:
-        show_png(schem_analogia_magnetico(), 0.85)
-        st.caption("Circuito magnético")
+    show_fig(fig_analogia_combinada(), 0.7)
 
     st.markdown(r"""
     | Circuito Elétrico | Circuito Magnético |
