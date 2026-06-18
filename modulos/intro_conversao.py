@@ -553,6 +553,225 @@ def run():
         ]):
             with col: st.metric(lab, val)
 
+    # ════════════════════════════════════════════════════════════════════════
+    # FIGURAS — CONVERSÃO ELETROMECÂNICA (geometria, matplotlib)
+    # ════════════════════════════════════════════════════════════════════════
+
+    def fig_fluxo_conversao():
+        """Diagrama de blocos: Sistema Elétrico -> Campo Magnético -> Sistema Mecânico."""
+        fig, ax = _mpl_base((7.5, 3.6))
+        ax.set_xlim(0, 13); ax.set_ylim(-2.6, 2.2)
+        w, h = 2.6, 1.1
+        boxes = [(2, 0, "Sistema\nElétrico"), (6.5, 0, "Campo\nMagnético"),
+                 (11, 0, "Sistema\nMecânico")]
+        for x, y, label in boxes:
+            ax.add_patch(mpatches.FancyBboxPatch((x-w/2, y-h/2), w, h, boxstyle="round,pad=0.05",
+                                                  fc="#3d8ef015", ec=AZ, lw=1.8, zorder=3))
+            ax.text(x, y, label, ha="center", va="center", fontsize=11, color=TX, zorder=4)
+        for (x1, _, _), (x2, _, _) in zip(boxes[:-1], boxes[1:]):
+            ax.annotate("", xy=(x2-w/2, 0), xytext=(x1+w/2, 0),
+                        arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.8))
+        ax.annotate("", xy=(12.8, 0), xytext=(11+w/2, 0),
+                    arrowprops=dict(arrowstyle="-|>", color=VD, lw=2))
+        ax.text(13, 0, "Potência\nmecânica\nentregue", ha="left", va="center", fontsize=9, color=VD)
+        labels_perdas = ["perdas\nelétricas", "perdas\nno campo", "perdas\nmecânicas"]
+        for (x, y, _), lp in zip(boxes, labels_perdas):
+            ax.annotate("", xy=(x, y-h/2-0.9), xytext=(x, y-h/2-0.05),
+                        arrowprops=dict(arrowstyle="-|>", color=LR, lw=1.6))
+            ax.text(x, y-h/2-1.15, lp, ha="center", va="top", fontsize=8.5, color=LR)
+        ax.set_title("Processo de Conversão Eletromecânica de Energia", fontsize=10, color=TX, pad=4)
+        fig.tight_layout(); return fig
+
+    def fig_energia_coenergia():
+        """Curva λ-i com áreas de energia (Wf) e coenergia (W'f) destacadas."""
+        fig, ax = plt.subplots(figsize=(5.6, 4.4))
+        fig.patch.set_alpha(0); ax.set_facecolor("none")
+        i_a = np.linspace(0, 5, 400)
+        lam = 1.3*np.sqrt(i_a)
+        i0 = 1.0; lam0 = 1.3*np.sqrt(i0)
+        ax.plot(i_a, lam, color=TX, lw=2.6, label="$\\lambda = \\lambda(i)$")
+        i_below = np.interp(np.linspace(0, lam0, 150), lam, i_a)
+        lam_below = np.linspace(0, lam0, 150)
+        ax.fill_betweenx(lam_below, 0, i_below, color=AZ, alpha=.85, ec="#1a5fc4", lw=1.5,
+                          label="$W_f$ (energia) — área A")
+        mask = i_a <= i0
+        ax.fill_between(i_a[mask], lam[mask], lam0, color=VD, alpha=.45, ec=VD, lw=1.2,
+                         label="$W_f'$ (coenergia) — área B")
+        ax.plot([i0, i0], [0, lam0], "--", color=CZ, lw=1)
+        ax.plot([0, i0], [lam0, lam0], "--", color=CZ, lw=1)
+        ax.plot(i0, lam0, "o", color=LR, ms=9, zorder=5)
+        ax.annotate("área A\n($W_f$)", xy=(0.06, 0.55), xytext=(0.55, 0.35),
+                    fontsize=8.5, color="#1a5fc4", ha="left",
+                    arrowprops=dict(arrowstyle="->", color="#1a5fc4", lw=1.2))
+        ax.legend(loc="lower right", fontsize=8.5, frameon=False, labelcolor=TX)
+        ax.set_xlabel("$i$", color=TX); ax.set_ylabel("$\\lambda$", color=TX)
+        ax.set_xlim(0, 2.2); ax.set_ylim(0, 1.5)
+        ax.tick_params(colors=CZ)
+        for sp in ax.spines.values(): sp.set_edgecolor("#bbb")
+        ax.set_title("Energia e Coenergia no Campo Magnético", fontsize=10, color=TX, pad=6)
+        fig.tight_layout(); return fig
+
+    def fig_sistema_dinamico():
+        """Sistema elétrico -> bloco de conversão -> sistema mecânico massa-mola-amortecedor."""
+        fig, ax = plt.subplots(figsize=(8.5, 4.2))
+        fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
+        ax.set_xlim(0, 15); ax.set_ylim(-3.2, 2.6)
+
+        ax.add_patch(plt.Circle((1.1, 0), .5, fc="none", ec=TX, lw=1.6))
+        ax.text(1.1, 0, "~", ha="center", va="center", fontsize=14, color=TX)
+        ax.text(0.4, 1.0, "$v_0$", fontsize=11, color=TX)
+        ax.plot([1.6, 2.3], [0.9, 0.9], color=TX, lw=1.4)
+        xz = np.linspace(2.3, 3.1, 8)
+        yz = 0.9 + 0.18*np.sin(np.linspace(0, 4*np.pi, 8))
+        ax.plot(xz, yz, color=TX, lw=1.4)
+        ax.text(2.7, 1.25, "$R$", fontsize=11, color=TX, ha="center")
+        ax.plot([3.1, 3.7], [0.9, 0.9], color=TX, lw=1.4)
+        ax.annotate("", xy=(3.0, 0.9), xytext=(2.4, 0.9),
+                    arrowprops=dict(arrowstyle="->", color=TX, lw=1.2))
+        ax.text(2.6, 1.5, "$i$", fontsize=10, color=TX)
+        ax.plot([1.1, 1.1], [0.5, 0.9], color=TX, lw=1.4)
+        ax.plot([1.1, 1.1], [-0.5, -0.9], color=TX, lw=1.4)
+        ax.plot([1.1, 3.7], [-0.9, -0.9], color=TX, lw=1.4)
+
+        ax.add_patch(mpatches.FancyBboxPatch((3.7, -1.1), 3.0, 2.2, boxstyle="round,pad=0.05",
+                                              fc="#3d8ef015", ec=AZ, lw=1.8, zorder=3))
+        ax.text(5.2, 0, "Sistema de\nconversão\neletromecânica", ha="center", va="center",
+                fontsize=9.5, color=TX, zorder=4)
+        ax.text(3.85, 1.25, r"$\lambda,\,e$", fontsize=10, color=TX)
+
+        ax.annotate("", xy=(7.5, 0), xytext=(6.7, 0),
+                    arrowprops=dict(arrowstyle="-|>", color=VD, lw=2))
+        ax.text(7.1, 0.35, "$f_{fld}$", fontsize=10, color=VD, ha="center")
+
+        wall_x = 13.6
+        ax.plot([wall_x, wall_x], [-2.6, 2.2], color=TX, lw=2.5)
+        for yy in np.linspace(-2.5, 2.1, 8):
+            ax.plot([wall_x, wall_x+0.3], [yy, yy-0.25], color=TX, lw=1)
+
+        bar_x = 7.7
+        ax.plot([bar_x, bar_x], [-2.6, 2.2], color=CZ, lw=2)
+
+        y_k = 1.6
+        xs = np.linspace(bar_x, wall_x, 14)
+        ys = y_k + 0.18*np.sin(np.linspace(0, 7*np.pi, 14))
+        ys[0] = y_k; ys[-1] = y_k
+        ax.plot(xs, ys, color=TX, lw=1.4)
+        ax.text((bar_x+wall_x)/2, y_k+0.5, "$K$", ha="center", fontsize=10, color=TX)
+
+        y_b = 0.55
+        ax.plot([bar_x, bar_x+2.2], [y_b, y_b], color=TX, lw=1.4)
+        ax.add_patch(mpatches.Rectangle((bar_x+2.2, y_b-0.25), 0.5, 0.5, fc="none", ec=TX, lw=1.4))
+        ax.plot([bar_x+2.7, wall_x], [y_b, y_b], color=TX, lw=1.4)
+        ax.text((bar_x+wall_x)/2, y_b+0.45, "$B$", ha="center", fontsize=10, color=TX)
+
+        y_m = -0.55
+        ax.add_patch(mpatches.Rectangle((bar_x+2.2, y_m-0.35), 1.0, 0.7, fc="#6c47ff15", ec=RX, lw=1.4))
+        ax.text(bar_x+2.7, y_m, "$M$", ha="center", va="center", fontsize=10, color=TX)
+        ax.plot([bar_x, bar_x+2.2], [y_m, y_m], color=TX, lw=1.4)
+        ax.plot([bar_x+3.2, wall_x], [y_m, y_m], color=TX, lw=1.4)
+
+        y_f0 = -1.7
+        ax.plot([bar_x, wall_x], [y_f0, y_f0], color=TX, lw=1.4)
+        ax.annotate("", xy=(bar_x-0.6, y_f0), xytext=(bar_x+0.3, y_f0),
+                    arrowprops=dict(arrowstyle="-|>", color=LR, lw=2))
+        ax.text(bar_x-0.5, y_f0-0.35, "$f_0$", fontsize=10, color=LR)
+
+        ax.annotate("", xy=(8.5, 2.45), xytext=(7.7, 2.45),
+                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.2))
+        ax.text(8.1, 2.65, "$x$", ha="center", fontsize=10, color=TX)
+
+        ax.set_title("Equações Dinâmicas — Sistema Eletromecânico Acoplado",
+                      fontsize=10.5, color=TX, pad=8)
+        fig.tight_layout(); return fig
+
+    def fig_acao_geradora_motora():
+        """Comparação entre ação geradora e ação motora."""
+        fig, axes = plt.subplots(1, 2, figsize=(9, 3.6))
+        fig.patch.set_alpha(0)
+        titles = ["Ação Geradora", "Ação Motora"]
+        for ax, title, gen in zip(axes, titles, [True, False]):
+            ax.set_facecolor("none"); ax.axis("off")
+            ax.set_xlim(0, 10); ax.set_ylim(-1, 5)
+            ax.set_aspect("equal")
+            ax.set_title(title, fontsize=11, color=TX, fontweight="bold", pad=6)
+            for y in np.linspace(0.5, 4, 6):
+                ax.annotate("", xy=(9.3, y), xytext=(0.7, y),
+                            arrowprops=dict(arrowstyle="->", color=CI, lw=1, alpha=.55))
+            ax.text(9.6, 2.25, "$B$", color=CI, fontsize=12, ha="left", va="center")
+            ax.plot([5, 5], [0.5, 4], color=TX, lw=4, solid_capstyle="round", zorder=4)
+            ax.add_patch(plt.Circle((5, 4), .12, color=TX, zorder=5))
+            ax.add_patch(plt.Circle((5, 0.5), .12, color=TX, zorder=5))
+            if gen:
+                ax.annotate("", xy=(6.3, 2.25), xytext=(5.25, 2.25),
+                            arrowprops=dict(arrowstyle="-|>", color=VD, lw=2.4))
+                ax.text(5.75, 2.65, "$u$ (velocidade)", color=VD, fontsize=9, ha="center")
+                ax.text(5, -0.6, "$e$ induzida no condutor", color=LR, fontsize=9.5, ha="center")
+            else:
+                ax.annotate("", xy=(5, 4.3), xytext=(5, 0.7),
+                            arrowprops=dict(arrowstyle="-|>", color=RX, lw=2.2))
+                ax.text(4.55, 2.25, "$i$", color=RX, fontsize=12, ha="right")
+                ax.annotate("", xy=(6.4, 2.25), xytext=(5.3, 2.25),
+                            arrowprops=dict(arrowstyle="-|>", color=LR, lw=2.4))
+                ax.text(5.85, 2.65, "$f_m$ (força)", color=LR, fontsize=9, ha="center")
+        fig.suptitle("Tipos de Ação na Conversão Eletromecânica", fontsize=11.5, color=TX, y=1.03)
+        fig.tight_layout(); return fig
+
+    # ════════════════════════════════════════════════════════════════════════
+    # EXPLORADOR 3 — FORÇA ELETROMAGNÉTICA EM SISTEMA LINEAR
+    # ════════════════════════════════════════════════════════════════════════
+
+    def exp_forca():
+        st.markdown("**Sistema linear com indutância dependente da posição** "
+                     "$L(x) = \\dfrac{k}{x} + L_0$ (eletroímã/relé — entreferro $x$ variável):")
+        c1, c2 = st.columns(2)
+        with c1:
+            i_const = st.slider("Corrente i (A)", 0.5, 10.0, 2.0, step=0.1, key="m1_exp3_i")
+            k_ind   = st.slider("Constante k (geometria)", 1.0, 20.0, 8.0, step=0.5, key="m1_exp3_k")
+        with c2:
+            L0   = st.slider("Indutância residual L₀ (H)", 0.0, 2.0, 0.3, step=0.05, key="m1_exp3_L0")
+            x_op = st.slider("Posição de operação x (cm)", 0.5, 5.0, 1.5, step=0.1, key="m1_exp3_x")
+
+        x_a = np.linspace(0.4, 5, 300)
+        L_a = k_ind/x_a + L0
+        dLdx_a = -k_ind/x_a**2
+        fm_a = 0.5 * i_const**2 * dLdx_a
+
+        L_op = k_ind/x_op + L0
+        dLdx_op = -k_ind/x_op**2
+        fm_op = 0.5 * i_const**2 * dLdx_op
+
+        c1, c2 = st.columns(2)
+        with c1:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=x_a, y=L_a, mode="lines",
+                                      line=dict(color=AZ, width=3)))
+            fig.add_trace(go.Scatter(x=[x_op], y=[L_op], mode="markers",
+                                      marker=dict(color=LR, size=11), showlegend=False))
+            fig.update_layout(title="Indutância L(x) vs. Posição",
+                               xaxis_title="x (cm)", yaxis_title="L (H)", showlegend=False)
+            show_plot(fig, key="m1_exp3_L", height=340)
+        with c2:
+            fig2 = go.Figure()
+            fig2.add_trace(go.Scatter(x=x_a, y=fm_a, mode="lines",
+                                       line=dict(color=LR, width=3)))
+            fig2.add_trace(go.Scatter(x=[x_op], y=[fm_op], mode="markers",
+                                       marker=dict(color=VD, size=11), showlegend=False))
+            fig2.add_hline(y=0, line=dict(color=CZ, width=1))
+            fig2.update_layout(title="Força Eletromagnética fm(x), i constante",
+                                xaxis_title="x (cm)", yaxis_title="fm (N)", showlegend=False)
+            show_plot(fig2, key="m1_exp3_fm", height=340)
+
+        cols = st.columns(3)
+        for col, (lab, val) in zip(cols, [
+            ("L(x) no ponto", f"{L_op:.3f} H"),
+            ("dL/dx no ponto", f"{dLdx_op:.3f} H/cm"),
+            ("fm no ponto", f"{fm_op:.3f} N"),
+        ]):
+            with col: st.metric(lab, val)
+        st.info("A força é **negativa** (atrativa): o sistema sempre tende a reduzir o "
+                "entreferro x, aumentando L(x) — coerente com $f_m = -\\frac{1}{2}i^2\\,dL/dx$ "
+                "quando dL/dx < 0.")
+
     # ═══════════════════════════════════════════════════════════════════════════════
     # CABEÇALHO
     # ═══════════════════════════════════════════════════════════════════════════════
@@ -563,38 +782,31 @@ def run():
     # ── Índice ────────────────────────────────────────────────────────────────────
     with st.expander("📋 Índice — clique para expandir", expanded=False):
         st.markdown("""
-    **[1. Relação i-H — Lei Circuital de Ampère](#1-rela-o-i-h)**
-    - Regra da mão direita
-    - Lei circuital de Ampère e condutor isolado
+    **[1. Relação i-H — Lei Circuital de Ampère](#1-relacao-i-h-lei-circuital-de-ampere)**
 
-    **[2. Relação B-H — Permeabilidade Magnética](#2-rela-o-b-h)**
-    - Permeabilidade do vácuo e relativa
-    - Não-linearidade dos materiais ferromagnéticos
+    **[2. Relação B-H — Permeabilidade Magnética](#2-relacao-b-h-permeabilidade-magnetica)**
 
-    **[3. Circuito Magnético Equivalente](#3-circuito-magn-tico-equivalente)**
-    - Força magnetomotriz, relutância e fluxo
-    - Analogia com o circuito elétrico
-    - 3.1 Presença de entreferro
-    - 3.2 Máquina rotativa e frangeamento
+    **[3. Circuito Magnético Equivalente](#3-circuito-magnetico-equivalente)**
+    - 3.1 Presença de entreferro · 3.2 Máquina rotativa e frangeamento
 
-    **[4. Indutância e Lei de Faraday](#4-indut-ncia-e-lei-de-faraday)**
-    - Fluxo concatenado e indutância própria
-    - Lei de Faraday
+    **[4. Indutância e Lei de Faraday](#4-indutancia-e-lei-de-faraday)**
     - 4.1 Indutância mútua e energia armazenada
 
-    **[5. Histerese Magnética](#5-histerese-magn-tica)**
-    - Laço B-H, remanência e coercividade
-    - Perdas por histerese
+    **[5. Histerese Magnética](#5-histerese-magnetica)**
 
-    **[6. Correntes Parasitas e Perdas no Núcleo](#6-correntes-parasitas-e-perdas-no-n-cleo)**
-    - Correntes de Foucault e laminação
-    - Perdas totais no núcleo
+    **[6. Correntes Parasitas e Perdas no Núcleo](#6-correntes-parasitas-e-perdas-no-nucleo)**
 
-    **[🎛️ Exploradores Interativos](#explorador)**
-    - Explorador 1 — Circuito magnético
-    - Explorador 2 — Curva B-H
+    **[7. Processo de Conversão Eletromecânica de Energia](#7-processo-de-conversao-eletromecanica-de-energia)**
 
-    **[Referências](#refer-ncias)**
+    **[8. Energia e Coenergia no Campo Magnético](#8-energia-e-coenergia-no-campo-magnetico)**
+    - 8.1 Especialização para sistemas lineares
+
+    **[9. Equações Dinâmicas e Tipos de Ação](#9-equacoes-dinamicas-e-tipos-de-acao)**
+
+    **[🎛️ Exploradores Interativos](#exploradores-interativos)**
+    - Circuito magnético · Curva B-H · Força eletromagnética
+
+    **Referências** (ao final da página)
     """)
 
     st.divider()
@@ -619,11 +831,6 @@ def run():
     resolver a integral diretamente, a uma distância $r$ do condutor:
 
     $$H \cdot 2\pi r = i \quad\Rightarrow\quad H = \frac{i}{2\pi r}$$
-
-    Considerando o ângulo $\theta$ entre $\vec{H}$ e o elemento de percurso $d\vec{l}$, a forma
-    geral da lei é:
-
-    $$\oint \vec{H} \cdot d\vec{l} = \oint H\, dl\, \cos\theta = N\,i$$
 
     Essa relação entre corrente e campo $H$ é a base para definir o **circuito magnético
     equivalente**, apresentado na Seção 3.
@@ -754,9 +961,10 @@ def run():
 
     $$L = \frac{\lambda}{i} = \frac{N^2}{\mathcal{R}} = \frac{N^2\,\mu\,A}{\ell}$$
 
-    A **lei de Faraday** descreve a FEM induzida pela variação do fluxo concatenado:
+    A **lei de Faraday** descreve a FEM induzida pela variação do fluxo concatenado. Na
+    convenção adotada neste material (mesma da Seção 8, onde $dW_e = e\,i\,dt$):
 
-    $$e = -\frac{d\lambda}{dt} = -N\frac{d\phi}{dt}$$
+    $$e = \frac{d\lambda}{dt} = N\frac{d\phi}{dt}$$
 
     Para $L$ constante (sistema linear), essa relação se reduz à forma mais familiar:
 
@@ -864,14 +1072,156 @@ def run():
 
 
     # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 7 — PROCESSO DE CONVERSÃO ELETROMECÂNICA DE ENERGIA
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("7. Processo de Conversão Eletromecânica de Energia")
+
+    st.markdown(r"""
+    A conversão eletromecânica de energia ocorre através do **campo magnético**, elo entre
+    o sistema elétrico (fonte, enrolamentos) e o sistema mecânico (parte móvel, carga). Há
+    dissipação de energia em cada estágio:
+    """)
+
+    show_fig(fig_fluxo_conversao(), 0.75)
+
+    st.markdown(r"""
+    O balanço de energia para uma variação infinitesimal $dt$ relaciona a energia elétrica de
+    entrada ($dW_e$), a energia mecânica entregue ($dW_m$), a energia armazenada no campo
+    ($dW_f$) e as perdas:
+
+    $$dW_e = dW_m + dW_f + Perdas$$
+
+    Isolando cada termo sob hipóteses simplificadoras (perdas nulas; parte móvel fixa ou em
+    movimento), obtêm-se as expressões de energia e força desenvolvidas a seguir.
+    """)
+
+    st.divider()
+
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 8 — ENERGIA E COENERGIA NO CAMPO MAGNÉTICO
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("8. Energia e Coenergia no Campo Magnético")
+
+    st.markdown(r"""
+    **Energia do campo — parte móvel fixa.** Com perdas nulas e a parte móvel fixa
+    ($dW_m=0$), o balanço da Seção 7 se reduz a $dW_e = dW_f$. Como $dW_e = e\,i\,dt$ e, pela
+    lei de Faraday, $e = d\lambda/dt$:
+
+    $$dW_e = e\,i\,dt = i\,d\lambda \qquad\Rightarrow\qquad W_f = \int_0^{\lambda} i\,d\lambda$$
+
+    Usando as relações de circuito magnético da Seção 3 ($Ni = H_c\ell_c + H_g\ell_g$ e
+    $\lambda = N\phi$), essa integral se separa em uma parcela do núcleo e uma do entreferro:
+
+    $$W_f = W_{fc} + W_{fg} \qquad\text{com}\qquad W_{fc} = \int H_c\,dB\;V_c \qquad W_{fg} = \frac{B_g^2}{2\mu_0}\,V_g$$
+
+    onde $V_c = \ell_c A$ e $V_g = \ell_g A$ são os volumes do núcleo e do entreferro.
+    """)
+
+    st.markdown(r"""
+    **Energia e coenergia.** No plano $\lambda$-$i$, a energia corresponde à área entre a
+    curva e o eixo $\lambda$ (área A), e a **coenergia** $W_f'$, à área entre a curva e o eixo
+    $i$ (área B):
+
+    $$W_f = \int_0^{\lambda} i\,d\lambda \qquad\qquad W_f' = \int_0^{i} \lambda\,di$$
+
+    > Em regiões de maior entreferro, a curva $\lambda$-$i$ se aproxima de uma reta e
+    > $W_f' = W_f$. Em núcleos saturados (figura abaixo), $W_f' > W_f$ — a coenergia não tem
+    > significado físico direto, mas é a ferramenta usada para calcular a força mecânica.
+    """)
+
+    show_fig(fig_energia_coenergia(), 0.55)
+
+    st.markdown("### 8.1 Energia Mecânica e Força")
+    st.markdown(r"""
+    Com perdas nulas e a parte móvel deslocando-se de $x_1$ a $x_2$:
+
+    **Posição variando lentamente** (corrente ≈ constante): $dW_m = dW_f'$, e a força é a
+    derivada da coenergia com $i$ constante:
+
+    $$f_m = \left.\frac{\partial W_f'(i,x)}{\partial x}\right|_{i=\text{constante}}$$
+
+    **Posição variando rapidamente** ($\lambda$ ≈ constante, $i\,d\lambda\approx 0$):
+    $dW_m = dW_f$, e a força é a derivada da energia com sinal trocado, $\lambda$ constante:
+
+    $$f_m = -\left.\frac{\partial W_f(i,x)}{\partial x}\right|_{\lambda=\text{constante}}$$
+
+    Os dois resultados são equivalentes: decorrem da relação $W_f + W_f' = \lambda\,i$, que
+    relaciona as derivadas de $W_f$ e $W_f'$ com sinais opostos.
+    """)
+
+    st.markdown("#### Especialização para sistemas lineares")
+    st.markdown(r"""
+    Em um sistema **linear** ($\lambda = L(x)\,i$, $W_f = \frac{1}{2}L(x)i^2$), as duas
+    expressões da força se reduzem a:
+
+    $$f_m = -\frac{1}{2}\,i^2\,\frac{dL(x)}{dx} \quad(\lambda\text{ constante})$$
+
+    $$f_m = \frac{1}{2}\,i^2\,\frac{dL(x)}{dx} \quad(i\text{ constante})$$
+
+    > Na prática usa-se a forma via coenergia (sinal positivo), pois $i$ é a variável
+    > tipicamente controlada: a força sempre tende a deslocar a parte móvel no sentido de
+    > **aumentar** $L(x)$.
+    """)
+
+    st.divider()
+
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 9 — EQUAÇÕES DINÂMICAS E TIPOS DE AÇÃO
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("9. Equações Dinâmicas e Tipos de Ação")
+
+    st.markdown(r"""
+    O acoplamento entre os sistemas elétrico e mecânico, incluindo os elementos mecânicos
+    usuais (mola $K$, amortecedor $B$, massa $M$) e uma força externa $f_0(t)$, resulta na
+    equação dinâmica completa do sistema:
+    """)
+
+    show_fig(fig_sistema_dinamico(), 0.85)
+
+    st.markdown(r"""
+    Pela 2ª lei de Newton, com $f_K = -K(x-x_0)$, $f_D = -B\,\dfrac{dx}{dt}$ e
+    $f_M = -M\,\dfrac{d^2x}{dt^2}$:
+
+    $$f_0(t) = M\frac{d^2x}{dt^2} + B\frac{dx}{dt} + K(x-x_0) + f_m(x,i)$$
+
+    Para um sistema **linear sem perdas**, substituindo a força eletromagnética obtida na
+    Seção 8.1:
+
+    $$f_0(t) = M\frac{d^2x}{dt^2} + B\frac{dx}{dt} + K(x-x_0) + \frac{1}{2}\,i^2\,\frac{dL(x)}{dx}$$
+
+    Essa equação acopla a dinâmica mecânica (posição $x$) à variável elétrica (corrente $i$),
+    e é a base para a modelagem de atuadores eletromagnéticos, relés e, de forma generalizada,
+    das máquinas elétricas rotativas estudadas nos próximos módulos.
+    """)
+
+    st.markdown("### Tipos de Ação")
+    st.markdown(r"""
+    Toda conversão eletromecânica de energia ocorre por uma de duas ações fundamentais:
+
+    - **Ação geradora:** quando um condutor se move em um campo magnético, uma tensão é
+      induzida no condutor (lei de Faraday).
+    - **Ação motora:** quando um condutor percorrido por corrente é posicionado em um campo
+      magnético, uma força mecânica é exercida sobre o condutor (força de Laplace, $F=Bi\ell$).
+    """)
+
+    show_fig(fig_acao_geradora_motora(), 0.78)
+
+    st.divider()
+
+
+    # ═══════════════════════════════════════════════════════════════════════════════
     # EXPLORADORES INTERATIVOS
     # ═══════════════════════════════════════════════════════════════════════════════
     st.header("🎛️ Exploradores Interativos")
 
-    tab1, tab2 = st.tabs(["Explorador 1 — Circuito Magnético",
-                           "Explorador 2 — Curva B-H"])
+    tab1, tab2, tab3 = st.tabs(["Explorador 1 — Circuito Magnético",
+                                 "Explorador 2 — Curva B-H",
+                                 "Explorador 3 — Força Eletromagnética"])
     with tab1: exp_circuito()
     with tab2: exp_BH()
+    with tab3: exp_forca()
 
     st.divider()
 
