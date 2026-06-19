@@ -1,5 +1,5 @@
 """
-🔋 Circuitos Magnéticos
+🔋 Introdução à Conversão Eletromecânica de Energia
 Disciplina: Máquinas Elétricas
 Curso: Engenharia de Energia
 Instituição: IFRN — Campus Natal-Central (CNAT)
@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import Rectangle
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import io
 import base64
 from PIL import Image
@@ -189,9 +190,11 @@ def run():
     def fig_circuito_mag():
         fig, ax = _mpl_base((5.6, 4.2))
         ax.set_xlim(-3.3, 3.3); ax.set_ylim(-2.6, 2.6)
-        t = np.linspace(0, 2*np.pi, 400); Ro, Ri = 2., 1.1
-        ax.fill_between(Ro*np.cos(t), Ro*np.sin(t), Ri*np.cos(t), Ri*np.sin(t),
-                        color="#3d8ef028", zorder=2)
+        Ro, Ri = 2., 1.1
+        ring = mpatches.Wedge((0, 0), Ro, 0, 360, width=Ro-Ri, facecolor="#3d8ef028",
+                               edgecolor="none", zorder=2)
+        ax.add_patch(ring)
+        t = np.linspace(0, 2*np.pi, 400)
         ax.plot(Ro*np.cos(t), Ro*np.sin(t), color=CZ, lw=1.4, zorder=3)
         ax.plot(Ri*np.cos(t), Ri*np.sin(t), color=CZ, lw=1.4, zorder=3)
         for ang in np.linspace(np.pi*.25, np.pi*.75, 9):
@@ -645,77 +648,119 @@ def run():
         ax.set_title("Energia e Coenergia no Campo Magnético", fontsize=10, color=TX, pad=6)
         fig.tight_layout(); return fig
 
+    def _zigzag(ax, x0, x1, y, n_zig=6, amp=0.18, color=TX, lw=1.4, lead_frac=0.08):
+        """Linha em zigue-zague triangular (usada para resistor e mola)."""
+        lead = (x1 - x0) * lead_frac
+        body_x0, body_x1 = x0 + lead, x1 - lead
+        n_seg = n_zig * 2
+        xb = np.linspace(body_x0, body_x1, n_seg + 1)
+        yb = [y]
+        for k in range(1, n_seg + 1):
+            yb.append(y + amp if k % 2 == 1 else y - amp)
+        yb[0] = y; yb[-1] = y
+        xs = [x0] + list(xb) + [x1]
+        ys = [y] + yb + [y]
+        ax.plot(xs, ys, color=color, lw=lw, solid_joinstyle="round", solid_capstyle="round")
+
     def fig_sistema_dinamico():
         """Sistema elétrico -> bloco de conversão -> sistema mecânico massa-mola-amortecedor."""
-        fig, ax = plt.subplots(figsize=(8.5, 4.2))
+        fig, ax = plt.subplots(figsize=(8.5, 4.5))
         fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
-        ax.set_xlim(0, 15); ax.set_ylim(-3.2, 2.6)
+        ax.set_xlim(0, 15); ax.set_ylim(-3.4, 2.8); ax.set_aspect("equal")
 
-        ax.add_patch(plt.Circle((1.1, 0), .5, fc="none", ec=TX, lw=1.6))
-        ax.text(1.1, 0, "~", ha="center", va="center", fontsize=14, color=TX)
-        ax.text(0.4, 1.0, "$v_0$", fontsize=11, color=TX)
-        ax.plot([1.6, 2.3], [0.9, 0.9], color=TX, lw=1.4)
-        xz = np.linspace(2.3, 3.1, 8)
-        yz = 0.9 + 0.18*np.sin(np.linspace(0, 4*np.pi, 8))
-        ax.plot(xz, yz, color=TX, lw=1.4)
-        ax.text(2.7, 1.25, "$R$", fontsize=11, color=TX, ha="center")
-        ax.plot([3.1, 3.7], [0.9, 0.9], color=TX, lw=1.4)
-        ax.annotate("", xy=(3.0, 0.9), xytext=(2.4, 0.9),
+        # --- Fonte de tensão ---
+        src_x, src_y = 1.1, 0
+        ax.add_patch(plt.Circle((src_x, src_y), .5, fc="none", ec=TX, lw=1.6, zorder=5))
+        ax.text(src_x, src_y, "~", ha="center", va="center", fontsize=14, color=TX, zorder=6)
+        ax.text(src_x-0.75, 1.0, "$v_0$", fontsize=11, color=TX)
+
+        # --- Fio superior: fonte -> resistor -> bloco (malha fechada) ---
+        top_y = 0.9
+        ax.plot([src_x, src_x], [0.5, top_y], color=TX, lw=1.4, zorder=2)
+        R_x0, R_x1 = 2.1, 3.1
+        ax.plot([src_x, R_x0], [top_y, top_y], color=TX, lw=1.4, zorder=2)
+        ax.annotate("", xy=(1.75, top_y), xytext=(1.45, top_y),
                     arrowprops=dict(arrowstyle="->", color=TX, lw=1.2))
-        ax.text(2.6, 1.5, "$i$", fontsize=10, color=TX)
-        ax.plot([1.1, 1.1], [0.5, 0.9], color=TX, lw=1.4)
-        ax.plot([1.1, 1.1], [-0.5, -0.9], color=TX, lw=1.4)
-        ax.plot([1.1, 3.7], [-0.9, -0.9], color=TX, lw=1.4)
+        ax.text(1.6, top_y+0.32, "$i$", fontsize=10, color=TX, ha="center")
+        block_x0 = 3.7
+        ax.plot([R_x1, block_x0], [top_y, top_y], color=TX, lw=1.4, zorder=2)
 
-        ax.add_patch(mpatches.FancyBboxPatch((3.7, -1.1), 3.0, 2.2, boxstyle="round,pad=0.05",
+        # --- Fio inferior: retorno fonte -> bloco ---
+        bot_y = -0.9
+        ax.plot([src_x, src_x], [-0.5, bot_y], color=TX, lw=1.4, zorder=2)
+        ax.plot([src_x, block_x0], [bot_y, bot_y], color=TX, lw=1.4, zorder=2)
+
+        # --- Bloco de conversão eletromecânica ---
+        block_w, block_h = 3.0, 2.2
+        ax.add_patch(mpatches.FancyBboxPatch((block_x0, -block_h/2), block_w, block_h,
+                                              boxstyle="round,pad=0.05",
                                               fc="#3d8ef015", ec=AZ, lw=1.8, zorder=3))
-        ax.text(5.2, 0, "Sistema de\nconversão\neletromecânica", ha="center", va="center",
-                fontsize=9.5, color=TX, zorder=4)
-        ax.text(3.85, 1.25, r"$\lambda,\,e$", fontsize=10, color=TX)
+        ax.text(block_x0 + block_w/2, 0, "Sistema de\nconversão\neletromecânica",
+                ha="center", va="center", fontsize=9.5, color=TX, zorder=4)
+        ax.text(block_x0+0.15, 1.25, r"$\lambda,\,e$", fontsize=10, color=TX)
+        block_x1 = block_x0 + block_w
 
-        ax.annotate("", xy=(7.5, 0), xytext=(6.7, 0),
+        # --- Resistor R (zigue-zague triangular padrão) — desenhado por cima do fio ---
+        _zigzag(ax, R_x0, R_x1, top_y, n_zig=5, amp=0.16, lead_frac=0.0)
+        ax.text((R_x0+R_x1)/2, top_y+0.35, "$R$", fontsize=11, color=TX, ha="center")
+
+        # --- Saída de força f_fld ---
+        ax.annotate("", xy=(block_x1+1.1, 0), xytext=(block_x1+0.1, 0),
                     arrowprops=dict(arrowstyle="-|>", color=VD, lw=2))
-        ax.text(7.1, 0.35, "$f_{fld}$", fontsize=10, color=VD, ha="center")
+        ax.text(block_x1+0.6, 0.35, "$f_{fld}$", fontsize=10, color=VD, ha="center")
 
+        # --- Parede fixa ---
         wall_x = 13.6
-        ax.plot([wall_x, wall_x], [-2.6, 2.2], color=TX, lw=2.5)
-        for yy in np.linspace(-2.5, 2.1, 8):
-            ax.plot([wall_x, wall_x+0.3], [yy, yy-0.25], color=TX, lw=1)
+        ax.plot([wall_x, wall_x], [-2.8, 2.4], color=TX, lw=2.5, zorder=2)
+        for yy in np.linspace(-2.7, 2.3, 9):
+            ax.plot([wall_x, wall_x+0.3], [yy, yy-0.25], color=TX, lw=1, zorder=2)
 
-        bar_x = 7.7
-        ax.plot([bar_x, bar_x], [-2.6, 2.2], color=CZ, lw=2)
+        # --- Barra móvel (recebe f_fld; conecta K, B, M e f0) ---
+        bar_x = block_x1 + 1.4
+        ax.plot([bar_x, bar_x], [-2.8, 2.4], color=CZ, lw=2.2, zorder=2)
 
-        y_k = 1.6
-        xs = np.linspace(bar_x, wall_x, 14)
-        ys = y_k + 0.18*np.sin(np.linspace(0, 7*np.pi, 14))
-        ys[0] = y_k; ys[-1] = y_k
-        ax.plot(xs, ys, color=TX, lw=1.4)
+        # --- Mola K (zigue-zague regular) ---
+        y_k = 1.7
+        _zigzag(ax, bar_x, wall_x, y_k, n_zig=7, amp=0.22, lead_frac=0.06)
         ax.text((bar_x+wall_x)/2, y_k+0.5, "$K$", ha="center", fontsize=10, color=TX)
 
-        y_b = 0.55
-        ax.plot([bar_x, bar_x+2.2], [y_b, y_b], color=TX, lw=1.4)
-        ax.add_patch(mpatches.Rectangle((bar_x+2.2, y_b-0.25), 0.5, 0.5, fc="none", ec=TX, lw=1.4))
-        ax.plot([bar_x+2.7, wall_x], [y_b, y_b], color=TX, lw=1.4)
-        ax.text((bar_x+wall_x)/2, y_b+0.45, "$B$", ha="center", fontsize=10, color=TX)
+        # --- Amortecedor B (símbolo padrão dashpot: pistão dentro de cilindro) ---
+        y_b = 0.6
+        cyl_x0, cyl_x1 = bar_x+2.1, bar_x+3.0
+        ax.plot([bar_x, cyl_x0], [y_b, y_b], color=TX, lw=1.4, zorder=2)
+        ax.plot([cyl_x0, cyl_x0], [y_b-0.3, y_b+0.3], color=TX, lw=1.4, zorder=3)
+        ax.plot([cyl_x0, cyl_x1], [y_b+0.3, y_b+0.3], color=TX, lw=1.4, zorder=3)
+        ax.plot([cyl_x0, cyl_x1], [y_b-0.3, y_b-0.3], color=TX, lw=1.4, zorder=3)
+        piston_x = cyl_x0 + 0.55
+        ax.plot([piston_x, piston_x], [y_b-0.22, y_b+0.22], color=TX, lw=3, zorder=4,
+                solid_capstyle="butt")
+        ax.plot([piston_x, wall_x], [y_b, y_b], color=TX, lw=1.4, zorder=2)
+        ax.text((bar_x+wall_x)/2, y_b+0.5, "$B$", ha="center", fontsize=10, color=TX)
 
-        y_m = -0.55
-        ax.add_patch(mpatches.Rectangle((bar_x+2.2, y_m-0.35), 1.0, 0.7, fc="#6c47ff15", ec=RX, lw=1.4))
-        ax.text(bar_x+2.7, y_m, "$M$", ha="center", va="center", fontsize=10, color=TX)
-        ax.plot([bar_x, bar_x+2.2], [y_m, y_m], color=TX, lw=1.4)
-        ax.plot([bar_x+3.2, wall_x], [y_m, y_m], color=TX, lw=1.4)
+        # --- Massa M ---
+        y_m = -0.6
+        mass_x0, mass_x1 = bar_x+2.1, bar_x+3.1
+        ax.plot([bar_x, mass_x0], [y_m, y_m], color=TX, lw=1.4, zorder=2)
+        ax.add_patch(mpatches.Rectangle((mass_x0, y_m-0.4), mass_x1-mass_x0, 0.8,
+                                         fc="#6c47ff15", ec=RX, lw=1.4, zorder=3))
+        ax.text((mass_x0+mass_x1)/2, y_m, "$M$", ha="center", va="center",
+                fontsize=10, color=TX, zorder=4)
+        ax.plot([mass_x1, wall_x], [y_m, y_m], color=TX, lw=1.4, zorder=2)
 
-        y_f0 = -1.7
-        ax.plot([bar_x, wall_x], [y_f0, y_f0], color=TX, lw=1.4)
-        ax.annotate("", xy=(bar_x-0.6, y_f0), xytext=(bar_x+0.3, y_f0),
+        # --- Força externa f0 ---
+        y_f0 = -1.9
+        ax.plot([bar_x, wall_x], [y_f0, y_f0], color=TX, lw=1.4, zorder=2)
+        ax.annotate("", xy=(bar_x-0.7, y_f0), xytext=(bar_x+0.3, y_f0),
                     arrowprops=dict(arrowstyle="-|>", color=LR, lw=2))
-        ax.text(bar_x-0.5, y_f0-0.35, "$f_0$", fontsize=10, color=LR)
+        ax.text(bar_x-0.6, y_f0-0.35, "$f_0$", fontsize=10, color=LR, ha="center")
 
-        ax.annotate("", xy=(8.5, 2.45), xytext=(7.7, 2.45),
+        # --- Eixo de posição x ---
+        ax.annotate("", xy=(bar_x+0.8, 2.6), xytext=(bar_x, 2.6),
                     arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.2))
-        ax.text(8.1, 2.65, "$x$", ha="center", fontsize=10, color=TX)
+        ax.text(bar_x+0.4, 2.8, "$x$", ha="center", fontsize=10, color=TX)
 
         ax.set_title("Equações Dinâmicas — Sistema Eletromecânico Acoplado",
-                      fontsize=10.5, color=TX, pad=8)
+                      fontsize=10.5, color=TX, pad=10)
         fig.tight_layout(); return fig
 
     def fig_acao_geradora_motora():
@@ -749,6 +794,223 @@ def run():
                 ax.text(5.85, 2.65, "$f_m$ (força)", color=LR, fontsize=9, ha="center")
         fig.suptitle("Tipos de Ação na Conversão Eletromecânica", fontsize=11.5, color=TX, y=1.03)
         fig.tight_layout(); return fig
+
+    # ════════════════════════════════════════════════════════════════════════
+    # FIGURAS — MÁQUINAS ROTATIVAS (geometria, matplotlib)
+    # ════════════════════════════════════════════════════════════════════════
+
+    def fig_maquina_elementar():
+        """Máquina elementar de dois enrolamentos: estator (C) + rotor cilíndrico,
+        eixos do estator/rotor e ângulo θ entre eles."""
+        fig, ax = plt.subplots(figsize=(6.2, 5.4))
+        fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
+        ax.set_xlim(-2.2, 9.5); ax.set_ylim(-1.5, 8.5); ax.set_aspect("equal")
+
+        out_pts = [(1.5,0.8),(7.5,0.8),(7.5,3.4),(6.0,3.4),
+                   (6.0,1.6),(2.7,1.6),(2.7,6.4),(6.0,6.4),(6.0,4.6),(7.5,4.6),
+                   (7.5,7.2),(1.5,7.2)]
+        ax.add_patch(plt.Polygon(out_pts, closed=True, fc="#3d8ef010", ec=TX, lw=2.0, zorder=2))
+        ax.text(0.7, 7.6, "Estator", color=TX, fontsize=10.5, ha="left")
+
+        for y0 in np.linspace(2.1, 5.9, 6):
+            ax.add_patch(mpatches.Ellipse((2.7, y0), .5, .3, color=AZ, zorder=4, alpha=.9))
+        ax.plot([1.1, 1.1], [2.1, 5.9], color=AZ, lw=1.4, zorder=3)
+        ax.plot([1.1, 2.0], [2.1, 2.1], color=AZ, lw=1.4, zorder=3)
+        ax.plot([1.1, 2.0], [5.9, 5.9], color=AZ, lw=1.4, zorder=3)
+        ax.annotate("", xy=(0.5, 5.9), xytext=(1.1, 5.9),
+                    arrowprops=dict(arrowstyle="->", color=AZ, lw=1.6))
+        ax.text(0.0, 6.15, "$i_s$", color=AZ, fontsize=12)
+
+        cx, cy = 6.0, 4.0
+        R_rotor = 1.45
+        ax.add_patch(plt.Circle((cx, cy), R_rotor, fc="#1f9d5510", ec=CZ, lw=1.6, zorder=3))
+
+        ax.plot([cx-2.6, cx+2.8], [cy, cy], color=CZ, lw=1, ls="--", zorder=1)
+        ax.text(cx+2.9, cy-0.15, "eixo do\nestator", color=CZ, fontsize=8, ha="left", va="top")
+
+        ang = 35
+        dx, dy = R_rotor*1.55*np.cos(np.radians(ang)), R_rotor*1.55*np.sin(np.radians(ang))
+        ax.plot([cx-dx, cx+dx], [cy-dy, cy+dy], color=VD, lw=2.0, zorder=4)
+        for t in np.linspace(-0.75, 0.75, 5):
+            px, py = cx+t*dx, cy+t*dy
+            perp = np.array([-dy, dx])/np.hypot(dx,dy)*0.28
+            ax.plot([px-perp[0],px+perp[0]], [py-perp[1],py+perp[1]], color=VD, lw=2.0, zorder=5)
+        ax.annotate("", xy=(cx+dx+0.15, cy+dy+0.15), xytext=(cx+dx-0.3, cy+dy-0.3),
+                    arrowprops=dict(arrowstyle="-", color=VD, lw=2))
+        ax.text(cx+dx+0.3, cy+dy+0.3, "Rotor", color=TX, fontsize=10.5, ha="left")
+        ax.annotate("", xy=(8.7, cy+dy*1.5), xytext=(cx+dx, cy+dy),
+                    arrowprops=dict(arrowstyle="-", color=VD, lw=1.4))
+        ax.add_patch(plt.Circle((8.7, cy+dy*1.5), .08, fc="none", ec=VD, lw=1.4, zorder=5))
+        ax.text(8.85, cy+dy*1.5, "$i_r$", color=VD, fontsize=12, va="center")
+
+        t_arc = np.linspace(0, np.radians(ang), 30)
+        r_arc = 0.85
+        ax.plot(cx+r_arc*np.cos(t_arc), cy+r_arc*np.sin(t_arc), color=LR, lw=1.6, zorder=4)
+        ax.text(cx+1.05, cy+0.42, r"$\theta$", color=LR, fontsize=13)
+
+        t_om = np.linspace(np.radians(ang)+0.3, np.radians(ang)+1.1, 20)
+        r_om = R_rotor + 0.35
+        ax.plot(cx+r_om*np.cos(t_om), cy+r_om*np.sin(t_om), color=RX, lw=1.6, zorder=4)
+        ax.annotate("", xy=(cx+r_om*np.cos(t_om[-1]), cy+r_om*np.sin(t_om[-1])),
+                    xytext=(cx+r_om*np.cos(t_om[-2]), cy+r_om*np.sin(t_om[-2])),
+                    arrowprops=dict(arrowstyle="->", color=RX, lw=1.6))
+        ax.text(cx+r_om*np.cos(t_om[-1])+0.1, cy+r_om*np.sin(t_om[-1])+0.25,
+                r"$\omega_m$", color=RX, fontsize=11)
+
+        ax.set_title("Máquina elementar de dois enrolamentos", fontsize=10.5, color=TX, pad=10)
+        fig.tight_layout(); return fig
+
+    def fig_maquina_cilindrica():
+        """Seção transversal de máquina cilíndrica: entreferro uniforme, eixos do
+        estator e do rotor, condutores S/-S e r/-r, ângulo θ = ωm·t + δ."""
+        fig, ax = plt.subplots(figsize=(5.6, 5.0))
+        fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
+        ax.set_xlim(-3.2, 4.6); ax.set_ylim(-3.2, 3.6); ax.set_aspect("equal")
+
+        R_out, R_in, R_rotor = 2.6, 2.05, 1.55
+        t = np.linspace(0, 2*np.pi, 200)
+        ax.plot(R_out*np.cos(t), R_out*np.sin(t), color=TX, lw=1.8, zorder=2)
+        ax.plot(R_in*np.cos(t), R_in*np.sin(t), color=CZ, lw=1.3, zorder=2)
+        ax.plot(R_rotor*np.cos(t), R_rotor*np.sin(t), color=CZ, lw=1.3, zorder=2)
+        ax.add_patch(plt.Circle((0,0), R_rotor, fc="#1f9d5510", zorder=1))
+
+        def cross(x, y, s=.12, color=TX):
+            ax.plot([x-s,x+s],[y-s,y+s], color=color, lw=1.6, zorder=5)
+            ax.plot([x-s,x+s],[y+s,y-s], color=color, lw=1.6, zorder=5)
+        def dot(x, y, s=.06, color=TX):
+            ax.add_patch(plt.Circle((x,y), s, fc=color, ec=color, zorder=5))
+
+        rs = (R_out+R_in)/2
+        cross(rs*np.cos(np.pi/2), rs*np.sin(np.pi/2), color=AZ)
+        ax.text(rs*np.cos(np.pi/2)-0.05, rs*np.sin(np.pi/2)+0.35, "S", color=AZ, fontsize=11, ha="center")
+        dot(rs*np.cos(-np.pi/2), rs*np.sin(-np.pi/2), color=AZ)
+        ax.text(rs*np.cos(-np.pi/2)-0.05, rs*np.sin(-np.pi/2)-0.4, "-S", color=AZ, fontsize=11, ha="center")
+
+        ang = 35
+        rr = (R_in+R_rotor)/2 * 0.9
+        a1 = np.radians(90+ang)
+        cross(rr*np.cos(a1), rr*np.sin(a1), s=.10, color=VD)
+        ax.text(rr*np.cos(a1)-0.35, rr*np.sin(a1)+0.05, "r", color=VD, fontsize=11, ha="center")
+        a2 = np.radians(-90+ang)
+        dot(rr*np.cos(a2), rr*np.sin(a2), s=.05, color=VD)
+        ax.text(rr*np.cos(a2)+0.35, rr*np.sin(a2)-0.05, "-r", color=VD, fontsize=11, ha="center")
+
+        ax.annotate("", xy=(R_out+0.7, 0), xytext=(-R_out-0.3, 0),
+                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.3))
+        ax.text(R_out+0.85, 0, "eixo do\nestator", color=TX, fontsize=9, va="center")
+
+        dxr, dyr = (R_out+0.7)*np.cos(np.radians(ang)), (R_out+0.7)*np.sin(np.radians(ang))
+        ax.annotate("", xy=(dxr, dyr), xytext=(-0.3*dxr, -0.3*dyr),
+                    arrowprops=dict(arrowstyle="-|>", color=VD, lw=1.3))
+        ax.text(dxr+0.15, dyr+0.15, "eixo do\nrotor", color=VD, fontsize=9)
+
+        t_arc = np.linspace(0, np.radians(ang), 30)
+        r_arc = 1.0
+        ax.plot(r_arc*np.cos(t_arc), r_arc*np.sin(t_arc), color=LR, lw=1.4, zorder=4)
+        ax.text(1.25, 0.45, r"$\theta=\omega_m t+\delta$", color=LR, fontsize=10)
+
+        ax.set_title("Máquina cilíndrica — entreferro uniforme", fontsize=10.5, color=TX, pad=8)
+        fig.tight_layout(); return fig
+
+    def fig_taxonomia():
+        """Diagrama hierárquico de classificação das máquinas elétricas."""
+        fig, ax = plt.subplots(figsize=(9.5, 4.6))
+        fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
+        ax.set_xlim(0, 16); ax.set_ylim(2.3, 11)
+
+        def box(x, y, w, h, text, fc="#3d8ef012", ec=AZ, fs=9.5, fw="normal"):
+            ax.add_patch(mpatches.FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.04",
+                                                  fc=fc, ec=ec, lw=1.4, zorder=3))
+            ax.text(x+w/2, y+h/2, text, ha="center", va="center", fontsize=fs,
+                    color=TX, fontweight=fw, zorder=4)
+
+        box(0.5, 9.3, 15, 1.0, "Máquinas Elétricas", fc="#3d8ef022", fs=13, fw="bold")
+        box(0.5, 7.7, 12.7, 1.0, "Máquinas rotativas", fc="#3d8ef018", fs=12)
+        box(13.5, 7.0, 2.0, 1.7, "Máquinas\nestacionárias", fc="#6b728018", ec=CZ, fs=8.5)
+        box(0.5, 6.1, 5.6, 1.0, "Corrente Contínua", fc=VD+"18", ec=VD, fs=11)
+        box(6.4, 6.1, 6.8, 1.0, "Corrente Alternada", fc=LR+"18", ec=LR, fs=11)
+
+        cc_items = ["Excitação\nIndependente", "Série/\nParalelo", "Servo-\nmotores", "Motores\nde passo"]
+        for i, it in enumerate(cc_items):
+            box(0.5+i*1.4, 4.5, 1.3, 1.3, it, fc=VD+"10", ec=VD, fs=7.8)
+
+        box(6.4, 4.5, 3.1, 1.3, "Máquina\nSíncrona", fc=LR+"12", ec=LR, fs=10)
+        box(9.7, 4.5, 3.5, 1.3, "Máquina Assíncrona\n(Indução)", fc=LR+"12", ec=LR, fs=9.5)
+
+        sync_items = ["Mono-\nfásico", "Tri-\nfásico"]
+        for i, it in enumerate(sync_items):
+            box(6.4+i*1.6, 2.9, 1.4, 1.3, it, fc=LR+"08", ec=LR, fs=8)
+        async_items = ["Mono-\nfásico", "Tri-\nfásico", "Servo-\nmotores", "Sincro-\nnizadores"]
+        for i, it in enumerate(async_items):
+            box(9.7+i*0.9, 2.9, 0.8, 1.3, it, fc=LR+"08", ec=LR, fs=6.8)
+
+        box(13.5, 5.4, 2.0, 1.3, "Transfor-\nmadores", fc="#6b728010", ec=CZ, fs=8.5)
+
+        def link(x1, y1, x2, y2):
+            ax.plot([x1, x2], [y1, y2], color=CZ, lw=1.0, zorder=1)
+
+        link(7.85, 9.3, 6.8, 8.7); link(7.85, 9.3, 14.5, 8.7)
+        link(6.8, 7.7, 3.3, 7.1); link(6.8, 7.7, 9.8, 7.1)
+        link(3.3, 6.1, 1.15, 5.8); link(3.3, 6.1, 2.55, 5.8)
+        link(3.3, 6.1, 3.95, 5.8); link(3.3, 6.1, 5.35, 5.8)
+        link(9.8, 6.1, 7.95, 5.8); link(9.8, 6.1, 11.45, 5.8)
+        link(7.95, 4.5, 7.1, 4.2); link(7.95, 4.5, 8.5, 4.2)
+        for i in range(4):
+            link(11.45, 4.5, 10.1+i*0.9, 4.2)
+
+        ax.set_title("Classificação das Máquinas Elétricas", fontsize=12, color=TX,
+                     fontweight="bold", pad=10)
+        fig.tight_layout(); return fig
+
+    def plotly_torque_pulsante():
+        """Compara torque oscilante (caso geral) com torque médio constante
+        (máquinas síncrona e assíncrona)."""
+        I_rm, I_sm, M, delta, alpha = 1.0, 1.0, 1.0, 0.3, 0.2
+        t = np.linspace(0, 4, 800)
+
+        ws = 2*np.pi*1.0
+        wr = 2*np.pi*0.3
+        T_sync = -(I_rm*I_sm*M/2) * (np.sin(2*ws*t + delta) + np.sin(delta))
+        mean_sync = -(I_rm*I_sm*M/2)*np.sin(delta)
+
+        T_async = -(I_rm*I_sm*M/4) * (
+            np.sin(2*ws*t + alpha + delta) + np.sin(-2*wr*t - alpha + delta) +
+            np.sin(2*ws*t - 2*wr*t - alpha + delta) + np.sin(alpha + delta))
+        mean_async = -(I_rm*I_sm*M/4)*np.sin(alpha+delta)
+
+        wm_geral = 2*np.pi*0.62
+        T_geral = -(I_rm*I_sm*M/4) * (
+            np.sin((wm_geral+ws+wr)*t + alpha + delta) + np.sin((wm_geral-ws-wr)*t - alpha + delta) +
+            np.sin((wm_geral+ws-wr)*t - alpha + delta) + np.sin((wm_geral-ws+wr)*t + alpha + delta))
+
+        fig = make_subplots(rows=3, cols=1, shared_xaxes=True,
+                             subplot_titles=(
+                                 "Caso geral (|ωm| ≠ |ωs ± ωr|): torque médio nulo",
+                                 "Máquina síncrona (ωm = ωs): torque médio constante",
+                                 "Máquina assíncrona (ωm = ωs − ωr): torque médio constante"),
+                             vertical_spacing=0.1)
+
+        fig.add_trace(go.Scatter(x=t, y=T_geral, mode="lines", line=dict(color=CZ, width=2),
+                                  showlegend=False), row=1, col=1)
+        fig.add_hline(y=0, line=dict(color=TX, dash="dash", width=1), row=1, col=1)
+
+        fig.add_trace(go.Scatter(x=t, y=T_sync, mode="lines", line=dict(color=LR, width=2),
+                                  showlegend=False), row=2, col=1)
+        fig.add_hline(y=mean_sync, line=dict(color=TX, dash="dash", width=1), row=2, col=1)
+
+        fig.add_trace(go.Scatter(x=t, y=T_async, mode="lines", line=dict(color=VD, width=2),
+                                  showlegend=False), row=3, col=1)
+        fig.add_hline(y=mean_async, line=dict(color=TX, dash="dash", width=1), row=3, col=1)
+
+        fig.update_yaxes(title_text="T (N·m)", row=1, col=1)
+        fig.update_yaxes(title_text="T (N·m)", row=2, col=1)
+        fig.update_yaxes(title_text="T (N·m)", row=3, col=1)
+        fig.update_xaxes(title_text="t (s)", row=3, col=1)
+        fig.update_layout(height=620, title="Torque eletromagnético: oscilante vs. médio constante",
+                           showlegend=False)
+        for ann in fig.layout.annotations:
+            ann.font.size = 11
+        return fig
 
     # ════════════════════════════════════════════════════════════════════════
     # EXPLORADOR 3 — FORÇA ELETROMAGNÉTICA EM SISTEMA LINEAR
@@ -806,10 +1068,239 @@ def run():
                 "entreferro x, aumentando L(x) — coerente com $f_m = -\\frac{1}{2}i^2\\,dL/dx$ "
                 "quando dL/dx < 0.")
 
+    def fig_maquina_elementar():
+        """Máquina elementar de dois enrolamentos: estator em C + rotor cilíndrico."""
+        fig, ax = _mpl_base((6.8, 5.9))
+        ax.set_xlim(-5.3, 5.0); ax.set_ylim(-3.4, 3.85)
+
+        rotor_r = 1.5
+        gap = 0.35
+
+        out_x0, out_y0 = -2.9, -2.5
+        out_w, out_h = 4.4, 5.0
+        ax.add_patch(mpatches.Rectangle((out_x0, out_y0), out_w, out_h,
+                                         fc="#3d8ef012", ec=TX, lw=1.8, zorder=2))
+        in_x0, in_y0 = -(rotor_r+gap), -(rotor_r+gap)
+        in_w = in_h = 2*(rotor_r+gap)
+        ax.add_patch(mpatches.Rectangle((in_x0, in_y0), in_w, in_h,
+                                         fc="white", ec=TX, lw=1.8, zorder=3))
+        open_h = 0.85
+        ax.add_patch(mpatches.Rectangle((in_x0+in_w, -open_h/2), out_x0+out_w-(in_x0+in_w), open_h,
+                                         fc="white", ec="none", zorder=4))
+        ax.plot([in_x0+in_w, out_x0+out_w], [open_h/2, open_h/2], color=TX, lw=1.8, zorder=5)
+        ax.plot([in_x0+in_w, out_x0+out_w], [-open_h/2, -open_h/2], color=TX, lw=1.8, zorder=5)
+
+        theta = np.radians(35)
+        ax.plot([-3.5*np.cos(theta), 3.5*np.cos(theta)], [-3.5*np.sin(theta), 3.5*np.sin(theta)],
+                color=CZ, lw=1, ls="--", zorder=1)
+        ax.plot([-3.5, 3.5], [0, 0], color=CZ, lw=1, ls="--", zorder=1)
+
+        coil_x = in_x0
+        for yy in np.linspace(-1.2, 1.2, 6):
+            ax.add_patch(mpatches.Ellipse((coil_x, yy), 0.4, 0.2, fc="white", ec=AZ, lw=1.6, zorder=10))
+        ax.plot([out_x0, coil_x-0.6], [1.0, 1.0], color=AZ, lw=1.6, zorder=10)
+        ax.plot([out_x0, coil_x-0.6], [-1.0, -1.0], color=AZ, lw=1.6, zorder=10)
+        ax.add_patch(plt.Circle((coil_x-0.6, 1.0), .05, fc=AZ, ec=AZ, zorder=11))
+        ax.add_patch(plt.Circle((coil_x-0.6, -1.0), .05, fc=AZ, ec=AZ, zorder=11))
+        ax.text(coil_x-0.85, 1.0, "$i_s$", fontsize=12, color=AZ, ha="right", va="center")
+        ax.text(out_x0+0.3, out_y0+out_h-0.4, "Estator", fontsize=10, color=AZ, ha="left")
+
+        ax.add_patch(plt.Circle((0, 0), rotor_r, fc="white", ec=TX, lw=1.8, zorder=8))
+
+        for t in np.linspace(-0.8, 0.8, 6):
+            cx, cy = t*np.cos(theta), t*np.sin(theta)
+            wx, wy = 0.18*np.sin(theta), -0.18*np.cos(theta)
+            ax.plot([cx-wx, cx+wx], [cy-wy, cy+wy], color=RX, lw=2.0, zorder=9)
+
+        rx0, ry0 = rotor_r*np.cos(theta), rotor_r*np.sin(theta)
+        t_end = (out_x0+out_w+0.5 - rx0) / np.cos(theta)
+        ax.plot([rx0, rx0+t_end*np.cos(theta)], [ry0, ry0+t_end*np.sin(theta)],
+                color=RX, lw=1.6, zorder=12)
+        ax.add_patch(plt.Circle((rx0+t_end*np.cos(theta), ry0+t_end*np.sin(theta)), .05,
+                                 fc=RX, ec=RX, zorder=13))
+        t_end2 = (out_x0 - (-rx0)) / np.cos(theta)
+        ax.plot([-rx0, -rx0+t_end2*np.cos(theta)], [-ry0, -ry0+t_end2*np.sin(theta)],
+                color=RX, lw=1.6, zorder=12)
+        ax.add_patch(plt.Circle((-rx0+t_end2*np.cos(theta), -ry0+t_end2*np.sin(theta)), .05,
+                                 fc=RX, ec=RX, zorder=13))
+
+        arc = np.linspace(0, theta, 30)
+        ax.plot(0.65*np.cos(arc), 0.65*np.sin(arc), color=TX, lw=1.3, zorder=10)
+        ax.text(0.95*np.cos(theta/2), 0.5*np.sin(theta/2)+0.12, r"$\theta$", fontsize=12, color=TX)
+
+        arc2 = np.linspace(theta+0.15, theta+0.7, 20)
+        ax.plot(0.95*np.cos(arc2), 0.95*np.sin(arc2), color=VD, lw=1.6, zorder=10)
+        ax.annotate("", xy=(0.95*np.cos(arc2[-1]), 0.95*np.sin(arc2[-1])),
+                    xytext=(0.95*np.cos(arc2[-3]), 0.95*np.sin(arc2[-3])),
+                    arrowprops=dict(arrowstyle="-|>", color=VD, lw=1.6), zorder=10)
+        ax.text(1.3*np.cos(theta+0.45), 1.3*np.sin(theta+0.45), r"$\omega_m$",
+                fontsize=11, color=VD, ha="center")
+
+        ax.text(0, rotor_r+0.55, "Rotor", fontsize=10, color=RX, ha="center")
+        ax.text(out_x0+out_w+0.6, ry0+t_end*np.sin(theta)+0.2, "$i_r$",
+                fontsize=12, color=RX, ha="left")
+
+        ax.set_title("Máquina elementar de dois enrolamentos", fontsize=10, color=TX, pad=10)
+        fig.tight_layout(); return fig
+
+    def fig_maquina_cilindrica():
+        """Seção transversal de máquina cilíndrica: entreferro uniforme, eixos estator/rotor."""
+        fig, ax = _mpl_base((6.2, 5.4))
+        ax.set_xlim(-3.6, 4.6); ax.set_ylim(-3.2, 3.5)
+
+        R_out, R_in = 2.3, 1.85
+
+        ring = mpatches.Wedge((0, 0), R_out, 0, 360, width=R_out-R_in,
+                               facecolor="#3d8ef022", edgecolor=TX, lw=1.6, zorder=2)
+        ax.add_patch(ring)
+        ax.add_patch(plt.Circle((0, 0), R_in, fc="white", ec=TX, lw=1.6, zorder=3))
+
+        theta = np.radians(35)
+
+        ax.plot([-3.3, 3.3], [0, 0], color=AZ, lw=1.3, ls="--", zorder=4)
+        ax.annotate("", xy=(3.3, 0), xytext=(3.0, 0),
+                    arrowprops=dict(arrowstyle="-|>", color=AZ, lw=1.3), zorder=4)
+        ax.text(3.45, 0, "Eixo do\nestator", fontsize=9, color=AZ, ha="left", va="center")
+
+        ax.plot([-2.4*np.cos(theta), 2.4*np.cos(theta)], [-2.4*np.sin(theta), 2.4*np.sin(theta)],
+                color=RX, lw=1.3, ls="--", zorder=4)
+        ax.annotate("", xy=(2.4*np.cos(theta), 2.4*np.sin(theta)),
+                    xytext=(2.1*np.cos(theta), 2.1*np.sin(theta)),
+                    arrowprops=dict(arrowstyle="-|>", color=RX, lw=1.3), zorder=4)
+        ax.text(2.55*np.cos(theta), 2.55*np.sin(theta)+0.2, "Eixo do\nrotor",
+                fontsize=9, color=RX, ha="left", va="bottom")
+
+        rs = (R_out+R_in)/2
+        ax.add_patch(plt.Circle((0, rs), .07, fc="none", ec=AZ, lw=1.6, zorder=5))
+        ax.text(0, rs, "·", fontsize=14, color=AZ, ha="center", va="center", zorder=6)
+        ax.text(-0.35, rs, "$S$", fontsize=11, color=AZ, ha="right", va="center")
+        ax.add_patch(plt.Circle((0, -rs), .07, fc=AZ, ec=AZ, lw=1.6, zorder=5))
+        ax.text(0.4, -rs, "$-S$", fontsize=11, color=AZ, ha="left", va="center")
+
+        rr = 0.55
+        rrx, rry = rr*np.cos(theta+np.pi/2), rr*np.sin(theta+np.pi/2)
+        ax.add_patch(plt.Circle((rrx, rry), .06, fc="none", ec=RX, lw=1.6, zorder=5))
+        ax.text(rrx-0.3, rry+0.15, "$R$", fontsize=11, color=RX, ha="right", va="center")
+        ax.add_patch(plt.Circle((-rrx, -rry), .06, fc=RX, ec=RX, lw=1.6, zorder=5))
+        ax.text(-rrx+0.3, -rry-0.15, "$-R$", fontsize=11, color=RX, ha="left", va="center")
+
+        arc = np.linspace(0, theta, 30)
+        ax.plot(1.15*np.cos(arc), 1.15*np.sin(arc), color=TX, lw=1.3, zorder=6)
+        ax.text(1.4*np.cos(theta/2), 1.4*np.sin(theta/2), r"$\theta=\omega_m t+\delta$",
+                fontsize=10, color=TX, ha="left", va="center")
+
+        ax.set_title("Máquina cilíndrica — entreferro uniforme", fontsize=10, color=TX, pad=10)
+        fig.tight_layout(); return fig
+
+    def fig_taxonomia():
+        """Diagrama hierárquico de classificação das máquinas elétricas."""
+        fig, ax = plt.subplots(figsize=(11, 6.5))
+        fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
+        ax.set_xlim(0, 100); ax.set_ylim(0, 60)
+
+        def box(x, y, w, h, label, fc="white", fontsize=9, lw=1.4):
+            ax.add_patch(mpatches.FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.15",
+                                                  fc=fc, ec=TX, lw=lw, zorder=3))
+            ax.text(x+w/2, y+h/2, label, ha="center", va="center", fontsize=fontsize,
+                    color=TX, zorder=4)
+
+        def link(x1, y1, x2, y2):
+            ax.plot([x1, x2], [y1, y2], color=CZ, lw=1.1, zorder=1)
+
+        box(20, 53, 60, 5.5, "Máquinas Elétricas", fc="#3d8ef018", fontsize=11)
+
+        box(10, 45, 55, 5, "Máquinas rotativas", fc="#3d8ef012", fontsize=10)
+        box(72, 45, 22, 5, "Máquinas\nestacionárias", fc="#6b728015", fontsize=8.5)
+        link(50, 53, 37, 50); link(50, 53, 83, 50)
+
+        box(7, 37, 25, 5, "Corrente Contínua", fc="#1f9d5515", fontsize=9)
+        box(35, 37, 28, 5, "Corrente Alternada", fc="#e07b0015", fontsize=9)
+        box(74, 37, 18, 5, "Transformadores", fc="#6b728010", fontsize=8.5)
+        link(37, 45, 19.5, 42); link(37, 45, 49, 42); link(83, 45, 83, 42)
+
+        cc_labels = ["Excitação\nindependente", "Série/\nParalelo", "Servo-\nmotores", "Motores\nde passo"]
+        cc_x0 = 5.5
+        for i, lab in enumerate(cc_labels):
+            x = cc_x0 + i*6.7
+            box(x, 28, 6.3, 6.5, lab, fc="#1f9d550c", fontsize=7.2)
+            link(19.5, 37, x+3.15, 34.5)
+
+        box(35, 28, 14, 5, "Máquina\nSíncrona", fc="#e07b0018", fontsize=9)
+        box(51, 28, 22, 5, "Máquina Assíncrona\n(Indução)", fc="#e07b0018", fontsize=9)
+        link(49, 37, 42, 33); link(49, 37, 62, 33)
+
+        box(33, 19, 9, 6, "Monofásico", fc="#e07b000c", fontsize=7.3)
+        box(43, 19, 9, 6, "Trifásico", fc="#e07b000c", fontsize=7.3)
+        link(42, 28, 37.5, 25); link(42, 28, 47.5, 25)
+
+        asy_labels = ["Monofásico", "Trifásico", "Servo-\nmotores", "Sincro-\nnizadores"]
+        asy_x0 = 54
+        for i, lab in enumerate(asy_labels):
+            x = asy_x0 + i*6.7
+            box(x, 19, 6.3, 6, lab, fc="#e07b000c", fontsize=7.3)
+            link(62, 28, x+3.1, 25)
+
+        ax.set_title("Classificação das Máquinas Elétricas", fontsize=11.5, color=TX, pad=10)
+        fig.tight_layout(); return fig
+
+    # ════════════════════════════════════════════════════════════════════════
+    # EXPLORADOR 4 — TORQUE PULSANTE EM MÁQUINAS CILÍNDRICAS
+    # ════════════════════════════════════════════════════════════════════════
+
+    def exp_torque():
+        st.markdown("**Torque instantâneo em máquina cilíndrica** — compare o torque "
+                     "pulsante com seu valor médio nos casos síncrono e assíncrono:")
+        caso = st.radio("Caso", ["Síncrona ($\\omega_m=\\omega_s$, $\\omega_r=0$)",
+                                  "Assíncrona ($\\omega_m=\\omega_s-\\omega_r$)"],
+                         key="m1_exp4_caso", horizontal=True)
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            Irm = st.slider("$I_{rm}$ (A)", 0.5, 5.0, 2.0, step=0.1, key="m1_exp4_Irm")
+        with c2:
+            Ism = st.slider("$I_{sm}$ (A)", 0.5, 5.0, 2.0, step=0.1, key="m1_exp4_Ism")
+        with c3:
+            delta = st.slider("δ (graus)", -90, 90, 30, step=5, key="m1_exp4_delta")
+
+        M = 1.0
+        ws = 2*np.pi*1.0
+        delta_r = np.radians(delta)
+        t = np.linspace(0, 2.0, 600)
+
+        if caso.startswith("Síncrona"):
+            T_inst = -(Irm*Ism*M/2) * (np.sin(2*ws*t + delta_r) + np.sin(delta_r))
+            T_med = -(Irm*Ism*M/2) * np.sin(delta_r)
+        else:
+            wr = st.slider("$\\omega_r$ / $\\omega_s$ (escorregamento)", 0.05, 0.95, 0.3,
+                            step=0.05, key="m1_exp4_wr")
+            wr_abs = wr*ws
+            alpha = np.radians(20)
+            T_inst = -(Irm*Ism*M/4) * (
+                np.sin(2*ws*t + alpha + delta_r) + np.sin(-2*wr_abs*t - alpha + delta_r)
+                + np.sin(2*ws*t - 2*wr_abs*t - alpha + delta_r) + np.sin(alpha + delta_r))
+            T_med = -(Irm*Ism*M/4) * np.sin(alpha + delta_r)
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=t, y=T_inst, mode="lines",
+                                  line=dict(color=AZ, width=2.5), name="T(t) instantâneo"))
+        fig.add_trace(go.Scatter(x=[t[0], t[-1]], y=[T_med, T_med], mode="lines",
+                                  line=dict(color=LR, width=2, dash="dash"),
+                                  name=f"T médio = {T_med:.3f} N·m"))
+        fig.update_layout(title="Torque eletromagnético — componente pulsante + valor médio",
+                           xaxis_title="t (s)", yaxis_title="Torque (N·m)",
+                           legend=dict(orientation="h", y=-0.25))
+        show_plot(fig, key="m1_exp4_torque", height=380)
+
+        st.metric("Torque médio", f"{T_med:.3f} N·m")
+        st.info("No caso **síncrono**, o torque pulsa em $2\\omega_s$ em torno de um valor "
+                "médio não-nulo — condição $|\\omega_m|=|\\omega_s|$ satisfeita para qualquer "
+                "$\\delta$. No caso **assíncrono**, o valor médio depende do escorregamento "
+                "através do ângulo $\\alpha$; em máquinas de indução reais $\\alpha$ e $I_{rm}$ "
+                "resultam da própria indução no rotor, não são livres como aqui.")
+
     # ═══════════════════════════════════════════════════════════════════════════════
     # CABEÇALHO
     # ═══════════════════════════════════════════════════════════════════════════════
-    st.title("🔋 Circuitos Magnéticos")
+    st.title("🔋 Introdução à Conversão Eletromecânica de Energia")
     st.caption("⚡ SINTONIA · Máquinas Elétricas · 👤 Marcus V A Fernandes · ✉️ marcus.fernandes@ifrn.edu.br")
     st.markdown("---")
 
@@ -837,8 +1328,18 @@ def run():
 
     **[9. Equações Dinâmicas e Tipos de Ação](#9-equacoes-dinamicas-e-tipos-de-acao)**
 
+    **[10. Conceitos Básicos de Máquinas Rotativas](#10-conceitos-basicos-de-maquinas-rotativas)**
+    - Estator, rotor e máquina elementar de dois enrolamentos
+    - Fluxos concatenados e energia armazenada
+
+    **[11. Torque Eletromagnético](#11-torque-eletromagnetico)**
+    - Torque via coenergia · Máquinas cilíndricas
+    - Condição de torque médio não-nulo · Casos síncrono e assíncrono
+
+    **[12. Classificação das Máquinas Elétricas](#12-classificacao-das-maquinas-eletricas)**
+
     **[🎛️ Exploradores Interativos](#exploradores-interativos)**
-    - Circuito magnético · Curva B-H · Força eletromagnética
+    - Circuito magnético · Curva B-H · Força eletromagnética · Torque pulsante
 
     **Referências** (ao final da página)
     """)
@@ -997,11 +1498,18 @@ def run():
     Para $L$ constante (sistema linear), essa relação se reduz à forma mais familiar:
 
     $$e = L\frac{di}{dt}$$
+
+    **Energia armazenada no campo magnético** de uma bobina, em sistema linear:
+
+    $$W_L = \frac{1}{2}\,L\,i^2 = \frac{\lambda^2}{2L} = \frac{1}{2}\,\mathcal{R}\,\phi^2$$
+
+    > A variação de $W_L$ com a posição do rotor é o mecanismo de **geração de força e torque
+    > eletromagnético** — princípio retomado nas Seções 9 (força) e 11 (torque) deste módulo.
     """)
 
-    show_fig(fig_circuito_mag(), 0.5)
+    show_plot(plotly_energia_indutiva(), key="m1_fig_energia", height=340)
 
-    st.markdown("### 4.1 Indutância Mútua e Energia Armazenada")
+    st.markdown("### 4.1 Indutância Mútua")
 
     col1, col2 = st.columns([1, 1])
     with col1:
@@ -1017,18 +1525,6 @@ def run():
     - $L_{12} = L_{21}$: **indutância mútua** (reciprocidade de Neumann)
     - Análise linear válida para $\mu$ constante (região linear da curva $B$-$H$)
     """)
-
-    st.markdown(r"""
-    **Energia armazenada no campo magnético:**
-
-    $$W_L = \frac{1}{2}\,L\,i^2 = \frac{\lambda^2}{2L} = \frac{1}{2}\,\mathcal{R}\,\phi^2$$
-
-    > A variação de $W_L$ com a posição do rotor é o mecanismo de **geração de força e torque
-    > eletromagnético** — princípio que será retomado nos módulos sobre máquinas CC, de
-    > indução e síncronas.
-    """)
-
-    show_plot(plotly_energia_indutiva(), key="m1_fig_energia", height=340)
 
     st.divider()
 
@@ -1221,7 +1717,7 @@ def run():
 
     Essa equação acopla a dinâmica mecânica (posição $x$) à variável elétrica (corrente $i$),
     e é a base para a modelagem de atuadores eletromagnéticos, relés e, de forma generalizada,
-    das máquinas elétricas rotativas estudadas nos próximos módulos.
+    das máquinas elétricas rotativas estudadas a seguir.
     """)
 
     st.markdown("### Tipos de Ação")
@@ -1240,16 +1736,157 @@ def run():
 
 
     # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 10 — CONCEITOS BÁSICOS DE MÁQUINAS ROTATIVAS
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("10. Conceitos Básicos de Máquinas Rotativas")
+
+    st.markdown(r"""
+    Uma máquina rotativa tem duas partes principais: o **estator**, parte estática, e o
+    **rotor**, parte móvel que gira em torno de um eixo. A máquina elementar de dois
+    enrolamentos abaixo ilustra os elementos comuns a toda máquina rotativa: um enrolamento
+    de estator percorrido por $i_s$, um enrolamento de rotor percorrido por $i_r$, e um
+    ângulo $\theta$ entre os eixos magnéticos dos dois enrolamentos, que varia com a
+    velocidade angular do rotor $\omega_m$.
+    """)
+
+    show_fig(fig_maquina_elementar(), 0.7)
+
+    st.markdown(r"""
+    **Fluxos concatenados.** Cada enrolamento é concatenado pelo fluxo produzido por ambas as
+    correntes, através das indutâncias próprias ($L_{ss}$, $L_{rr}$) e da indutância mútua
+    ($L_{sr}=L_{rs}$), que depende da posição relativa $\theta$ entre os enrolamentos:
+
+    $$\lambda_s = L_{ss}\,i_s + L_{sr}\,i_r \qquad\qquad \lambda_r = L_{sr}\,i_s + L_{rr}\,i_r$$
+
+    **Energia do campo.** Substituindo na expressão diferencial de $W_f$ (Seção 8) e
+    integrando cada termo de $0$ até o valor final de cada corrente:
+
+    $$dW_f = i_s\,L_{ss}\,di_s + i_r\,L_{rr}\,di_r + L_{sr}\,d(i_r\,i_s)$$
+
+    $$W_f = \frac{1}{2}L_{ss}\,i_s^2 + \frac{1}{2}L_{rr}\,i_r^2 + L_{sr}\,i_r\,i_s$$
+
+    Essa expressão de energia é o ponto de partida para obter o torque eletromagnético,
+    desenvolvido na próxima seção.
+    """)
+
+    st.divider()
+
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 11 — TORQUE ELETROMAGNÉTICO
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("11. Torque Eletromagnético")
+
+    st.markdown(r"""
+    Por analogia com a força mecânica linear (Seção 8.1), o torque é obtido derivando a
+    coenergia em relação à posição angular $\theta$, com as correntes mantidas constantes:
+
+    $$T = \left.\frac{\partial W_f'(i,\theta)}{\partial\theta}\right|_{i=\text{constante}}$$
+
+    Aplicando à energia da Seção 10 (em sistemas magneticamente lineares, $W_f=W_f'$):
+
+    $$T = \frac{1}{2}i_s^2\frac{dL_{ss}}{d\theta} + \frac{1}{2}i_r^2\frac{dL_{rr}}{d\theta} + i_r\,i_s\,\frac{dL_{sr}}{d\theta}$$
+    """)
+
+    st.markdown("### Máquinas cilíndricas")
+    st.markdown(r"""
+    Numa **máquina cilíndrica**, o entreferro é uniforme: $L_{ss}$ e $L_{rr}$ não dependem de
+    $\theta$, e os dois primeiros termos do torque se anulam, restando apenas o termo de
+    acoplamento mútuo:
+
+    $$T = i_r\,i_s\,\frac{dL_{sr}}{d\theta}$$
+    """)
+
+    show_fig(fig_maquina_cilindrica(), 0.55)
+
+    st.markdown(r"""
+    Considerando o rotor girando a velocidade constante, com a indutância mútua variando
+    senoidalmente com $\theta$, e correntes senoidais de estator e rotor com frequências
+    elétricas próprias:
+
+    $$\theta = \omega_m t + \delta \qquad L_{sr} = M\cos\theta$$
+
+    $$i_r = I_{rm}\cos(\omega_r t+\alpha) \qquad i_s = I_{sm}\cos(\omega_s t)$$
+
+    Substituindo e expandindo o produto de cossenos em soma de senos, o torque instantâneo
+    resulta em **quatro componentes oscilatórias**, cada uma numa combinação distinta das
+    três frequências envolvidas:
+
+    $$T = -\frac{I_{rm}I_{sm}M}{4}\left(\sin[(\omega_m+\omega_s+\omega_r)t+\alpha+\delta] + \sin[(\omega_m-\omega_s-\omega_r)t-\alpha+\delta] + \sin[(\omega_m+\omega_s-\omega_r)t-\alpha+\delta] + \sin[(\omega_m-\omega_s+\omega_r)t+\alpha+\delta]\right)$$
+
+    > Cada termo oscila no tempo e tem média nula — **exceto** quando o argumento do seno
+    > perde a dependência temporal, isto é, quando o coeficiente de $t$ se anula. Isso só
+    > ocorre quando:
+    > $$|\omega_m| = |\omega_s \pm \omega_r|$$
+    > Essa é a condição fundamental para que uma máquina cilíndrica produza **torque médio
+    > não-nulo** — a base para distinguir máquinas síncronas de assíncronas.
+    """)
+
+    st.markdown("### Máquina síncrona")
+    st.markdown(r"""
+    Com $\omega_m=\omega_s$, $\omega_r=0$ (corrente de rotor contínua) e $\alpha=0$, os quatro
+    termos colapsam em apenas dois: um oscilante em $2\omega_s$ e um constante:
+
+    $$T = -\frac{I_r\,I_{sm}\,M}{2}\left[\sin(2\omega_s t+\delta)+\sin(\delta)\right]$$
+
+    O torque pulsa em $2\omega_s$ em torno do valor médio $-\frac{1}{2}I_rI_{sm}M\sin\delta$,
+    não-nulo para qualquer $\delta \ne 0,\pi$.
+    """)
+
+    st.markdown("### Máquina assíncrona")
+    st.markdown(r"""
+    Com $\omega_m=\omega_s-\omega_r$ (rotor girando mais devagar que o campo do estator —
+    escorregamento), o torque instantâneo é:
+
+    $$T = -\frac{I_{rm}I_{sm}M}{4}\left(\sin(2\omega_s t+\alpha+\delta) + \sin(-2\omega_r t-\alpha+\delta) + \sin(2\omega_s t-2\omega_r t-\alpha+\delta) + \sin(\alpha+\delta)\right)$$
+
+    Novamente há uma parcela constante, $-\frac{1}{4}I_{rm}I_{sm}M\sin(\alpha+\delta)$, que
+    sustenta o torque médio — mas aqui $\alpha$ e $I_{rm}$ não são impostos externamente: em
+    uma máquina de indução real, eles resultam da própria corrente induzida no rotor pelo
+    escorregamento entre o campo girante e o rotor.
+    """)
+
+    st.divider()
+
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 12 — CLASSIFICAÇÃO DAS MÁQUINAS ELÉTRICAS
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("12. Classificação das Máquinas Elétricas")
+
+    st.markdown(r"""
+    As máquinas elétricas dividem-se primeiro em **rotativas** (estator e rotor, como
+    estudado na Seção 10) e **estacionárias** (transformadores, sem partes móveis). Dentro
+    das rotativas, a classificação principal é pelo tipo de alimentação — corrente contínua
+    ou corrente alternada — e, dentro de cada uma, pelo princípio de operação:
+    """)
+
+    show_fig(fig_taxonomia(), 0.95)
+
+    st.markdown(r"""
+    A distinção entre **máquina síncrona** e **máquina assíncrona (de indução)**, vista na
+    Seção 11, é a divisão fundamental dentro das máquinas de corrente alternada: na síncrona
+    o rotor gira exatamente na velocidade do campo girante ($\omega_m=\omega_s$); na
+    assíncrona há escorregamento ($\omega_m=\omega_s-\omega_r$), característico do
+    funcionamento por indução. Os módulos seguintes detalham cada uma dessas famílias.
+    """)
+
+    st.divider()
+
+
+    # ═══════════════════════════════════════════════════════════════════════════════
     # EXPLORADORES INTERATIVOS
     # ═══════════════════════════════════════════════════════════════════════════════
     st.header("🎛️ Exploradores Interativos")
 
-    tab1, tab2, tab3 = st.tabs(["Explorador 1 — Circuito Magnético",
-                                 "Explorador 2 — Curva B-H",
-                                 "Explorador 3 — Força Eletromagnética"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Explorador 1 — Circuito Magnético",
+                                       "Explorador 2 — Curva B-H",
+                                       "Explorador 3 — Força Eletromagnética",
+                                       "Explorador 4 — Torque Pulsante"])
     with tab1: exp_circuito()
     with tab2: exp_BH()
     with tab3: exp_forca()
+    with tab4: exp_torque()
 
     st.divider()
 
@@ -1271,7 +1908,7 @@ def run():
 
     st.markdown(
         "<div style='text-align:center;color:gray;font-size:12px'>"
-        "🔋 Circuitos Magnéticos &nbsp;·&nbsp; ⚡ SINTONIA — Máquinas Elétricas<br>"
+        "🔋 Conversão Eletromecânica de Energia &nbsp;·&nbsp; ⚡ SINTONIA — Máquinas Elétricas<br>"
         "👤 Marcus V A Fernandes &nbsp;·&nbsp; 🏛️ IFRN-CNAT"
         " &nbsp;·&nbsp; 🏷️ v1.0 &nbsp;·&nbsp; 📅 2026"
         "</div>",
