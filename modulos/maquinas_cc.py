@@ -5,10 +5,11 @@ Curso: Engenharia de Energia
 Instituição: IFRN — Campus Natal-Central (CNAT)
 Autor: Marcus V A Fernandes · marcus.fernandes@ifrn.edu.br · v1.0
 
-Fonte: 1º PPTX-fonte do Módulo 3 — "CEEI - MCC - 01 - Conceitos" (conceitos
+Fonte: 1º e 2º PPTX-fonte do Módulo 3 — "CEEI - MCC - 01 - Conceitos" (conceitos
 elementares, estrutura construtiva, tensão na armadura, torque eletromagnético,
-curva de magnetização, reação da armadura e interpolos). Tópicos de gerador,
-motor e dinâmica de regime aguardam os próximos PPTX-fonte.
+curva de magnetização, reação da armadura e interpolos) e "CEEI - MCC - 02 - Gerador"
+(classificação dos geradores, regulação de tensão, excitação independente, shunt,
+composto e série). Tópicos de motor e dinâmica de regime aguardam o 3º PPTX-fonte.
 """
 
 import streamlit as st
@@ -850,6 +851,528 @@ def run():
         return fig
 
     # ════════════════════════════════════════════════════════════════════════
+    # FIGURAS — OPERAÇÃO COMO GERADOR (matplotlib)
+    # ════════════════════════════════════════════════════════════════════════
+
+    def fig_classificacao_geradores():
+        """5 esquemas de conexão do campo: independente, shunt, série, composto
+        curto e composto longo."""
+        fig, axes = plt.subplots(1, 5, figsize=(13.5, 3.4))
+        fig.patch.set_alpha(0)
+
+        def armature(ax, cx, cy, r=0.34):
+            ax.add_patch(plt.Circle((cx, cy), r, fc="white", ec=TX, lw=1.6, zorder=5))
+            ax.text(cx, cy, "$E_a$", fontsize=9, color=TX, ha="center", va="center", zorder=6)
+            return cx, cy, r
+
+        def rheostat(ax, x0, x1, y, color=AZ):
+            _zigzag(ax, x0, x1, y, n_zig=3, amp=0.1, color=color, lw=1.4)
+            mx = (x0+x1)/2
+            ax.annotate("", xy=(mx+0.18, y+0.22), xytext=(mx-0.18, y-0.18),
+                        arrowprops=dict(arrowstyle="-|>", color=color, lw=1.2), zorder=6)
+
+        # ---- (a) Independente ----
+        ax = axes[0]; ax.set_facecolor("none"); ax.axis("off"); ax.set_aspect("equal")
+        ax.set_xlim(-0.3, 2.6); ax.set_ylim(-1.6, 1.6)
+        cx, cy, r = armature(ax, 1.6, 0)
+        ax.plot([cx, cx], [cy+r, 1.3], color=TX, lw=1.4); ax.plot([cx-0.05,cx+0.05],[1.3,1.3],color=TX,lw=0)
+        ax.add_patch(plt.Circle((cx,1.35),.05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.text(cx+0.15,1.35,"+",fontsize=10,color=TX, va="center")
+        ax.plot([cx, cx], [cy-r, -1.3], color=TX, lw=1.4)
+        ax.add_patch(plt.Circle((cx,-1.35),.05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.text(cx+0.15,-1.35,"$-$",fontsize=10,color=TX, va="center")
+        # campo separado, à esquerda
+        ax.plot([0.1,0.1],[-0.55,0.55], color=AZ, lw=1.4)
+        _zigzag_v(ax, -0.2, 0.2, 0.1, n_zig=3, amp=0.1, color=AZ, lw=1.4)
+        rheostat(ax, -0.05, 0.25, 0.55, color=AZ)
+        ax.add_patch(plt.Circle((0.1,-0.55),.05, fc="white", ec=AZ, lw=1.2, zorder=6))
+        ax.add_patch(plt.Circle((0.1,0.85),.05, fc="white", ec=AZ, lw=1.2, zorder=6))
+        ax.plot([0.1,0.1],[0.55,0.85], color=AZ, lw=1.4)
+        ax.set_title("(a) Independente", fontsize=9.5, color=TX, pad=6)
+
+        # ---- (b) Shunt (paralelo) ----
+        ax = axes[1]; ax.set_facecolor("none"); ax.axis("off"); ax.set_aspect("equal")
+        ax.set_xlim(-0.3, 2.6); ax.set_ylim(-1.6, 1.6)
+        cx, cy, r = armature(ax, 1.0, 0)
+        ax.plot([cx,cx],[cy+r,1.3], color=TX, lw=1.4)
+        ax.plot([cx,cx],[cy-r,-1.3], color=TX, lw=1.4)
+        ax.plot([cx,2.3],[1.3,1.3], color=TX, lw=1.4)
+        ax.plot([cx,2.3],[-1.3,-1.3], color=TX, lw=1.4)
+        ax.add_patch(plt.Circle((2.3,1.3),.05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.add_patch(plt.Circle((2.3,-1.3),.05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.text(2.45,1.3,"+",fontsize=10,color=TX, va="center")
+        ax.text(2.45,-1.3,"$-$",fontsize=10,color=TX, va="center")
+        fx = 0.25
+        ax.plot([fx,cx],[1.3,1.3], color=AZ, lw=1.4)
+        ax.plot([fx,cx],[-1.3,-1.3], color=AZ, lw=1.4)
+        _zigzag_v(ax, -0.6, 0.4, fx, n_zig=4, amp=0.1, color=AZ, lw=1.4)
+        rheostat(ax, fx-0.15, fx+0.15, 0.8, color=AZ)
+        ax.plot([fx,fx],[0.4,0.65], color=AZ, lw=1.4); ax.plot([fx,fx],[0.95,1.3], color=AZ, lw=1.4)
+        ax.plot([fx,fx],[-1.3,-0.6], color=AZ, lw=1.4)
+        ax.set_title("(b) Shunt (paralelo)", fontsize=9.5, color=TX, pad=6)
+
+        # ---- (c) Série ----
+        ax = axes[2]; ax.set_facecolor("none"); ax.axis("off"); ax.set_aspect("equal")
+        ax.set_xlim(-0.3, 2.6); ax.set_ylim(-1.6, 1.6)
+        cx, cy, r = armature(ax, 0.6, 0)
+        ax.plot([cx,cx],[cy+r,1.3], color=TX, lw=1.4)
+        ax.plot([cx,cx],[cy-r,-1.3], color=TX, lw=1.4)
+        ax.plot([cx,1.3],[1.3,1.3], color=TX, lw=1.4)
+        _zigzag(ax, 1.3, 2.0, 1.3, n_zig=3, amp=0.1, color=VD, lw=1.5)
+        ax.plot([2.0,2.3],[1.3,1.3], color=TX, lw=1.4)
+        ax.plot([cx,2.3],[-1.3,-1.3], color=TX, lw=1.4)
+        ax.add_patch(plt.Circle((2.3,1.3),.05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.add_patch(plt.Circle((2.3,-1.3),.05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.text(2.45,1.3,"+",fontsize=10,color=TX, va="center")
+        ax.text(2.45,-1.3,"$-$",fontsize=10,color=TX, va="center")
+        ax.set_title("(c) Série", fontsize=9.5, color=TX, pad=6)
+
+        # ---- (d) Composto curto (short shunt) ----
+        ax = axes[3]; ax.set_facecolor("none"); ax.axis("off"); ax.set_aspect("equal")
+        ax.set_xlim(-0.3, 2.7); ax.set_ylim(-1.6, 1.6)
+        cx, cy, r = armature(ax, 0.6, 0)
+        ax.plot([cx,cx],[cy+r,1.3], color=TX, lw=1.4)
+        ax.plot([cx,cx],[cy-r,-1.3], color=TX, lw=1.4)
+        nodex = 1.0
+        ax.plot([cx,nodex],[1.3,1.3], color=TX, lw=1.4)
+        ax.add_patch(plt.Circle((nodex,1.3), .035, fc=TX, ec=TX, zorder=7))
+        _zigzag(ax, nodex+0.3, nodex+1.0, 1.3, n_zig=3, amp=0.1, color=VD, lw=1.5)
+        ax.plot([nodex,nodex+0.3],[1.3,1.3], color=TX, lw=1.4)
+        ax.plot([nodex+1.0,2.4],[1.3,1.3], color=TX, lw=1.4)
+        ax.plot([cx,2.4],[-1.3,-1.3], color=TX, lw=1.4)
+        ax.add_patch(plt.Circle((2.4,1.3),.05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.add_patch(plt.Circle((2.4,-1.3),.05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.text(2.55,1.3,"+",fontsize=9,color=TX, va="center")
+        ax.text(2.55,-1.3,"$-$",fontsize=9,color=TX, va="center")
+        fx = nodex
+        _zigzag_v(ax, -0.6, 0.4, fx, n_zig=4, amp=0.1, color=AZ, lw=1.4)
+        rheostat(ax, fx-0.15, fx+0.15, 0.8, color=AZ)
+        ax.plot([fx,fx],[0.4,0.65], color=AZ, lw=1.4); ax.plot([fx,fx],[0.95,1.3], color=AZ, lw=1.4)
+        ax.plot([fx,fx],[-1.3,-0.6], color=AZ, lw=1.4)
+        ax.set_title("(d) Composto curto", fontsize=9.5, color=TX, pad=6)
+
+        # ---- (e) Composto longo (long shunt) ----
+        ax = axes[4]; ax.set_facecolor("none"); ax.axis("off"); ax.set_aspect("equal")
+        ax.set_xlim(-0.3, 2.7); ax.set_ylim(-1.6, 1.6)
+        cx, cy, r = armature(ax, 0.6, 0)
+        ax.plot([cx,cx],[cy+r,1.3], color=TX, lw=1.4)
+        ax.plot([cx,cx],[cy-r,-1.3], color=TX, lw=1.4)
+        _zigzag(ax, cx+0.3, cx+1.0, 1.3, n_zig=3, amp=0.1, color=VD, lw=1.5)
+        ax.plot([cx,cx+0.3],[1.3,1.3], color=TX, lw=1.4)
+        nodex = cx+1.0
+        ax.plot([nodex,2.4],[1.3,1.3], color=TX, lw=1.4)
+        ax.add_patch(plt.Circle((nodex,1.3), .035, fc=TX, ec=TX, zorder=7))
+        ax.plot([cx,2.4],[-1.3,-1.3], color=TX, lw=1.4)
+        ax.add_patch(plt.Circle((2.4,1.3),.05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.add_patch(plt.Circle((2.4,-1.3),.05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.text(2.55,1.3,"+",fontsize=9,color=TX, va="center")
+        ax.text(2.55,-1.3,"$-$",fontsize=9,color=TX, va="center")
+        fx = nodex
+        _zigzag_v(ax, -0.6, 0.4, fx, n_zig=4, amp=0.1, color=AZ, lw=1.4)
+        rheostat(ax, fx-0.15, fx+0.15, 0.8, color=AZ)
+        ax.plot([fx,fx],[0.4,0.65], color=AZ, lw=1.4); ax.plot([fx,fx],[0.95,1.3], color=AZ, lw=1.4)
+        ax.plot([fx,fx],[-1.3,-0.6], color=AZ, lw=1.4)
+        ax.set_title("(e) Composto longo", fontsize=9.5, color=TX, pad=6)
+
+        fig.tight_layout()
+        return fig
+
+
+    def fig_gerador_independente_circuito():
+        """Circuito do gerador CC de excitação independente: malha de campo (Vf, Rfc, Rfw)
+        e malha de armadura (Ea, Ra) alimentando a carga RL."""
+        fig, ax = _mpl_base((7.2, 4.0))
+        ax.set_xlim(-0.5, 9.4); ax.set_ylim(-2.3, 2.3)
+
+        # --- malha de campo (esquerda) ---
+        fx0 = 0.0
+        ax.plot([fx0, fx0], [-1.0, 0.0], color=AZ, lw=1.5)
+        _zigzag_v(ax, 0.0, 0.9, fx0, n_zig=3, amp=0.12, color=AZ, lw=1.5)
+        ax.text(fx0-0.35, 0.45, "$R_{fc}$", fontsize=9.5, color=AZ, ha="center")
+        ax.plot([fx0, fx0+1.0], [0.9, 0.9], color=AZ, lw=1.5)
+        _zigzag(ax, fx0+1.0, fx0+2.0, 0.9, n_zig=3, amp=0.12, color=AZ, lw=1.5)
+        ax.text(fx0+1.5, 1.18, "$R_{fw}$", fontsize=9.5, color=AZ, ha="center")
+        ax.plot([fx0+2.0, fx0+2.4], [0.9, 0.9], color=AZ, lw=1.5)
+        ax.plot([fx0+2.4, fx0+2.4], [0.9, -1.0], color=AZ, lw=1.5)
+        ax.plot([fx0+2.4, fx0], [-1.0, -1.0], color=AZ, lw=1.5)
+        ax.add_patch(plt.Circle((fx0, -1.0), .045, fc="white", ec=AZ, lw=1.2, zorder=6))
+        ax.text(fx0-0.25, -1.0, "+", fontsize=10, color=AZ, va="center")
+        ax.text(fx0-0.55, -1.0, "$V_f$", fontsize=9.5, color=AZ, va="center")
+        ax.annotate("", xy=(fx0+0.45, -0.55), xytext=(fx0+0.05, -0.95),
+                    arrowprops=dict(arrowstyle="-|>", color=AZ, lw=1.1))
+        ax.text(fx0+0.65, -0.6, "$I_f$", fontsize=9.5, color=AZ)
+
+        # --- malha de armadura (centro) ---
+        ax0 = 3.6
+        ax.add_patch(plt.Circle((ax0, 0), 0.5, fc="white", ec=TX, lw=1.7, zorder=5))
+        ax.text(ax0, 0, "$E_a$", fontsize=11, color=TX, ha="center", va="center", zorder=6)
+        ax.annotate("", xy=(ax0-0.75, -0.6), xytext=(ax0-0.4, -0.35),
+                    arrowprops=dict(arrowstyle="-|>", color=CZ, lw=1.1))
+        ax.text(ax0-1.0, -0.7, "$\\omega_m$", fontsize=9.5, color=CZ)
+        ax.plot([ax0, ax0], [0.5, 1.3], color=TX, lw=1.5)
+        _zigzag_v(ax, 1.3, 2.0, ax0, n_zig=3, amp=0.12, color=TX, lw=1.5)
+        ax.text(ax0+0.32, 1.65, "$R_a$", fontsize=9.5, color=TX)
+        ax.plot([ax0, ax0+1.6], [2.0, 2.0], color=TX, lw=1.5)
+        ax.annotate("", xy=(ax0+0.9, 2.0), xytext=(ax0+0.5, 2.0),
+                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.1))
+        ax.text(ax0+0.7, 2.18, "$I_a$", fontsize=9.5, color=TX, ha="center")
+        ax.plot([ax0, ax0], [-0.5, -2.0], color=TX, lw=1.5)
+        ax.plot([ax0, ax0+5.0], [-2.0, -2.0], color=TX, lw=1.5)
+        ax.text(ax0+0.15, 0.65, "+", fontsize=10, color=TX)
+        ax.text(ax0+0.15, -0.65, "$-$", fontsize=10, color=TX)
+
+        # --- terminais / carga (direita) ---
+        tx = ax0+1.6
+        ax.add_patch(plt.Circle((tx, 2.0), .05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.text(tx+0.18, 2.0, "+", fontsize=10, color=TX, va="center")
+        ax.text(tx-0.35, 2.25, "$I_t$", fontsize=9.5, color=TX)
+        ax.annotate("", xy=(tx+0.05, 2.0), xytext=(tx-0.35, 2.0),
+                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.0))
+        ax.text(ax0+2.5, 0, "$V_t$", fontsize=10.5, color=TX, ha="center")
+        lx = ax0+5.0
+        ax.plot([lx, lx], [-2.0, 2.0], color=LR, lw=1.5)
+        _zigzag_v(ax, -1.4, 1.4, lx, n_zig=5, amp=0.13, color=LR, lw=1.5)
+        ax.plot([tx, lx], [2.0, 2.0], color=TX, lw=1.5)
+        ax.text(lx+0.3, 0, "$R_L$", fontsize=9.5, color=LR, va="center")
+        ax.add_patch(plt.Circle((tx, -2.0), .05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.text(tx+0.18, -2.0, "$-$", fontsize=10, color=TX, va="center")
+
+        fig.tight_layout()
+        return fig
+
+
+    def fig_caracteristica_terminal():
+        """Curva característica terminal Vt x It: queda IaRa, efeito da reação de armadura
+        e ponto de operação com a reta de carga."""
+        fig, ax = plt.subplots(figsize=(6.6, 4.4))
+        fig.patch.set_alpha(0); ax.set_facecolor("none")
+
+        It = np.linspace(0, 120, 200)
+        Ea = 100 - 0.03*It                      # leve queda por reação de armadura na FEM
+        Vt_no_ar = 100 - 0.18*It                  # reta: só queda IaRa
+        Vt_ar = 100 - 0.18*It - 0.0028*It**2      # com reação de armadura (achatamento)
+
+        ax.plot(It, np.full_like(It, 100), color=CZ, lw=1.3, ls=":")
+        ax.plot(It, Ea, color=AZ, lw=2.0, ls="--", label="$E_a$ (com reação de armadura)")
+        ax.plot(It, Vt_no_ar, color=CZ, lw=1.8, ls="-.", label="Terminal sem reação de armadura")
+        ax.plot(It, Vt_ar, color=RX, lw=2.6, label="Terminal com reação de armadura")
+
+        RL_slope = 0.65
+        load = RL_slope*It
+        ax.plot(It, load, color=LR, lw=1.8, label="Reta de carga ($R_L$)")
+
+        # ponto de operação (interseção aproximada)
+        idx = np.argmin(np.abs(Vt_ar-load))
+        ax.plot(It[idx], Vt_ar[idx], marker="o", color=TX, ms=7, zorder=6)
+        ax.annotate("Ponto de\noperação", xy=(It[idx], Vt_ar[idx]), xytext=(It[idx]+12, Vt_ar[idx]-18),
+                    fontsize=9, color=TX, arrowprops=dict(arrowstyle="->", color=TX, lw=1.0))
+
+        ax.annotate("", xy=(60, Ea[np.argmin(np.abs(It-60))]), xytext=(60, Vt_no_ar[np.argmin(np.abs(It-60))]),
+                    arrowprops=dict(arrowstyle="<->", color=TX, lw=1.0))
+        ax.text(62, (Ea[np.argmin(np.abs(It-60))]+Vt_no_ar[np.argmin(np.abs(It-60))])/2, "$I_aR_a$",
+                fontsize=9, color=TX)
+
+        ax.set_xlim(0, 120); ax.set_ylim(0, 110)
+        ax.set_xlabel("$I_t$ (% corrente nominal)", fontsize=10, color=TX)
+        ax.set_ylabel("$V_t$ (% tensão nominal)", fontsize=10, color=TX)
+        ax.legend(fontsize=8, loc="lower left", frameon=False)
+        for s in ["top","right"]: ax.spines[s].set_visible(False)
+        ax.spines["left"].set_color(TX); ax.spines["bottom"].set_color(TX)
+        ax.tick_params(colors=TX, labelsize=8)
+        ax.set_title("Característica terminal — excitação independente", fontsize=10.5, color=TX, pad=10)
+        fig.tight_layout()
+        return fig
+
+
+    def fig_gerador_shunt_circuito():
+        """Circuito do gerador CC shunt (autoexcitado): campo conectado em paralelo
+        com a própria armadura."""
+        fig, ax = _mpl_base((6.6, 4.0))
+        ax.set_xlim(-1.0, 7.4); ax.set_ylim(-2.3, 2.3)
+
+        ax0 = 2.0
+        ax.add_patch(plt.Circle((ax0, 0), 0.5, fc="white", ec=TX, lw=1.7, zorder=5))
+        ax.text(ax0, 0, "$E_a$", fontsize=11, color=TX, ha="center", va="center", zorder=6)
+        ax.annotate("", xy=(ax0-0.75, -0.6), xytext=(ax0-0.4, -0.35),
+                    arrowprops=dict(arrowstyle="-|>", color=CZ, lw=1.1))
+        ax.text(ax0-1.0, -0.7, "$\\omega_m$", fontsize=9.5, color=CZ)
+        ax.plot([ax0, ax0], [0.5, 1.3], color=TX, lw=1.5)
+        _zigzag_v(ax, 1.3, 2.0, ax0, n_zig=3, amp=0.12, color=TX, lw=1.5)
+        ax.text(ax0+0.32, 1.65, "$R_a$", fontsize=9.5, color=TX)
+        ax.plot([ax0, ax0], [-0.5, -2.0], color=TX, lw=1.5)
+        nodex = ax0
+        ax.plot([nodex, nodex+3.6], [2.0, 2.0], color=TX, lw=1.5)
+        ax.plot([nodex, nodex+3.6], [-2.0, -2.0], color=TX, lw=1.5)
+        ax.annotate("", xy=(ax0+0.9, 2.0), xytext=(ax0+0.5, 2.0),
+                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.1))
+        ax.text(ax0+0.7, 2.2, "$I_a$", fontsize=9.5, color=TX, ha="center")
+        ax.text(ax0+0.15, 0.65, "+", fontsize=10, color=TX)
+        ax.text(ax0+0.15, -0.65, "$-$", fontsize=10, color=TX)
+
+        # campo (shunt), entre a armadura e os terminais
+        fx = ax0 + 1.3
+        ax.add_patch(plt.Circle((fx, 2.0), .035, fc=TX, ec=TX, zorder=7))
+        ax.add_patch(plt.Circle((fx, -2.0), .035, fc=TX, ec=TX, zorder=7))
+        _zigzag_v(ax, -1.2, 0.3, fx, n_zig=4, amp=0.12, color=AZ, lw=1.5)
+        mx = fx
+        ax.annotate("", xy=(mx+0.22, 0.75), xytext=(mx-0.18, 0.35),
+                    arrowprops=dict(arrowstyle="-|>", color=AZ, lw=1.2))
+        ax.plot([fx, fx], [0.3, 0.55], color=AZ, lw=1.5)
+        _zigzag_v(ax, 0.55, 1.0, fx, n_zig=2, amp=0.1, color=AZ, lw=1.5)
+        ax.plot([fx, fx], [1.0, 2.0], color=AZ, lw=1.5)
+        ax.plot([fx, fx], [-2.0, -1.2], color=AZ, lw=1.5)
+        ax.annotate("", xy=(fx-0.45, 1.55), xytext=(fx-0.05, 1.85),
+                    arrowprops=dict(arrowstyle="-|>", color=AZ, lw=1.1))
+        ax.text(fx-0.75, 1.5, "$I_f$", fontsize=9.5, color=AZ)
+        ax.text(fx+0.3, -0.4, "$R_{fc}{+}R_{fw}$", fontsize=8.5, color=AZ, rotation=90, va="center")
+
+        # terminais / carga
+        tx = nodex+3.6
+        ax.add_patch(plt.Circle((tx, 2.0), .05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.add_patch(plt.Circle((tx, -2.0), .05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.text(tx+0.18, 2.0, "+", fontsize=10, color=TX, va="center")
+        ax.text(tx+0.18, -2.0, "$-$", fontsize=10, color=TX, va="center")
+        ax.text((fx+tx)/2, 0, "$V_t$", fontsize=10.5, color=TX, ha="center")
+        ax.annotate("", xy=(fx+0.7, 2.0), xytext=(fx+0.3, 2.0),
+                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.0))
+        ax.text(fx+0.5, 2.2, "$I_t$", fontsize=9, color=TX, ha="center")
+
+        fig.tight_layout()
+        return fig
+
+
+    def fig_autoexcitacao(Rf_slope=1.0, show_buildup=True):
+        """Curva de autoexcitação do gerador shunt: curva de magnetização Ea x If
+        e reta de resistência de campo Rf — convergência no ponto de operação."""
+        fig, ax = plt.subplots(figsize=(6.6, 4.6))
+        fig.patch.set_alpha(0); ax.set_facecolor("none")
+
+        If = np.linspace(0, 10, 300)
+        Ear = 4.0   # tensão residual
+        def mag(x, k=11.0, knee=4.5, p=1.7):
+            lin = k*x + Ear
+            sat = lin/(1+((k*x)/(k*knee))**p)**(1/p)
+            return sat + Ear*(1 - x/(x+0.3))*0  # placeholder, simplificado abaixo
+
+        # curva de magnetização com tensão residual em If=0
+        Ea = Ear + (100-Ear) * (1 - np.exp(-If/2.2))
+        Ea = np.clip(Ea, 0, None)
+        # achatar mais para saturação
+        Ea = Ear + (100-Ear) * (If/(If+2.0)) ** 0.85
+        ax.plot(If, Ea, color=AZ, lw=2.6, label="Curva de magnetização $E_a(I_f)$")
+
+        line = Rf_slope*100/8.5 * If
+        ax.plot(If, line, color=LR, lw=2.2, label=f"Reta $R_f\\!\\cdot\\!I_f$")
+
+        # interseção
+        idx = np.argmin(np.abs(Ea-line))
+        if If[idx] > 0.3:
+            ax.plot(If[idx], Ea[idx], marker="o", color=TX, ms=8, zorder=6)
+            ax.annotate("Ponto de\noperação P", xy=(If[idx], Ea[idx]), xytext=(If[idx]-3.0, Ea[idx]+12),
+                        fontsize=9, color=TX, arrowprops=dict(arrowstyle="->", color=TX, lw=1.0))
+
+        if show_buildup:
+            # escada ilustrativa de autoexcitação
+            x = 0.15
+            pts = [(0, Ear)]
+            for _ in range(6):
+                y_on_mag = np.interp(x, If, Ea)
+                pts.append((x, y_on_mag))
+                x_on_line = y_on_mag / (Rf_slope*100/8.5) if Rf_slope > 0 else x
+                pts.append((x_on_line, y_on_mag))
+                x = x_on_line
+                if x > If[idx]*0.97: break
+            xs, ys = zip(*pts)
+            ax.plot(xs, ys, color=CZ, lw=1.1, ls="--", zorder=3)
+
+        ax.plot(0, Ear, marker="o", color=VD, ms=6, zorder=6)
+        ax.annotate("$E_{ar}$ (residual)", xy=(0, Ear), xytext=(0.35, Ear+9),
+                    fontsize=8.5, color=VD)
+
+        ax.set_xlim(0, 10); ax.set_ylim(0, 115)
+        ax.set_xlabel("$I_f$ (A)", fontsize=10, color=TX)
+        ax.set_ylabel("$E_a$ (% nominal)", fontsize=10, color=TX)
+        ax.legend(fontsize=8.5, loc="lower right", frameon=False)
+        for s in ["top","right"]: ax.spines[s].set_visible(False)
+        ax.spines["left"].set_color(TX); ax.spines["bottom"].set_color(TX)
+        ax.tick_params(colors=TX, labelsize=8)
+        ax.set_title("Autoexcitação do gerador shunt", fontsize=10.5, color=TX, pad=10)
+        fig.tight_layout()
+        return fig
+
+
+    def _gerador_composto_painel(ax, short_shunt=True):
+        ax.set_facecolor("none"); ax.axis("off"); ax.set_aspect("equal")
+        ax.set_xlim(-1.0, 6.6); ax.set_ylim(-2.3, 2.3)
+
+        ax0 = 1.6
+        ax.add_patch(plt.Circle((ax0, 0), 0.5, fc="white", ec=TX, lw=1.7, zorder=5))
+        ax.text(ax0, 0, "$E_a$", fontsize=11, color=TX, ha="center", va="center", zorder=6)
+        ax.plot([ax0, ax0], [0.5, 1.3], color=TX, lw=1.5)
+        _zigzag_v(ax, 1.3, 2.0, ax0, n_zig=3, amp=0.12, color=TX, lw=1.5)
+        ax.text(ax0+0.32, 1.65, "$R_a$", fontsize=9, color=TX)
+        ax.plot([ax0, ax0], [-0.5, -2.0], color=TX, lw=1.5)
+        ax.text(ax0+0.15, 0.65, "+", fontsize=10, color=TX)
+        ax.text(ax0+0.15, -0.65, "$-$", fontsize=10, color=TX)
+
+        if short_shunt:
+            node1 = ax0
+            ax.plot([node1, node1+1.0], [2.0, 2.0], color=TX, lw=1.5)
+            fx = node1 + 1.0
+            ax.add_patch(plt.Circle((fx, 2.0), .035, fc=TX, ec=TX, zorder=7))
+            _zigzag(ax, fx+0.4, fx+1.5, 2.0, n_zig=3, amp=0.12, color=VD, lw=1.5)
+            ax.text(fx+0.95, 2.3, "$R_{sr}$", fontsize=9, color=VD, ha="center")
+            ax.plot([fx+1.5, fx+2.4], [2.0, 2.0], color=TX, lw=1.5)
+            tx = fx+2.4
+        else:
+            ax.plot([ax0, ax0+1.0], [2.0, 2.0], color=TX, lw=1.5)
+            _zigzag(ax, ax0+0.3, ax0+1.0, 2.0, n_zig=3, amp=0.12, color=VD, lw=1.5)
+            ax.text(ax0+0.65, 2.3, "$R_{sr}$", fontsize=9, color=VD, ha="center")
+            fx = ax0 + 1.7
+            ax.plot([ax0+1.0, fx], [2.0,2.0], color=TX, lw=1.5)
+            ax.add_patch(plt.Circle((fx, 2.0), .035, fc=TX, ec=TX, zorder=7))
+            ax.plot([fx, fx+1.5], [2.0, 2.0], color=TX, lw=1.5)
+            tx = fx+1.5
+
+        ax.plot([ax0, tx], [-2.0, -2.0], color=TX, lw=1.5)
+        ax.add_patch(plt.Circle((fx, -2.0), .035, fc=TX, ec=TX, zorder=7))
+
+        _zigzag_v(ax, -1.2, 0.3, fx, n_zig=4, amp=0.11, color=AZ, lw=1.4)
+        ax.plot([fx, fx], [0.3, 0.5], color=AZ, lw=1.4)
+        _zigzag_v(ax, 0.5, 0.95, fx, n_zig=2, amp=0.09, color=AZ, lw=1.4)
+        ax.plot([fx, fx], [0.95, 2.0], color=AZ, lw=1.4)
+        ax.plot([fx, fx], [-2.0, -1.2], color=AZ, lw=1.4)
+        ax.text(fx+0.28, -0.4, "$R_{fc}{+}R_{fw}$", fontsize=7.5, color=AZ, rotation=90, va="center")
+
+        ax.add_patch(plt.Circle((tx, 2.0), .05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.add_patch(plt.Circle((tx, -2.0), .05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.text(tx+0.18, 2.0, "+", fontsize=10, color=TX, va="center")
+        ax.text(tx+0.18, -2.0, "$-$", fontsize=10, color=TX, va="center")
+        title = "Composto curto (short shunt)" if short_shunt else "Composto longo (long shunt)"
+        ax.set_title(title, fontsize=10, color=TX, pad=10)
+
+
+    def fig_gerador_composto_circuitos():
+        fig, axes = plt.subplots(1, 2, figsize=(10.6, 4.0))
+        fig.patch.set_alpha(0)
+        _gerador_composto_painel(axes[0], short_shunt=True)
+        _gerador_composto_painel(axes[1], short_shunt=False)
+        fig.tight_layout()
+        return fig
+
+
+    def fig_caracteristica_composto():
+        """Família de curvas Vt x Ia para composto: sobrecomposto, plano, subcomposto
+        e diferencial."""
+        fig, ax = plt.subplots(figsize=(6.8, 4.6))
+        fig.patch.set_alpha(0); ax.set_facecolor("none")
+
+        Ia = np.linspace(0, 130, 200)
+        Vt_rated = 100
+        over = Vt_rated + 0.22*Ia - 0.0009*Ia**2
+        flat = Vt_rated + 0.0*Ia - 0.0003*Ia**2
+        under = Vt_rated - 0.07*Ia
+        diff = Vt_rated - 0.55*Ia + 0.0008*Ia**2
+        diff = np.clip(diff, -100, None)
+
+        ax.plot(Ia, over, color=AZ, lw=2.2, label="Sobrecomposto")
+        ax.plot(Ia, flat, color=VD, lw=2.2, label="Composto plano")
+        ax.plot(Ia, under, color=LR, lw=2.2, label="Subcomposto")
+        ax.plot(Ia, diff, color=RX, lw=2.2, label="Diferencial")
+        ax.axvline(100, color=CZ, lw=1.0, ls=":")
+        ax.text(101, 8, "$I_{a(nom)}$", fontsize=8.5, color=CZ)
+        ax.plot(0, Vt_rated, marker="o", color=TX, ms=5, zorder=6)
+
+        ax.set_xlim(0, 130); ax.set_ylim(0, 130)
+        ax.set_xlabel("$I_a$ (% nominal)", fontsize=10, color=TX)
+        ax.set_ylabel("$V_t$ (% nominal)", fontsize=10, color=TX)
+        ax.legend(fontsize=8.5, loc="lower left", frameon=False)
+        for s in ["top","right"]: ax.spines[s].set_visible(False)
+        ax.spines["left"].set_color(TX); ax.spines["bottom"].set_color(TX)
+        ax.tick_params(colors=TX, labelsize=8)
+        ax.set_title("Característica terminal — gerador composto", fontsize=10.5, color=TX, pad=10)
+        fig.tight_layout()
+        return fig
+
+
+    def fig_gerador_serie_circuito():
+        """Circuito do gerador CC série: enrolamento de campo em série com a
+        armadura e a carga — uma única malha de corrente."""
+        fig, ax = _mpl_base((6.6, 3.8))
+        ax.set_xlim(-0.6, 7.6); ax.set_ylim(-2.1, 2.1)
+
+        ax0 = 1.4
+        ax.add_patch(plt.Circle((ax0, 0), 0.5, fc="white", ec=TX, lw=1.7, zorder=5))
+        ax.text(ax0, 0, "$E_a$", fontsize=11, color=TX, ha="center", va="center", zorder=6)
+        ax.annotate("", xy=(ax0-0.75, -0.6), xytext=(ax0-0.4, -0.35),
+                    arrowprops=dict(arrowstyle="-|>", color=CZ, lw=1.1))
+        ax.text(ax0-1.0, -0.7, "$\\omega_m$", fontsize=9.5, color=CZ)
+        ax.plot([ax0, ax0], [0.5, 1.2], color=TX, lw=1.5)
+        _zigzag_v(ax, 1.2, 1.9, ax0, n_zig=3, amp=0.12, color=TX, lw=1.5)
+        ax.text(ax0+0.32, 1.55, "$R_a$", fontsize=9.5, color=TX)
+        ax.plot([ax0, ax0], [-0.5, -1.9], color=TX, lw=1.5)
+        ax.annotate("", xy=(ax0+0.7, 1.9), xytext=(ax0+0.3, 1.9),
+                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.1))
+        ax.text(ax0+0.5, 2.1, "$I_a$", fontsize=9.5, color=TX, ha="center")
+
+        ax.plot([ax0, ax0+1.6], [1.9, 1.9], color=TX, lw=1.5)
+        _zigzag(ax, ax0+1.6, ax0+2.7, 1.9, n_zig=3, amp=0.13, color=VD, lw=1.6)
+        ax.text(ax0+2.15, 2.18, "$R_{sr}$", fontsize=9.5, color=VD, ha="center")
+        ax.plot([ax0+2.7, ax0+3.6], [1.9, 1.9], color=TX, lw=1.5)
+
+        tx = ax0+3.6
+        ax.add_patch(plt.Circle((tx, 1.9), .05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.text(tx+0.18, 1.9, "+", fontsize=10, color=TX, va="center")
+        ax.text(tx-0.4, 2.15, "$I_t$", fontsize=9.5, color=TX)
+        ax.text((ax0+0.5+tx)/2+0.6, 0, "$V_t$", fontsize=10.5, color=TX, ha="center")
+
+        lx = ax0+5.6
+        ax.plot([tx, lx], [1.9, 1.9], color=TX, lw=1.5)
+        ax.plot([ax0, lx], [-1.9, -1.9], color=TX, lw=1.5)
+        ax.plot([lx, lx], [-1.9, 1.9], color=LR, lw=1.5)
+        _zigzag_v(ax, -1.3, 1.3, lx, n_zig=5, amp=0.13, color=LR, lw=1.5)
+        ax.text(lx+0.3, 0, "$R_L$", fontsize=9.5, color=LR, va="center")
+        ax.add_patch(plt.Circle((tx, -1.9), .05, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.text(tx+0.18, -1.9, "$-$", fontsize=10, color=TX, va="center")
+
+        fig.tight_layout()
+        return fig
+
+
+    def fig_caracteristica_serie():
+        """Curva característica do gerador série: Vt cresce com It seguindo a
+        saturação, depois cai por reação de armadura; reta de carga RL."""
+        fig, ax = plt.subplots(figsize=(6.6, 4.4))
+        fig.patch.set_alpha(0); ax.set_facecolor("none")
+
+        It = np.linspace(0.001, 130, 300)
+        Vt = 120*(It/(It+22))**0.9 - 0.0022*It**2
+        Vt = np.clip(Vt, 0, None)
+
+        ax.plot(It, Vt, color=RX, lw=2.6, label="Característica terminal ($V_t \\times I_t$)")
+        RL_slope = 0.62
+        load = RL_slope*It
+        ax.plot(It, load, color=LR, lw=1.8, label="Reta de carga ($R_L$)")
+        mask = It > 20
+        idx_local = np.argmin(np.abs(Vt[mask]-load[mask]))
+        idx = np.where(mask)[0][idx_local]
+        if idx > 3:
+            ax.plot(It[idx], Vt[idx], marker="o", color=TX, ms=7, zorder=6)
+            ax.annotate("P", xy=(It[idx], Vt[idx]), xytext=(It[idx]+6, Vt[idx]+6),
+                        fontsize=10, color=TX)
+
+        ax.set_xlim(0, 130); ax.set_ylim(0, 90)
+        ax.set_xlabel("$I_t$ (A)", fontsize=10, color=TX)
+        ax.set_ylabel("$V_t$ (V)", fontsize=10, color=TX)
+        ax.legend(fontsize=8.5, loc="upper left", frameon=False)
+        for s in ["top","right"]: ax.spines[s].set_visible(False)
+        ax.spines["left"].set_color(TX); ax.spines["bottom"].set_color(TX)
+        ax.tick_params(colors=TX, labelsize=8)
+        ax.set_title("Característica terminal — gerador série", fontsize=10.5, color=TX, pad=10)
+        fig.tight_layout()
+        return fig
+
+    # ════════════════════════════════════════════════════════════════════════
     # EXPLORADORES INTERATIVOS (Plotly)
     # ════════════════════════════════════════════════════════════════════════
 
@@ -1018,6 +1541,97 @@ def run():
                    "(mais corrente, menos tensão), enquanto o ondulado mantém sempre $a=2$ "
                    "(menos corrente por caminho, tensão $p/2$ vezes maior, para o mesmo número de condutores).")
 
+    def exp_regulacao_tensao():
+        st.markdown("**Ajuste a resistência de armadura, a reação de armadura e a carga:**")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            Ra_e = st.slider("Queda por $R_a$ (% em $I_t$ nominal)", 2, 25, 12, step=1, key="m3_e5_ra")
+        with c2:
+            ar_e = st.slider("Intensidade da reação de armadura", 0, 10, 4, step=1, key="m3_e5_ar")
+        with c3:
+            RL_e = st.slider("Carga — inclinação da reta ($R_L$, relativo)", 20, 150, 70, step=5, key="m3_e5_rl")
+
+        It = np.linspace(0, 130, 250)
+        Ea = 100 - 0.15*ar_e/10*It
+        Vt_no_ar = 100 - (Ra_e/100)*It
+        Vt_ar = 100 - (Ra_e/100)*It - (ar_e/1000)*It**2
+        Vt_ar = np.clip(Vt_ar, 0, None)
+        load = (RL_e/100)*It
+
+        mask = It > 5
+        idx_local = np.argmin(np.abs(Vt_ar[mask]-load[mask]))
+        idx = np.where(mask)[0][idx_local]
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=It, y=Ea, mode="lines", name="Ea (com reação)",
+                                  line=dict(color=AZ, width=2, dash="dash")))
+        fig.add_trace(go.Scatter(x=It, y=Vt_no_ar, mode="lines", name="Terminal sem reação de armadura",
+                                  line=dict(color=CZ, width=2, dash="dot")))
+        fig.add_trace(go.Scatter(x=It, y=Vt_ar, mode="lines", name="Terminal com reação de armadura",
+                                  line=dict(color=RX, width=3)))
+        fig.add_trace(go.Scatter(x=It, y=load, mode="lines", name="Reta de carga",
+                                  line=dict(color=LR, width=2)))
+        fig.add_trace(go.Scatter(x=[It[idx]], y=[Vt_ar[idx]], mode="markers",
+                                  marker=dict(color=TX, size=11), name="Ponto de operação"))
+        fig.update_layout(title="Característica Terminal e Ponto de Operação",
+                           xaxis_title="It (% nominal)", yaxis_title="Vt (% nominal)",
+                           legend=dict(orientation="h", y=-0.3))
+        show_plot(fig, key="m3_exp5_term", height=420)
+
+        Vnl = Vt_ar[0]
+        Vfl = float(np.interp(100, It, Vt_ar))
+        reg = (Vnl-Vfl)/Vfl*100 if Vfl > 0 else float("nan")
+        c1, c2, c3 = st.columns(3)
+        with c1: st.metric("Vt a vazio", f"{Vnl:.1f}%")
+        with c2: st.metric("Vt em carga nominal", f"{Vfl:.1f}%")
+        with c3: st.metric("Regulação de tensão", f"{reg:.1f}%")
+        st.caption("$R_{V_t}=(V_{tsc}-V_{tnom})/V_{tnom}$ — quanto maior a queda por $R_a$ e mais forte a "
+                   "reação de armadura, maior a regulação (pior a estabilidade da tensão terminal sob carga).")
+
+
+    def exp_autoexcitacao():
+        st.markdown("**Ajuste a resistência do circuito de campo $R_f$ e observe a autoexcitação:**")
+        Rf_e = st.slider("Resistência de campo $R_f$ (relativa)", 0.3, 4.5, 1.0, step=0.05, key="m3_e6_rf")
+
+        If = np.linspace(0, 10, 300)
+        Ear = 4.0
+        Ea = Ear + (100-Ear) * (If/(If+2.0)) ** 0.85
+        i_ref = np.argmin(np.abs(If-1.0))
+        slope0 = Ea[i_ref]/If[i_ref]   # secante origem->1A (resistência crítica aprox.)
+        line = Rf_e*100/8.5 * If
+
+        diff = Ea - line
+        sign_changes = np.where(np.diff(np.sign(diff[3:])) != 0)[0]
+        has_intersection = len(sign_changes) > 0 and Rf_e*100/8.5 < slope0
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=If, y=Ea, mode="lines", name="Curva de magnetização",
+                                  line=dict(color=AZ, width=3)))
+        fig.add_trace(go.Scatter(x=If, y=line, mode="lines", name=f"Reta Rf·If",
+                                  line=dict(color=LR, width=2.5)))
+        if has_intersection:
+            idx = sign_changes[-1]+3
+            fig.add_trace(go.Scatter(x=[If[idx]], y=[Ea[idx]], mode="markers",
+                                      marker=dict(color=TX, size=12), name="Ponto de operação"))
+            Vbuild = Ea[idx]
+        else:
+            Vbuild = Ear
+        fig.update_layout(title="Autoexcitação do Gerador Shunt",
+                           xaxis_title="If (A)", yaxis_title="Ea (% nominal)",
+                           legend=dict(orientation="h", y=-0.3))
+        show_plot(fig, key="m3_exp6_auto", height=420)
+
+        c1, c2, c3 = st.columns(3)
+        with c1: st.metric("Tensão residual", f"{Ear:.1f}%")
+        with c2: st.metric("Tensão de regime", f"{Vbuild:.1f}%")
+        with c3: st.metric("Resistência crítica (aprox.)", f"{slope0*8.5/100:.2f} (relativa)")
+        if not has_intersection:
+            st.warning("⚠️ $R_f$ acima da resistência crítica: a reta não cruza a curva de magnetização "
+                       "de forma útil — o gerador **não consegue se autoexcitar** além da tensão residual.")
+        st.caption("Quanto mais inclinada a reta $R_f\\cdot I_f$ (maior $R_f$), menor a tensão final de "
+                   "regime. Acima da **resistência crítica** — quando a reta se aproxima da inclinação "
+                   "inicial da curva de magnetização —, a autoexcitação deixa de ocorrer.")
+
     # ═══════════════════════════════════════════════════════════════════════════════
     # CABEÇALHO
     # ═══════════════════════════════════════════════════════════════════════════════
@@ -1052,8 +1666,19 @@ def run():
 
     **[12. Interpolos](#12-interpolos)**
 
+    **[13. Classificação dos Geradores CC e Regulação de Tensão](#13-classificacao-dos-geradores-cc-e-regulacao-de-tensao)**
+
+    **[14. Gerador de Excitação Independente](#14-gerador-de-excitacao-independente)**
+
+    **[15. Gerador Shunt (Autoexcitado)](#15-gerador-shunt-autoexcitado)**
+
+    **[16. Gerador Composto (Compound)](#16-gerador-composto-compound)**
+
+    **[17. Gerador Série](#17-gerador-serie)**
+
     **[🎛️ Exploradores Interativos](#exploradores-interativos)**
     - Tensão e torque induzidos · Curva de magnetização · Ondulação de comutação · Lap vs. wave
+    - Regulação de tensão · Autoexcitação shunt
 
     **Referências** (ao final da página)
     """)
@@ -1523,18 +2148,240 @@ def run():
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 13 — CLASSIFICAÇÃO DOS GERADORES CC E REGULAÇÃO DE TENSÃO
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("13. Classificação dos Geradores CC e Regulação de Tensão")
+
+    st.markdown(r"""
+    Até aqui tratamos a máquina CC de forma genérica. A partir de agora, o foco passa a
+    ser a **operação como gerador**: o eixo é acionado mecanicamente a $\omega_m$ e a
+    máquina entrega potência elétrica nos terminais da armadura. A forma como o
+    enrolamento de campo é conectado define o **tipo de gerador** — e essa escolha tem
+    impacto direto sobre como a tensão terminal se comporta sob carga.
+
+    - **Independente**: o campo é alimentado por uma fonte externa (outro gerador CC,
+      retificador ou bateria) — circuito de campo e circuito de armadura totalmente
+      desacoplados.
+    - **Shunt (paralelo)**: o campo é conectado diretamente aos terminais da própria
+      armadura — a máquina se **autoexcita**, sem fonte externa.
+    - **Série**: o enrolamento de campo é percorrido pela própria corrente de carga —
+      poucas espiras, grande seção, suporta correntes elevadas.
+    - **Composto (compound)**: combina um enrolamento shunt e um enrolamento série no
+      mesmo polo. Conforme o ponto em que o ramo shunt é conectado em relação ao
+      enrolamento série, a ligação é dita **curta** (*short shunt*, shunt antes do
+      enrolamento série) ou **longa** (*long shunt*, shunt depois do enrolamento série).
+    """)
+
+    show_fig(fig_classificacao_geradores(), 0.96)
+
+    st.markdown(r"""
+    Um parâmetro comum a todos os tipos é a **regulação de tensão**: o quanto a tensão
+    terminal varia entre a operação a vazio e a operação em carga nominal.
+
+    $$R_{V_t} \equiv \frac{V_{tsc}-V_{tnom}}{V_{tnom}}$$
+
+    sendo $V_{tsc}$ a tensão terminal a vazio (sem carga) e $V_{tnom}$ a tensão terminal
+    com a corrente de carga nominal. Quanto **menor** $R_{V_t}$, mais estável é a tensão
+    terminal da máquina frente a variações de carga — um critério central na escolha do
+    tipo de gerador para cada aplicação, como ficará claro nas seções seguintes.
+    """)
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 14 — GERADOR DE EXCITAÇÃO INDEPENDENTE
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("14. Gerador de Excitação Independente")
+
+    st.markdown(r"""
+    No gerador de excitação independente, o circuito de campo é alimentado por uma fonte
+    própria $V_f$, totalmente desacoplada da armadura. A corrente de campo fica então sob
+    controle direto do reostato $R_{fc}$, sem depender da tensão gerada — característica
+    que torna esse tipo de gerador o mais previsível e estável dos quatro.
+    """)
+
+    show_fig(fig_gerador_independente_circuito(), 0.74)
+
+    st.markdown(r"""
+    As equações do circuito seguem diretamente das leis de Kirchhoff e da relação
+    $E_a=K_a\Phi\omega_m$ já estabelecida na Seção 8:
+
+    $$V_f \equiv R_f\cdot I_f \qquad\quad V_t \equiv E_a - R_a\cdot I_a \qquad\quad E_a = K_a\,\Phi\,\omega_m \qquad\quad I_a = I_t \qquad\quad V_t = R_L\cdot I_t$$
+
+    com $R_f=R_{fw}+R_{fc}$ a resistência total do circuito de campo, e $R_a$ a resistência
+    do circuito de armadura (incluindo, se necessário, o efeito das escovas — quando não
+    modelado dentro de $R_a$, costuma-se considerá-lo uma queda fixa de cerca de 2 V).
+
+    Como $I_a=I_t$, toda a corrente de carga atravessa $R_a$: a tensão terminal cai
+    **linearmente** com a corrente de carga, segundo $V_t=E_a-R_aI_a$. Em máquinas reais,
+    soma-se a esse efeito a **reação da armadura** (Seção 11), que reduz ainda mais $E_a$
+    em correntes elevadas — resultando em uma curva ligeiramente côncava, abaixo da reta
+    ideal:
+    """)
+
+    show_fig(fig_caracteristica_terminal(), 0.62)
+
+    st.markdown(r"""
+    A interseção entre a característica terminal e a **reta de carga** ($V_t=R_LI_t$,
+    inclinação $R_L$) define o **ponto de operação** real do conjunto gerador-carga. Por
+    ter excitação independente da própria tensão gerada, esse gerador apresenta **boa
+    regulação de tensão** — a queda é dominada apenas por $R_a$ e pela reação de armadura,
+    sem o efeito adicional de realimentação que aparece no gerador shunt (Seção 15).
+    Explore esse comportamento no [Explorador 5](#exploradores-interativos).
+    """)
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 15 — GERADOR SHUNT (AUTOEXCITADO)
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("15. Gerador Shunt (Autoexcitado)")
+
+    st.markdown(r"""
+    No gerador shunt (ou paralelo), o enrolamento de campo é conectado **diretamente aos
+    terminais da própria armadura** — não há fonte de campo externa. A máquina precisa,
+    portanto, **se autoexcitar**: gerar sua própria tensão de campo a partir do zero.
+    """)
+
+    show_fig(fig_gerador_shunt_circuito(), 0.62)
+
+    st.markdown(r"""
+    As equações mudam em um ponto essencial — a corrente de armadura agora se divide
+    entre a carga e o próprio campo:
+
+    $$V_t \equiv E_a - R_a\cdot I_a \qquad\quad V_f = V_t = R_f\cdot I_f \qquad\quad I_a \equiv I_t + I_f \qquad\quad V_t = R_L\cdot I_t$$
+
+    ### 15.1 Como a autoexcitação ocorre
+
+    Sem corrente de campo, como a máquina pode gerar tensão para alimentar o próprio
+    campo? A resposta está no **magnetismo residual** do núcleo polar: mesmo sem corrente
+    de campo, um pequeno fluxo residual produz uma tensão residual $E_{ar}$ quando o rotor
+    gira — suficiente para fazer circular uma pequena corrente de campo, que reforça o
+    fluxo e aumenta a tensão gerada. É um processo de realimentação positiva que se repete
+    em pequenos incrementos, convergindo para um ponto de equilíbrio.
+
+    Esse processo aparece ao sobrepor a **curva de magnetização** $E_a(I_f)$ (Seção 10)
+    com a **reta de resistência de campo** $R_f\cdot I_f$: o ponto de operação final é
+    onde as duas se cruzam — ali, a tensão gerada é exatamente a necessária para
+    impulsionar, através de $R_f$, a corrente de campo que sustenta aquele mesmo fluxo.
+    """)
+
+    show_fig(fig_autoexcitacao(), 0.62)
+
+    st.markdown(r"""
+    Quanto **maior** $R_f$ (reta mais inclinada), **menor** a tensão final de regime, até a
+    **resistência crítica de campo**: além dela, a reta deixa de cruzar a porção útil da
+    curva de magnetização e a máquina não se autoexcita além da tensão residual. Por
+    depender da própria tensão gerada para excitar o campo, o gerador shunt também tem
+    regulação de tensão **pior** que o de excitação independente: a queda em $R_a$ sob
+    carga reduz $V_t$, que reduz $I_f$ e $E_a$, agravando ainda mais a queda — um efeito
+    cumulativo ausente na excitação independente. Explore a autoexcitação e a resistência
+    crítica no [Explorador 6](#exploradores-interativos).
+    """)
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 16 — GERADOR COMPOSTO (COMPOUND)
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("16. Gerador Composto (Compound)")
+
+    st.markdown(r"""
+    O gerador composto combina um enrolamento shunt (muitas espiras, alta resistência,
+    corrente pequena e aproximadamente constante) com um enrolamento série (poucas
+    espiras, baixa resistência, percorrido pela corrente de carga) no mesmo polo. Conforme
+    o ponto em que o ramo shunt se conecta — antes ou depois do enrolamento série —, fala-se
+    em ligação **curta** ou **longa**:
+    """)
+
+    show_fig(fig_gerador_composto_circuitos(), 0.92)
+
+    st.markdown(r"""
+    Em ambos os casos, o fluxo total por polo passa a ser a combinação dos dois
+    enrolamentos, e a tensão induzida reflete essa soma. Tomando a ligação longa como
+    referência (o enrolamento série soma sua queda à da armadura):
+
+    $$E_a = K_a\,(\Phi_{sh}\pm\Phi_{sr})\,\omega_m \qquad\quad V_t = E_a - R_a\cdot I_a - R_{sr}\cdot I_a \qquad\quad I_a = I_t + I_f \qquad\quad V_t = R_L\cdot I_t$$
+
+    O sinal $\pm$ indica que a composição pode ser:
+
+    - **Cumulativa**: $\Phi_{sr}$ reforça $\Phi_{sh}$ — à medida que a carga (e portanto
+      $I_a$) aumenta, o fluxo série cresce e **compensa** a queda que ocorreria por
+      $R_a$ e pela reação de armadura.
+    - **Diferencial**: $\Phi_{sr}$ se opõe a $\Phi_{sh}$ — o fluxo série **soma-se** à
+      queda de tensão sob carga, agravando-a.
+
+    Dentro da composição cumulativa, o número de espiras do enrolamento série $N_{sr}$
+    determina o quanto o fluxo série compensa a queda de tensão — dando origem a uma
+    família de comportamentos possíveis:
+    """)
+
+    show_fig(fig_caracteristica_composto(), 0.62)
+
+    st.markdown(r"""
+    - **Sobrecomposto**: $N_{sr}$ grande o suficiente para que $V_t$ **suba** com a carga.
+    - **Composto plano**: $V_t$ permanece aproximadamente constante entre vazio e plena
+      carga — a configuração mais comum em aplicações que exigem tensão estável.
+    - **Subcomposto**: a compensação é parcial — $V_t$ ainda cai com a carga, porém menos
+      do que cairia em um gerador puramente shunt.
+    - **Diferencial**: usado propositalmente em aplicações que exigem corrente
+      praticamente constante e tensão fortemente decrescente, como geradores para solda.
+    """)
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 17 — GERADOR SÉRIE
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("17. Gerador Série")
+
+    st.markdown(r"""
+    No gerador série, não há enrolamento shunt: o único enrolamento de campo é percorrido
+    pela própria corrente de carga, em uma única malha.
+    """)
+
+    show_fig(fig_gerador_serie_circuito(), 0.62)
+
+    st.markdown(r"""
+    $$E_a = K_a\,\Phi\,\omega_m \qquad\quad V_t = E_a - R_a\cdot I_a - R_{sr}\cdot I_a \qquad\quad I_t = I_a \qquad\quad V_t = R_L\cdot I_t$$
+
+    Sem corrente de carga não há corrente de campo — e, portanto, praticamente nenhuma
+    tensão gerada (apenas o pequeno efeito do magnetismo residual). À medida que a carga
+    cresce, o fluxo cresce junto, e $V_t$ sobe seguindo a forma da curva de magnetização;
+    em correntes elevadas, porém, a saturação do núcleo e a reação de armadura fazem a
+    tensão **cair** novamente:
+    """)
+
+    show_fig(fig_caracteristica_serie(), 0.62)
+
+    st.markdown(r"""
+    Essa característica — tensão fortemente dependente da carga, sem nenhuma estabilidade
+    a vazio — torna o gerador série **inadequado** para a maioria das aplicações que
+    exigem tensão controlada, sendo raramente empregado como gerador autônomo na prática.
+    Seu enrolamento série, no entanto, é o mesmo princípio construtivo reaproveitado no
+    gerador composto (Seção 16), onde a contribuição do fluxo série é dosada para
+    **complementar** — e não substituir — a excitação shunt.
+    """)
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════════
     # EXPLORADORES INTERATIVOS
     # ═══════════════════════════════════════════════════════════════════════════════
     st.header("🎛️ Exploradores Interativos")
 
-    tab1, tab2, tab3, tab4 = st.tabs(["Explorador 1 — Tensão e Torque",
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Explorador 1 — Tensão e Torque",
                                        "Explorador 2 — Curva de Magnetização",
                                        "Explorador 3 — Ondulação de Comutação",
-                                       "Explorador 4 — Lap vs. Wave"])
+                                       "Explorador 4 — Lap vs. Wave",
+                                       "Explorador 5 — Regulação de Tensão",
+                                       "Explorador 6 — Autoexcitação Shunt"])
     with tab1: exp_tensao_torque()
     with tab2: exp_magnetizacao()
     with tab3: exp_comutacao()
     with tab4: exp_enrolamentos()
+    with tab5: exp_regulacao_tensao()
+    with tab6: exp_autoexcitacao()
 
     st.divider()
 
