@@ -209,7 +209,7 @@ def run():
         n_arm = 20
         for k in range(n_arm):
             a = np.radians(k*360/n_arm)
-            mark = "dot" if np.cos(a) < 0 else "cross"  # lado N: saindo; lado S: entrando (ilustrativo)
+            mark = "cross" if np.cos(a) < 0 else "dot"  # lado N: entrando; lado S: saindo — consistente com a convenção usada nas Seções 11 (Reação da Armadura) e 12 (Interpolos)
             cx, cy = R_arm*np.cos(a), R_arm*np.sin(a)
             ax.add_patch(plt.Circle((cx, cy), .085, fc="white", ec=RX, lw=1.2, zorder=6))
             if mark == "dot":
@@ -238,10 +238,10 @@ def run():
 
 
     def fig_comutador_basico():
-        """Comutador elementar de 2 segmentos: bobina única, escovas fixas B1/B2,
-        polos N/S, terminais a/b."""
+        """Comutador elementar de 2 segmentos: bobina única, escovas fixas B1/B2 no eixo q
+        (neutro/interpolar — não no eixo dos polos), polos N/S no eixo d, terminais a/b."""
         fig, ax = _mpl_base((5.6, 5.6))
-        ax.set_xlim(-4.2, 4.2); ax.set_ylim(-3.6, 3.4)
+        ax.set_xlim(-4.2, 4.2); ax.set_ylim(-3.4, 3.4)
 
         R_pole_out, R_pole_in = 3.2, 2.1
         half_pole = 62
@@ -265,24 +265,24 @@ def run():
 
         # comutador (2 segmentos) - pequeno anel central
         R_com = 0.45
-        for k, lbl, dx in [(0, "$C_a$", 0.05), (1, "$C_b$", -0.05)]:
-            a0 = np.radians(90+180*k)
-            a1 = np.radians(270+180*k)
         ax.add_patch(mpatches.Wedge((0,0), R_com, 70, 250, width=R_com-0.18, fc="white", ec=TX, lw=1.3, zorder=7))
         ax.add_patch(mpatches.Wedge((0,0), R_com, 250, 70+360, width=R_com-0.18, fc="white", ec=TX, lw=1.3, zorder=7))
         ax.text(0, R_com-0.09, "$C_a$", fontsize=9, color=TX, ha="center", va="center", zorder=8)
         ax.text(0, -(R_com-0.09), "$C_b$", fontsize=9, color=TX, ha="center", va="center", zorder=8)
 
-        # escovas B1 (esquerda) e B2 (direita), fixas, hachuradas
-        bw, bh = 0.3, 0.85
-        ax.add_patch(mpatches.Rectangle((-R_pole_in, -bh/2), bw, bh, fc=LR, ec=TX, lw=1.2,
+        # escovas B1 (topo) e B2 (base) — fixas no eixo q, entre os polos: é exatamente
+        # onde e_ab passa por zero (Seção 4), garantindo comutação sem curto-circuitar
+        # uma bobina com tensão induzida significativa
+        bw, bh = 0.3, 0.85    # bw: espessura radial · bh: largura tangencial
+        b_in = R_rot + 0.25
+        ax.add_patch(mpatches.Rectangle((-bh/2, b_in), bh, bw, fc=LR, ec=TX, lw=1.2,
                                          hatch="//", alpha=.85, zorder=4))
-        ax.add_patch(mpatches.Rectangle((R_pole_in-bw, -bh/2), bw, bh, fc=LR, ec=TX, lw=1.2,
+        ax.add_patch(mpatches.Rectangle((-bh/2, -(b_in+bw)), bh, bw, fc=LR, ec=TX, lw=1.2,
                                          hatch="//", alpha=.85, zorder=4))
-        ax.text(-R_pole_in-0.15, -bh/2-0.25, "$B_1$", fontsize=11, color=TX, ha="center")
-        ax.text(R_pole_in+0.15, -bh/2-0.25, "$B_2$", fontsize=11, color=TX, ha="center")
+        ax.text(-bh/2-0.18, b_in+bw/2, "$B_1$", fontsize=11, color=TX, ha="right", va="center")
+        ax.text(-bh/2-0.18, -(b_in+bw/2), "$B_2$", fontsize=11, color=TX, ha="right", va="center")
 
-        # terminais a (+) e b (-)
+        # terminais a (+) e b (-) — tensão própria da bobina, e_ab
         a_pt = r_coil*np.array([np.cos(np.radians(150)), np.sin(np.radians(150))])
         b_pt = r_coil*np.array([np.cos(np.radians(330)), np.sin(np.radians(330))])
         ext_a = a_pt*1.55
@@ -296,21 +296,27 @@ def run():
         ax.text(ext_b[0]+0.15, ext_b[1]-0.25, "b", fontsize=11, color=TX, ha="center")
         ax.text(ext_b[0]+0.15, ext_b[1]-0.45, "$-$", fontsize=11, color=TX, ha="center")
 
-        # rotacao n
-        arc_n = np.linspace(np.radians(110), np.radians(70), 20)
-        r_n = R_rot+0.35
+        # rotação n — deslocada para o vão entre a escova B1 e o polo S, sem sobrepor nada
+        arc_n = np.linspace(np.radians(48), np.radians(8), 20)
+        r_n = R_pole_in - 0.15
         ax.plot(r_n*np.cos(arc_n), r_n*np.sin(arc_n), color=TX, lw=1.4, zorder=6)
         ax.annotate("", xy=(r_n*np.cos(arc_n[0]), r_n*np.sin(arc_n[0])),
                     xytext=(r_n*np.cos(arc_n[2]), r_n*np.sin(arc_n[2])),
                     arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.4), zorder=6)
-        ax.text(0, r_n+0.22, "n", fontsize=10.5, color=TX, ha="center")
+        ax.text(r_n*np.cos(np.radians(28))+0.05, r_n*np.sin(np.radians(28))+0.32,
+                "n", fontsize=10.5, color=TX, ha="center")
 
-        ax.text(0, -3.35, r"$+\;\;e_{12}\;\;-$", fontsize=10.5, color=TX, ha="center")
-        ax.plot([-bw/2-R_pole_in+0.15, -bw/2-R_pole_in+0.15], [-bh/2-0.55, -2.9], color=TX, lw=1, zorder=2)
-        ax.plot([R_pole_in-bw/2-0.15, R_pole_in-bw/2-0.15], [-bh/2-0.55, -2.9], color=TX, lw=1, zorder=2)
-        ax.plot([-bw/2-R_pole_in+0.15, R_pole_in-bw/2-0.15], [-2.9,-2.9], color=TX, lw=1, zorder=2)
+        # saída externa e_12, via os terminais das escovas (eixo q)
+        lead = 0.55
+        ax.plot([0, 0], [b_in+bw, b_in+bw+lead], color=TX, lw=1.3, zorder=4)
+        ax.plot([0, 0], [-(b_in+bw), -(b_in+bw+lead)], color=TX, lw=1.3, zorder=4)
+        ax.add_patch(plt.Circle((0, b_in+bw+lead), .055, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.add_patch(plt.Circle((0, -(b_in+bw+lead)), .055, fc="white", ec=TX, lw=1.2, zorder=6))
+        ax.text(0.26, b_in+bw+lead, "+", fontsize=11, color=TX, va="center")
+        ax.text(0.26, -(b_in+bw+lead), "$-$", fontsize=11, color=TX, va="center")
+        ax.text(0.95, 0, "$e_{12}$", fontsize=10.5, color=TX, ha="center", va="center")
 
-        ax.set_title("Comutador elementar (2 segmentos)", fontsize=10.5, color=TX, pad=10)
+        ax.set_title("Comutador elementar (2 segmentos)", fontsize=10.5, color=TX, pad=16)
         fig.tight_layout(); return fig
 
 
