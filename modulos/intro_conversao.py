@@ -747,9 +747,10 @@ def run():
                 fontsize=10, color=TX, zorder=4)
         ax.plot([mass_x1, wall_x], [y_m, y_m], color=TX, lw=1.4, zorder=2)
 
-        # --- Força externa f0 ---
+        # --- Força externa f0 (aplicada diretamente na barra — sem ligação à parede,
+        #     pois f0 não é um elemento físico conectado ao apoio fixo, apenas uma
+        #     força externa atuando sobre a massa móvel) ---
         y_f0 = -1.9
-        ax.plot([bar_x, wall_x], [y_f0, y_f0], color=TX, lw=1.4, zorder=2)
         ax.annotate("", xy=(bar_x-0.7, y_f0), xytext=(bar_x+0.3, y_f0),
                     arrowprops=dict(arrowstyle="-|>", color=LR, lw=2))
         ax.text(bar_x-0.6, y_f0-0.35, "$f_0$", fontsize=10, color=LR, ha="center")
@@ -798,67 +799,6 @@ def run():
     # ════════════════════════════════════════════════════════════════════════
     # FIGURAS — MÁQUINAS ROTATIVAS (geometria, matplotlib)
     # ════════════════════════════════════════════════════════════════════════
-
-    def fig_maquina_elementar():
-        """Máquina elementar de dois enrolamentos: estator (C) + rotor cilíndrico,
-        eixos do estator/rotor e ângulo θ entre eles."""
-        fig, ax = plt.subplots(figsize=(6.2, 5.4))
-        fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
-        ax.set_xlim(-2.2, 9.5); ax.set_ylim(-1.5, 8.5); ax.set_aspect("equal")
-
-        out_pts = [(1.5,0.8),(7.5,0.8),(7.5,3.4),(6.0,3.4),
-                   (6.0,1.6),(2.7,1.6),(2.7,6.4),(6.0,6.4),(6.0,4.6),(7.5,4.6),
-                   (7.5,7.2),(1.5,7.2)]
-        ax.add_patch(plt.Polygon(out_pts, closed=True, fc="#3d8ef010", ec=TX, lw=2.0, zorder=2))
-        ax.text(0.7, 7.6, "Estator", color=TX, fontsize=10.5, ha="left")
-
-        for y0 in np.linspace(2.1, 5.9, 6):
-            ax.add_patch(mpatches.Ellipse((2.7, y0), .5, .3, color=AZ, zorder=4, alpha=.9))
-        ax.plot([1.1, 1.1], [2.1, 5.9], color=AZ, lw=1.4, zorder=3)
-        ax.plot([1.1, 2.0], [2.1, 2.1], color=AZ, lw=1.4, zorder=3)
-        ax.plot([1.1, 2.0], [5.9, 5.9], color=AZ, lw=1.4, zorder=3)
-        ax.annotate("", xy=(0.5, 5.9), xytext=(1.1, 5.9),
-                    arrowprops=dict(arrowstyle="->", color=AZ, lw=1.6))
-        ax.text(0.0, 6.15, "$i_s$", color=AZ, fontsize=12)
-
-        cx, cy = 6.0, 4.0
-        R_rotor = 1.45
-        ax.add_patch(plt.Circle((cx, cy), R_rotor, fc="#1f9d5510", ec=CZ, lw=1.6, zorder=3))
-
-        ax.plot([cx-2.6, cx+2.8], [cy, cy], color=CZ, lw=1, ls="--", zorder=1)
-        ax.text(cx+2.9, cy-0.15, "eixo do\nestator", color=CZ, fontsize=8, ha="left", va="top")
-
-        ang = 35
-        dx, dy = R_rotor*1.55*np.cos(np.radians(ang)), R_rotor*1.55*np.sin(np.radians(ang))
-        ax.plot([cx-dx, cx+dx], [cy-dy, cy+dy], color=VD, lw=2.0, zorder=4)
-        for t in np.linspace(-0.75, 0.75, 5):
-            px, py = cx+t*dx, cy+t*dy
-            perp = np.array([-dy, dx])/np.hypot(dx,dy)*0.28
-            ax.plot([px-perp[0],px+perp[0]], [py-perp[1],py+perp[1]], color=VD, lw=2.0, zorder=5)
-        ax.annotate("", xy=(cx+dx+0.15, cy+dy+0.15), xytext=(cx+dx-0.3, cy+dy-0.3),
-                    arrowprops=dict(arrowstyle="-", color=VD, lw=2))
-        ax.text(cx+dx+0.3, cy+dy+0.3, "Rotor", color=TX, fontsize=10.5, ha="left")
-        ax.annotate("", xy=(8.7, cy+dy*1.5), xytext=(cx+dx, cy+dy),
-                    arrowprops=dict(arrowstyle="-", color=VD, lw=1.4))
-        ax.add_patch(plt.Circle((8.7, cy+dy*1.5), .08, fc="none", ec=VD, lw=1.4, zorder=5))
-        ax.text(8.85, cy+dy*1.5, "$i_r$", color=VD, fontsize=12, va="center")
-
-        t_arc = np.linspace(0, np.radians(ang), 30)
-        r_arc = 0.85
-        ax.plot(cx+r_arc*np.cos(t_arc), cy+r_arc*np.sin(t_arc), color=LR, lw=1.6, zorder=4)
-        ax.text(cx+1.05, cy+0.42, r"$\theta$", color=LR, fontsize=13)
-
-        t_om = np.linspace(np.radians(ang)+0.3, np.radians(ang)+1.1, 20)
-        r_om = R_rotor + 0.35
-        ax.plot(cx+r_om*np.cos(t_om), cy+r_om*np.sin(t_om), color=RX, lw=1.6, zorder=4)
-        ax.annotate("", xy=(cx+r_om*np.cos(t_om[-1]), cy+r_om*np.sin(t_om[-1])),
-                    xytext=(cx+r_om*np.cos(t_om[-2]), cy+r_om*np.sin(t_om[-2])),
-                    arrowprops=dict(arrowstyle="->", color=RX, lw=1.6))
-        ax.text(cx+r_om*np.cos(t_om[-1])+0.1, cy+r_om*np.sin(t_om[-1])+0.25,
-                r"$\omega_m$", color=RX, fontsize=11)
-
-        ax.set_title("Máquina elementar de dois enrolamentos", fontsize=10.5, color=TX, pad=10)
-        fig.tight_layout(); return fig
 
     def fig_maquina_cilindrica():
         """Seção transversal de máquina cilíndrica: entreferro uniforme, eixos do
@@ -1069,78 +1009,97 @@ def run():
                 "quando dL/dx < 0.")
 
     def fig_maquina_elementar():
-        """Máquina elementar de dois enrolamentos: estator em C + rotor cilíndrico."""
-        fig, ax = _mpl_base((6.8, 5.9))
-        ax.set_xlim(-5.3, 5.0); ax.set_ylim(-3.4, 3.85)
+        """Máquina elementar de dois enrolamentos: núcleo C do estator + rotor
+        cilíndrico bobinado, inserido no entreferro a um ângulo θ do eixo do estator."""
+        fig, ax = _mpl_base((6.8, 6.2))
+        ax.set_xlim(-2.4, 10.4); ax.set_ylim(-0.3, 8.3)
 
-        rotor_r = 1.5
-        gap = 0.35
+        # --- Núcleo em C do estator ---
+        out_pts = [(1.5,0.8),(7.5,0.8),(7.5,3.4),(6.0,3.4),
+                   (6.0,1.6),(2.7,1.6),(2.7,6.4),(6.0,6.4),(6.0,4.6),(7.5,4.6),
+                   (7.5,7.2),(1.5,7.2)]
+        ax.add_patch(plt.Polygon(out_pts, closed=True, fc="#1a1f2b08", ec=TX, lw=2.0, zorder=2))
+        ax.annotate("Estator", xy=(2.1, 7.25), xytext=(-0.3, 7.95),
+                    fontsize=11, color=TX, ha="left",
+                    arrowprops=dict(arrowstyle="->", color=TX, lw=1.2))
 
-        out_x0, out_y0 = -2.9, -2.5
-        out_w, out_h = 4.4, 5.0
-        ax.add_patch(mpatches.Rectangle((out_x0, out_y0), out_w, out_h,
-                                         fc="#3d8ef012", ec=TX, lw=1.8, zorder=2))
-        in_x0, in_y0 = -(rotor_r+gap), -(rotor_r+gap)
-        in_w = in_h = 2*(rotor_r+gap)
-        ax.add_patch(mpatches.Rectangle((in_x0, in_y0), in_w, in_h,
-                                         fc="white", ec=TX, lw=1.8, zorder=3))
-        open_h = 0.85
-        ax.add_patch(mpatches.Rectangle((in_x0+in_w, -open_h/2), out_x0+out_w-(in_x0+in_w), open_h,
-                                         fc="white", ec="none", zorder=4))
-        ax.plot([in_x0+in_w, out_x0+out_w], [open_h/2, open_h/2], color=TX, lw=1.8, zorder=5)
-        ax.plot([in_x0+in_w, out_x0+out_w], [-open_h/2, -open_h/2], color=TX, lw=1.8, zorder=5)
+        # --- Bobina do estator (enrolamento concentrado na perna esquerda) ---
+        for y0 in np.linspace(2.1, 5.9, 6):
+            ax.add_patch(mpatches.Ellipse((2.7, y0), .55, .32, fc="white", ec=AZ, lw=1.6, zorder=4))
+        ax.plot([0.6, 2.0], [5.9, 5.9], color=AZ, lw=1.5, zorder=3)
+        ax.plot([0.6, 2.0], [2.1, 2.1], color=AZ, lw=1.5, zorder=3)
+        ax.add_patch(plt.Circle((0.6, 2.1), .09, fc="white", ec=AZ, lw=1.5, zorder=5))
+        ax.annotate("", xy=(0.05, 5.9), xytext=(0.6, 5.9),
+                    arrowprops=dict(arrowstyle="->", color=AZ, lw=1.6))
+        ax.text(-0.15, 6.15, "$i_s$", color=AZ, fontsize=12, ha="center")
 
-        theta = np.radians(35)
-        ax.plot([-3.5*np.cos(theta), 3.5*np.cos(theta)], [-3.5*np.sin(theta), 3.5*np.sin(theta)],
-                color=CZ, lw=1, ls="--", zorder=1)
-        ax.plot([-3.5, 3.5], [0, 0], color=CZ, lw=1, ls="--", zorder=1)
+        # --- Eixo do estator (referência vertical, fixo) ---
+        x_axis = 7.5
+        ax.plot([x_axis, x_axis], [0.2, 8.0], color=CZ, lw=1.1, ls=(0,(6,3,1,3)), zorder=1)
 
-        coil_x = in_x0
-        for yy in np.linspace(-1.2, 1.2, 6):
-            ax.add_patch(mpatches.Ellipse((coil_x, yy), 0.4, 0.2, fc="white", ec=AZ, lw=1.6, zorder=10))
-        ax.plot([out_x0, coil_x-0.6], [1.0, 1.0], color=AZ, lw=1.6, zorder=10)
-        ax.plot([out_x0, coil_x-0.6], [-1.0, -1.0], color=AZ, lw=1.6, zorder=10)
-        ax.add_patch(plt.Circle((coil_x-0.6, 1.0), .05, fc=AZ, ec=AZ, zorder=11))
-        ax.add_patch(plt.Circle((coil_x-0.6, -1.0), .05, fc=AZ, ec=AZ, zorder=11))
-        ax.text(coil_x-0.85, 1.0, "$i_s$", fontsize=12, color=AZ, ha="right", va="center")
-        ax.text(out_x0+0.3, out_y0+out_h-0.4, "Estator", fontsize=10, color=AZ, ha="left")
+        # --- Rotor cilíndrico bobinado, inserido no entreferro a ângulo θ ---
+        theta_deg = 33
+        th = np.radians(theta_deg)
+        u = np.array([np.sin(th), np.cos(th)])
+        v = np.array([np.cos(th), -np.sin(th)])
+        rc = np.array([7.05, 4.30])
+        half_L, half_W = 1.18, 0.36
 
-        ax.add_patch(plt.Circle((0, 0), rotor_r, fc="white", ec=TX, lw=1.8, zorder=8))
+        p_in  = rc - half_L*u
+        p_out = rc + half_L*u
 
-        for t in np.linspace(-0.8, 0.8, 6):
-            cx, cy = t*np.cos(theta), t*np.sin(theta)
-            wx, wy = 0.18*np.sin(theta), -0.18*np.cos(theta)
-            ax.plot([cx-wx, cx+wx], [cy-wy, cy+wy], color=RX, lw=2.0, zorder=9)
+        # vértice de anotação do ângulo (acima do rotor, sobre o eixo do estator)
+        vertex = np.array([x_axis, 5.85])
 
-        rx0, ry0 = rotor_r*np.cos(theta), rotor_r*np.sin(theta)
-        t_end = (out_x0+out_w+0.5 - rx0) / np.cos(theta)
-        ax.plot([rx0, rx0+t_end*np.cos(theta)], [ry0, ry0+t_end*np.sin(theta)],
-                color=RX, lw=1.6, zorder=12)
-        ax.add_patch(plt.Circle((rx0+t_end*np.cos(theta), ry0+t_end*np.sin(theta)), .05,
-                                 fc=RX, ec=RX, zorder=13))
-        t_end2 = (out_x0 - (-rx0)) / np.cos(theta)
-        ax.plot([-rx0, -rx0+t_end2*np.cos(theta)], [-ry0, -ry0+t_end2*np.sin(theta)],
-                color=RX, lw=1.6, zorder=12)
-        ax.add_patch(plt.Circle((-rx0+t_end2*np.cos(theta), -ry0+t_end2*np.sin(theta)), .05,
-                                 fc=RX, ec=RX, zorder=13))
+        c1 = p_in - half_W*v; c2 = p_in + half_W*v
+        c3 = p_out + half_W*v; c4 = p_out - half_W*v
+        ax.add_patch(plt.Polygon([c1,c2,c3,c4], closed=True, fc="#6c47ff14", ec=RX, lw=1.7, zorder=6))
+        ax.plot([c1[0],c2[0]],[c1[1],c2[1]], color=RX, lw=1.7, zorder=7)
+        ax.plot([c3[0],c4[0]],[c3[1],c4[1]], color=RX, lw=1.7, zorder=7)
 
-        arc = np.linspace(0, theta, 30)
-        ax.plot(0.65*np.cos(arc), 0.65*np.sin(arc), color=TX, lw=1.3, zorder=10)
-        ax.text(0.95*np.cos(theta/2), 0.5*np.sin(theta/2)+0.12, r"$\theta$", fontsize=12, color=TX)
+        n_turns = 6
+        for t in np.linspace(-half_L+0.16, half_L-0.16, n_turns):
+            pc = rc + t*u
+            a = pc - half_W*v*0.92
+            b = pc + half_W*v*0.92
+            ax.plot([a[0],b[0]], [a[1],b[1]], color=RX, lw=1.3, zorder=8)
+            ax.add_patch(plt.Circle((b[0],b[1]), .045, fc=RX, ec=RX, zorder=9))
 
-        arc2 = np.linspace(theta+0.15, theta+0.7, 20)
-        ax.plot(0.95*np.cos(arc2), 0.95*np.sin(arc2), color=VD, lw=1.6, zorder=10)
-        ax.annotate("", xy=(0.95*np.cos(arc2[-1]), 0.95*np.sin(arc2[-1])),
-                    xytext=(0.95*np.cos(arc2[-3]), 0.95*np.sin(arc2[-3])),
-                    arrowprops=dict(arrowstyle="-|>", color=VD, lw=1.6), zorder=10)
-        ax.text(1.3*np.cos(theta+0.45), 1.3*np.sin(theta+0.45), r"$\omega_m$",
-                fontsize=11, color=VD, ha="center")
+        ax.annotate("Rotor", xy=(p_in[0]+0.3*u[0]-0.32*v[0], p_in[1]+0.3*u[1]-0.32*v[1]),
+                    xytext=(5.55, 1.0), fontsize=10.5, color=TX, ha="left",
+                    arrowprops=dict(arrowstyle="->", color=TX, lw=1.1))
 
-        ax.text(0, rotor_r+0.55, "Rotor", fontsize=10, color=RX, ha="center")
-        ax.text(out_x0+out_w+0.6, ry0+t_end*np.sin(theta)+0.2, "$i_r$",
-                fontsize=12, color=RX, ha="left")
+        # --- Terminais i_r (saída externa do rotor, retas horizontais) ---
+        t1 = p_out + half_W*0.6*v
+        t2 = p_out - half_W*0.6*v
+        e1 = t1 + np.array([1.15, 0.0])
+        e2 = t2 + np.array([1.15, 0.0])
+        ax.plot([t1[0],e1[0]],[t1[1],e1[1]], color=RX, lw=1.5, zorder=7)
+        ax.plot([t2[0],e2[0]],[t2[1],e2[1]], color=RX, lw=1.5, zorder=7)
+        ax.add_patch(plt.Circle(e2, .09, fc="white", ec=RX, lw=1.5, zorder=8))
+        ax.annotate("", xy=(e1[0]+0.5, e1[1]), xytext=e1,
+                    arrowprops=dict(arrowstyle="->", color=RX, lw=1.6))
+        ax.text(e1[0]+0.65, e1[1]+0.04, "$i_r$", color=RX, fontsize=12, va="center")
 
-        ax.set_title("Máquina elementar de dois enrolamentos", fontsize=10, color=TX, pad=10)
+        # --- Ângulo θ (vértice de anotação) ---
+        theta_arc_r = 0.78
+        t_arc = np.linspace(np.pi/2, np.pi/2 - th, 30)
+        arc_pts = vertex[:, None] + theta_arc_r*np.array([np.cos(t_arc), np.sin(t_arc)])
+        ax.plot(arc_pts[0], arc_pts[1], color=LR, lw=1.6, zorder=10)
+        mid_a = np.pi/2 - th/2
+        ax.text(vertex[0]+1.02*theta_arc_r*np.cos(mid_a), vertex[1]+1.25*theta_arc_r*np.sin(mid_a),
+                r"$\theta$", color=LR, fontsize=13, ha="center")
+
+        # --- ω_m (sentido de rotação, arco menor aninhado, mesmo vértice) ---
+        r_om = 0.46
+        t_om = np.linspace(np.pi/2 - 0.12, np.pi/2 - th + 0.12, 18)
+        om_pts = vertex[:, None] + r_om*np.array([np.cos(t_om), np.sin(t_om)])
+        ax.plot(om_pts[0], om_pts[1], color=RX, lw=1.6, zorder=10)
+        ax.annotate("", xy=(om_pts[0][-1], om_pts[1][-1]), xytext=(om_pts[0][-3], om_pts[1][-3]),
+                    arrowprops=dict(arrowstyle="-|>", color=RX, lw=1.6), zorder=10)
+        ax.text(vertex[0]-0.85, vertex[1]-0.32, r"$\omega_m$", color=RX, fontsize=11, ha="center")
+
+        ax.set_title("Máquina elementar de dois enrolamentos", fontsize=10.5, color=TX, pad=10)
         fig.tight_layout(); return fig
 
     def fig_maquina_cilindrica():
