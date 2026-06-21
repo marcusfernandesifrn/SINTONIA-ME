@@ -17,6 +17,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import plotly.graph_objects as go
+import schemdraw
+import schemdraw.elements as elm
 import io
 import base64
 import warnings
@@ -985,65 +987,44 @@ def run():
 
 
     def fig_gerador_independente_circuito():
-        """Circuito do gerador CC de excitação independente: malha de campo (Vf, Rfc, Rfw)
-        e malha de armadura (Ea, Ra) alimentando a carga RL."""
-        fig, ax = _mpl_base((7.2, 4.0))
-        ax.set_xlim(-0.5, 9.4); ax.set_ylim(-2.3, 2.3)
+        """Circuito do gerador CC de excitação independente: malha de campo (Vf, Rfc, Rfw,
+        Nf) isolada da malha de armadura (Ea, Ra) que alimenta a carga RL. Construído com
+        schemdraw, fiel ao desenho de referência (MCC_Desenhos.ipynb)."""
+        with schemdraw.Drawing() as d:
+            d.config(unit=2.2)
+            d.push()
+            Nf = elm.Inductor().right().label('$N_f$').color(AZ)
+            If = elm.Line().down().color(AZ)
+            elm.Line().down().dot(open=True).color(AZ)
+            d.pop()
+            d.push()
+            elm.Resistor().down().label('$R_{fw}$').color(AZ)
+            elm.ResistorVar().down().label('$R_{fc}$').color(AZ).dot(open=True)
+            elm.Gap().right().label(('+', '$V_f$', '-')).color(AZ)
+            d.pop()
 
-        # --- malha de campo (esquerda) ---
-        fx0 = 0.0
-        ax.plot([fx0, fx0], [-1.0, 0.0], color=AZ, lw=1.5)
-        _zigzag_v(ax, 0.0, 0.9, fx0, n_zig=3, amp=0.12, color=AZ, lw=1.5)
-        ax.text(fx0-0.35, 0.45, "$R_{fc}$", fontsize=9.5, color=AZ, ha="center")
-        ax.plot([fx0, fx0+1.0], [0.9, 0.9], color=AZ, lw=1.5)
-        _zigzag(ax, fx0+1.0, fx0+2.0, 0.9, n_zig=3, amp=0.12, color=AZ, lw=1.5)
-        ax.text(fx0+1.5, 1.18, "$R_{fw}$", fontsize=9.5, color=AZ, ha="center")
-        ax.plot([fx0+2.0, fx0+2.4], [0.9, 0.9], color=AZ, lw=1.5)
-        ax.plot([fx0+2.4, fx0+2.4], [0.9, -1.0], color=AZ, lw=1.5)
-        ax.plot([fx0+2.4, fx0], [-1.0, -1.0], color=AZ, lw=1.5)
-        ax.add_patch(plt.Circle((fx0, -1.0), .045, fc="white", ec=AZ, lw=1.2, zorder=6))
-        ax.text(fx0-0.25, -1.0, "+", fontsize=10, color=AZ, va="center")
-        ax.text(fx0-0.55, -1.0, "$V_f$", fontsize=9.5, color=AZ, va="center")
-        ax.annotate("", xy=(fx0+0.45, -0.55), xytext=(fx0+0.05, -0.95),
-                    arrowprops=dict(arrowstyle="-|>", color=AZ, lw=1.1))
-        ax.text(fx0+0.65, -0.6, "$I_f$", fontsize=9.5, color=AZ)
+            d.move_from(Nf.end, dx=2, dy=1)
+            d.push()
+            Ea = elm.Motor().down().label('$E_a$').color(TX)
+            elm.Line().down().color(TX)
+            Vtm = elm.Line().right().dot(open=True).color(TX)
+            d.pop()
+            Ia = elm.Line().up().color(TX)
+            Vtp = elm.Resistor().right().label('$R_a$').color(TX).dot(open=True)
 
-        # --- malha de armadura (centro) ---
-        ax0 = 3.6
-        ax.add_patch(plt.Circle((ax0, 0), 0.5, fc="white", ec=TX, lw=1.7, zorder=5))
-        ax.text(ax0, 0, "$E_a$", fontsize=11, color=TX, ha="center", va="center", zorder=6)
-        ax.annotate("", xy=(ax0-0.75, -0.6), xytext=(ax0-0.4, -0.35),
-                    arrowprops=dict(arrowstyle="-|>", color=CZ, lw=1.1))
-        ax.text(ax0-1.0, -0.7, "$\\omega_m$", fontsize=9.5, color=CZ)
-        ax.plot([ax0, ax0], [0.5, 1.3], color=TX, lw=1.5)
-        _zigzag_v(ax, 1.3, 2.0, ax0, n_zig=3, amp=0.12, color=TX, lw=1.5)
-        ax.text(ax0+0.32, 1.65, "$R_a$", fontsize=9.5, color=TX)
-        ax.plot([ax0, ax0+1.6], [2.0, 2.0], color=TX, lw=1.5)
-        ax.annotate("", xy=(ax0+0.9, 2.0), xytext=(ax0+0.5, 2.0),
-                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.1))
-        ax.text(ax0+0.7, 2.18, "$I_a$", fontsize=9.5, color=TX, ha="center")
-        ax.plot([ax0, ax0], [-0.5, -2.0], color=TX, lw=1.5)
-        ax.plot([ax0, ax0+5.0], [-2.0, -2.0], color=TX, lw=1.5)
-        ax.text(ax0+0.15, 0.65, "+", fontsize=10, color=TX)
-        ax.text(ax0+0.15, -0.65, "$-$", fontsize=10, color=TX)
+            elm.Line().right().color(TX)
+            elm.Line().down().color(TX)
+            elm.ResistorVar().down().label('$R_L$').color(TX)
+            elm.Line().down().color(TX)
+            elm.Line().left().color(TX)
 
-        # --- terminais / carga (direita) ---
-        tx = ax0+1.6
-        ax.add_patch(plt.Circle((tx, 2.0), .05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.text(tx+0.18, 2.0, "+", fontsize=10, color=TX, va="center")
-        ax.text(tx-0.35, 2.25, "$I_t$", fontsize=9.5, color=TX)
-        ax.annotate("", xy=(tx+0.05, 2.0), xytext=(tx-0.35, 2.0),
-                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.0))
-        ax.text(ax0+2.5, 0, "$V_t$", fontsize=10.5, color=TX, ha="center")
-        lx = ax0+5.0
-        ax.plot([lx, lx], [-2.0, 2.0], color=LR, lw=1.5)
-        _zigzag_v(ax, -1.4, 1.4, lx, n_zig=5, amp=0.13, color=LR, lw=1.5)
-        ax.plot([tx, lx], [2.0, 2.0], color=TX, lw=1.5)
-        ax.text(lx+0.3, 0, "$R_L$", fontsize=9.5, color=LR, va="center")
-        ax.add_patch(plt.Circle((tx, -2.0), .05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.text(tx+0.18, -2.0, "$-$", fontsize=10, color=TX, va="center")
+            elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(Vtp.end, Vtm.end).color(TX)
 
-        fig.tight_layout()
+            elm.CurrentLabel(top=False, length=1.25, ofst=.3).at(Ia).label('$I_a$').color(TX)
+            elm.CurrentLabel(top=False, length=1.25, ofst=.3).at(If).label('$I_f$').color(AZ)
+
+        fig = d.fig.getfig()
+        fig.patch.set_alpha(0)
         return fig
 
 
@@ -1091,59 +1072,42 @@ def run():
 
 
     def fig_gerador_shunt_circuito():
-        """Circuito do gerador CC shunt (autoexcitado): campo conectado em paralelo
-        com a própria armadura."""
-        fig, ax = _mpl_base((6.6, 4.0))
-        ax.set_xlim(-1.0, 7.4); ax.set_ylim(-2.3, 2.3)
+        """Circuito do gerador CC shunt (autoexcitado): campo (Nf, Rfw, Rfc) conectado em
+        paralelo com a própria armadura (Ea, Ra), alimentando a carga RL. Construído com
+        schemdraw, fiel ao desenho de referência (MCC_Desenhos.ipynb)."""
+        with schemdraw.Drawing() as d:
+            d.config(unit=2.2)
+            d.push()
+            Nf = elm.Inductor().right().label('$N_{f}$').color(AZ)
+            If = elm.Line().up().color(AZ)
+            Rfw = elm.Resistor().up().label('$R_{fw}$').color(AZ)
+            elm.Line().right().dot(open=True).color(AZ)
+            d.pop()
+            elm.ResistorVar().down().label('$R_{fc}$').color(AZ)
+            elm.Line().right().color(AZ)
+            elm.Line().right().dot(open=True).color(AZ)
+            d.push()
+            Vtm = elm.Line().right().dot(open=True).color(TX)
+            d.pop()
+            elm.Line().up().color(TX)
+            Ea = elm.Motor().up().label('$E_a$').color(TX)
+            Ra = elm.Resistor().up().label('$R_{a}$').color(TX)
+            Vtp = elm.Line().right().dot(open=True).color(TX)
 
-        ax0 = 2.0
-        ax.add_patch(plt.Circle((ax0, 0), 0.5, fc="white", ec=TX, lw=1.7, zorder=5))
-        ax.text(ax0, 0, "$E_a$", fontsize=11, color=TX, ha="center", va="center", zorder=6)
-        ax.annotate("", xy=(ax0-0.75, -0.6), xytext=(ax0-0.4, -0.35),
-                    arrowprops=dict(arrowstyle="-|>", color=CZ, lw=1.1))
-        ax.text(ax0-1.0, -0.7, "$\\omega_m$", fontsize=9.5, color=CZ)
-        ax.plot([ax0, ax0], [0.5, 1.3], color=TX, lw=1.5)
-        _zigzag_v(ax, 1.3, 2.0, ax0, n_zig=3, amp=0.12, color=TX, lw=1.5)
-        ax.text(ax0+0.32, 1.65, "$R_a$", fontsize=9.5, color=TX)
-        ax.plot([ax0, ax0], [-0.5, -2.0], color=TX, lw=1.5)
-        nodex = ax0
-        ax.plot([nodex, nodex+3.6], [2.0, 2.0], color=TX, lw=1.5)
-        ax.plot([nodex, nodex+3.6], [-2.0, -2.0], color=TX, lw=1.5)
-        ax.annotate("", xy=(ax0+0.9, 2.0), xytext=(ax0+0.5, 2.0),
-                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.1))
-        ax.text(ax0+0.7, 2.2, "$I_a$", fontsize=9.5, color=TX, ha="center")
-        ax.text(ax0+0.15, 0.65, "+", fontsize=10, color=TX)
-        ax.text(ax0+0.15, -0.65, "$-$", fontsize=10, color=TX)
+            elm.Line().right().color(TX)
+            elm.Line().down().color(TX)
+            elm.ResistorVar().down().label('$R_{L}$').color(TX)
+            elm.Line().down().color(TX)
+            elm.Line().left().color(TX)
 
-        # campo (shunt), entre a armadura e os terminais
-        fx = ax0 + 1.3
-        ax.add_patch(plt.Circle((fx, 2.0), .035, fc=TX, ec=TX, zorder=7))
-        ax.add_patch(plt.Circle((fx, -2.0), .035, fc=TX, ec=TX, zorder=7))
-        _zigzag_v(ax, -1.2, 0.3, fx, n_zig=4, amp=0.12, color=AZ, lw=1.5)
-        mx = fx
-        ax.annotate("", xy=(mx+0.22, 0.75), xytext=(mx-0.18, 0.35),
-                    arrowprops=dict(arrowstyle="-|>", color=AZ, lw=1.2))
-        ax.plot([fx, fx], [0.3, 0.55], color=AZ, lw=1.5)
-        _zigzag_v(ax, 0.55, 1.0, fx, n_zig=2, amp=0.1, color=AZ, lw=1.5)
-        ax.plot([fx, fx], [1.0, 2.0], color=AZ, lw=1.5)
-        ax.plot([fx, fx], [-2.0, -1.2], color=AZ, lw=1.5)
-        ax.annotate("", xy=(fx-0.45, 1.55), xytext=(fx-0.05, 1.85),
-                    arrowprops=dict(arrowstyle="-|>", color=AZ, lw=1.1))
-        ax.text(fx-0.75, 1.5, "$I_f$", fontsize=9.5, color=AZ)
-        ax.text(fx+0.3, -0.4, "$R_{fc}{+}R_{fw}$", fontsize=8.5, color=AZ, rotation=90, va="center")
+            elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(Vtp.end, Vtm.end).color(TX)
 
-        # terminais / carga
-        tx = nodex+3.6
-        ax.add_patch(plt.Circle((tx, 2.0), .05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.add_patch(plt.Circle((tx, -2.0), .05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.text(tx+0.18, 2.0, "+", fontsize=10, color=TX, va="center")
-        ax.text(tx+0.18, -2.0, "$-$", fontsize=10, color=TX, va="center")
-        ax.text((fx+tx)/2, 0, "$V_t$", fontsize=10.5, color=TX, ha="center")
-        ax.annotate("", xy=(fx+0.7, 2.0), xytext=(fx+0.3, 2.0),
-                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.0))
-        ax.text(fx+0.5, 2.2, "$I_t$", fontsize=9, color=TX, ha="center")
+            elm.CurrentLabel(top=False, length=1.25, ofst=.3).at(Ra).label('$I_a$').color(TX)
+            elm.CurrentLabel(top=True, length=1.25, ofst=.3).reverse().at(If).label('$I_f$').color(AZ)
+            elm.CurrentLabel(top=True, length=1.25, ofst=.3).at(Vtp).label('$I_t$').color(TX)
 
-        fig.tight_layout()
+        fig = d.fig.getfig()
+        fig.patch.set_alpha(0)
         return fig
 
 
@@ -1207,63 +1171,93 @@ def run():
         return fig
 
 
-    def _gerador_composto_painel(ax, short_shunt=True):
-        ax.set_facecolor("none"); ax.axis("off"); ax.set_aspect("equal")
-        ax.set_xlim(-1.0, 6.6); ax.set_ylim(-2.3, 2.3)
+    def fig_gerador_composto_curto_circuito():
+        """Circuito do gerador CC composto, ligação curta (short shunt): o campo shunt
+        (Nf, Rfw, Rfc) é tomado em paralelo apenas com a armadura (Ea, Ra) — antes do
+        enrolamento série (Ns, Rsr). Construído com schemdraw, fiel ao desenho de
+        referência (MCC_Desenhos.ipynb)."""
+        with schemdraw.Drawing() as d:
+            d.config(unit=2.2)
+            d.push()
+            Nf = elm.Inductor().right().label('$N_{f}$').color(AZ)
+            Rfc = elm.ResistorVar().up().label('$R_{fc}$').color(AZ)
+            If = elm.Line().right().dot(open=False).color(AZ)
+            d.pop()
+            Rfw = elm.Resistor().down().label('$R_{fw}$').color(AZ)
+            elm.Line().right().color(TX)
+            elm.Line().right().dot(open=False).color(TX)
+            d.push()
+            elm.Line().right().color(TX)
+            elm.Line().right().color(TX)
+            Vtm = elm.Line().right().dot(open=True).color(TX)
+            d.pop()
+            Ea = elm.Motor().up().label('$E_a$').color(TX)
+            Ra = elm.Resistor().up().label('$R_{a}$').color(TX)
+            Ns = elm.Inductor().right().label('$N_{s}$').color(VD)
+            Rs = elm.Resistor().right().label('$R_{sr}$').color(VD)
+            Vtp = elm.Line().right().dot(open=True).color(TX)
 
-        ax0 = 1.6
-        ax.add_patch(plt.Circle((ax0, 0), 0.5, fc="white", ec=TX, lw=1.7, zorder=5))
-        ax.text(ax0, 0, "$E_a$", fontsize=11, color=TX, ha="center", va="center", zorder=6)
-        ax.plot([ax0, ax0], [0.5, 1.3], color=TX, lw=1.5)
-        _zigzag_v(ax, 1.3, 2.0, ax0, n_zig=3, amp=0.12, color=TX, lw=1.5)
-        ax.text(ax0+0.32, 1.65, "$R_a$", fontsize=9, color=TX)
-        ax.plot([ax0, ax0], [-0.5, -2.0], color=TX, lw=1.5)
-        ax.text(ax0+0.15, 0.65, "+", fontsize=10, color=TX)
-        ax.text(ax0+0.15, -0.65, "$-$", fontsize=10, color=TX)
+            elm.Line().right().color(TX)
+            elm.Line().down(length=1.0).color(TX)
+            elm.ResistorVar().down().label('$R_{L}$').color(TX)
+            elm.Line().down(length=1.0).color(TX)
+            elm.Line().left().color(TX)
 
-        if short_shunt:
-            node1 = ax0
-            ax.plot([node1, node1+1.0], [2.0, 2.0], color=TX, lw=1.5)
-            fx = node1 + 1.0
-            ax.add_patch(plt.Circle((fx, 2.0), .035, fc=TX, ec=TX, zorder=7))
-            _zigzag(ax, fx+0.4, fx+1.5, 2.0, n_zig=3, amp=0.12, color=VD, lw=1.5)
-            ax.text(fx+0.95, 2.3, "$R_{sr}$", fontsize=9, color=VD, ha="center")
-            ax.plot([fx+1.5, fx+2.4], [2.0, 2.0], color=TX, lw=1.5)
-            tx = fx+2.4
-        else:
-            ax.plot([ax0, ax0+1.0], [2.0, 2.0], color=TX, lw=1.5)
-            _zigzag(ax, ax0+0.3, ax0+1.0, 2.0, n_zig=3, amp=0.12, color=VD, lw=1.5)
-            ax.text(ax0+0.65, 2.3, "$R_{sr}$", fontsize=9, color=VD, ha="center")
-            fx = ax0 + 1.7
-            ax.plot([ax0+1.0, fx], [2.0,2.0], color=TX, lw=1.5)
-            ax.add_patch(plt.Circle((fx, 2.0), .035, fc=TX, ec=TX, zorder=7))
-            ax.plot([fx, fx+1.5], [2.0, 2.0], color=TX, lw=1.5)
-            tx = fx+1.5
+            elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(Vtp.end, Vtm.end).color(TX)
 
-        ax.plot([ax0, tx], [-2.0, -2.0], color=TX, lw=1.5)
-        ax.add_patch(plt.Circle((fx, -2.0), .035, fc=TX, ec=TX, zorder=7))
+            elm.CurrentLabel(top=False, length=1.25, ofst=.3).at(Ra).label('$I_a$').color(TX)
+            elm.CurrentLabel(top=True, length=1.25, ofst=.3).reverse().at(If).label('$I_f$').color(AZ)
+            elm.CurrentLabel(top=True, length=1.25, ofst=.3).at(Vtp).label('$I_t$').color(TX)
 
-        _zigzag_v(ax, -1.2, 0.3, fx, n_zig=4, amp=0.11, color=AZ, lw=1.4)
-        ax.plot([fx, fx], [0.3, 0.5], color=AZ, lw=1.4)
-        _zigzag_v(ax, 0.5, 0.95, fx, n_zig=2, amp=0.09, color=AZ, lw=1.4)
-        ax.plot([fx, fx], [0.95, 2.0], color=AZ, lw=1.4)
-        ax.plot([fx, fx], [-2.0, -1.2], color=AZ, lw=1.4)
-        ax.text(fx+0.28, -0.4, "$R_{fc}{+}R_{fw}$", fontsize=7.5, color=AZ, rotation=90, va="center")
-
-        ax.add_patch(plt.Circle((tx, 2.0), .05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.add_patch(plt.Circle((tx, -2.0), .05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.text(tx+0.18, 2.0, "+", fontsize=10, color=TX, va="center")
-        ax.text(tx+0.18, -2.0, "$-$", fontsize=10, color=TX, va="center")
-        title = "Composto curto (short shunt)" if short_shunt else "Composto longo (long shunt)"
-        ax.set_title(title, fontsize=10, color=TX, pad=10)
-
-
-    def fig_gerador_composto_circuitos():
-        fig, axes = plt.subplots(1, 2, figsize=(10.6, 4.0))
+        fig = d.fig.getfig()
         fig.patch.set_alpha(0)
-        _gerador_composto_painel(axes[0], short_shunt=True)
-        _gerador_composto_painel(axes[1], short_shunt=False)
-        fig.tight_layout()
+        return fig
+
+
+    def fig_gerador_composto_longo_circuito():
+        """Circuito do gerador CC composto, ligação longa (long shunt): o campo shunt
+        (Nf, Rfw, Rfc) é tomado em paralelo com a armadura somada ao enrolamento série
+        (Ea, Ra, Ns, Rsr). Construído com schemdraw, fiel ao desenho de referência
+        (MCC_Desenhos.ipynb)."""
+        with schemdraw.Drawing() as d:
+            d.config(unit=2.2)
+            d.push()
+            Nf = elm.Inductor().right().label('$N_{f}$').color(AZ)
+            elm.Line().up().color(AZ)
+            Rfc = elm.ResistorVar().up().label('$R_{fc}$').color(AZ)
+            elm.Line().right().color(AZ)
+            Rfw = elm.Resistor().right().label('$R_{fw}$').color(AZ)
+            If = elm.Line().right().color(AZ)
+            elm.Line().down().dot(open=False).color(AZ)
+            d.pop()
+            elm.Line().down().color(TX)
+            elm.Line().right().color(TX)
+            elm.Line().right().dot(open=False).color(TX)
+            d.push()
+            elm.Line().right().color(TX)
+            elm.Line().right().color(TX)
+            Vtm = elm.Line().right().dot(open=True).color(TX)
+            d.pop()
+            Ea = elm.Motor().up().label('$E_a$').color(TX)
+            Ra = elm.Resistor().up().label('$R_{a}$').color(TX)
+            Ns = elm.Inductor().right().label('$N_{s}$').color(VD)
+            Rs = elm.Resistor().right().label('$R_{sr}$').color(VD)
+            Vtp = elm.Line().right().dot(open=True).color(TX)
+
+            elm.Line().right().color(TX)
+            elm.Line().down(length=1.0).color(TX)
+            elm.ResistorVar().down().label('$R_{L}$').color(TX)
+            elm.Line().down(length=1.0).color(TX)
+            elm.Line().left().color(TX)
+
+            elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(Vtp.end, Vtm.end).color(TX)
+
+            elm.CurrentLabel(top=False, length=1.25, ofst=.3).at(Ra).label('$I_a$').color(TX)
+            elm.CurrentLabel(top=True, length=1.25, ofst=.3).reverse().at(If).label('$I_f$').color(AZ)
+            elm.CurrentLabel(top=True, length=1.25, ofst=.3).at(Vtp).label('$I_t$').color(TX)
+
+        fig = d.fig.getfig()
+        fig.patch.set_alpha(0)
         return fig
 
 
@@ -1302,46 +1296,37 @@ def run():
 
 
     def fig_gerador_serie_circuito():
-        """Circuito do gerador CC série: enrolamento de campo em série com a
-        armadura e a carga — uma única malha de corrente."""
-        fig, ax = _mpl_base((6.6, 3.8))
-        ax.set_xlim(-0.6, 7.6); ax.set_ylim(-2.1, 2.1)
+        """Circuito do gerador CC série: enrolamento de campo (Ns, Rsr) em série com a
+        armadura (Ea, Ra) e a carga RL — uma única malha de corrente. Construído com
+        schemdraw, fiel ao desenho de referência (MCC_Desenhos.ipynb)."""
+        with schemdraw.Drawing() as d:
+            d.config(unit=2.2)
+            d.push()
+            Ea = elm.Motor().down().label('$E_a$').color(TX)
+            elm.Line().right().color(TX)
+            elm.Line().right().color(TX)
+            elm.Line().right().color(TX)
+            T2 = elm.Dot(open=True).color(TX)
+            d.pop()
+            Ra = elm.Resistor().up().label('$R_{a}$').color(TX)
+            elm.Line().right().color(TX)
+            elm.Line().down().color(TX)
+            elm.Inductor().right().label('$N_{s}$').color(VD)
+            elm.Line().up().color(TX)
+            elm.Resistor().right().label('$R_{sr}$').color(VD)
+            T1 = elm.Dot(open=True).color(TX)
+            elm.Line().right().color(TX)
+            elm.Line().down(length=1.0).color(TX)
+            elm.ResistorVar().down().label('$R_{L}$').color(TX)
+            elm.Line().down(length=1.0).color(TX)
+            elm.Line().left().color(TX)
 
-        ax0 = 1.4
-        ax.add_patch(plt.Circle((ax0, 0), 0.5, fc="white", ec=TX, lw=1.7, zorder=5))
-        ax.text(ax0, 0, "$E_a$", fontsize=11, color=TX, ha="center", va="center", zorder=6)
-        ax.annotate("", xy=(ax0-0.75, -0.6), xytext=(ax0-0.4, -0.35),
-                    arrowprops=dict(arrowstyle="-|>", color=CZ, lw=1.1))
-        ax.text(ax0-1.0, -0.7, "$\\omega_m$", fontsize=9.5, color=CZ)
-        ax.plot([ax0, ax0], [0.5, 1.2], color=TX, lw=1.5)
-        _zigzag_v(ax, 1.2, 1.9, ax0, n_zig=3, amp=0.12, color=TX, lw=1.5)
-        ax.text(ax0+0.32, 1.55, "$R_a$", fontsize=9.5, color=TX)
-        ax.plot([ax0, ax0], [-0.5, -1.9], color=TX, lw=1.5)
-        ax.annotate("", xy=(ax0+0.7, 1.9), xytext=(ax0+0.3, 1.9),
-                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.1))
-        ax.text(ax0+0.5, 2.1, "$I_a$", fontsize=9.5, color=TX, ha="center")
+            elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(T1.end, T2.end).color(TX)
 
-        ax.plot([ax0, ax0+1.6], [1.9, 1.9], color=TX, lw=1.5)
-        _zigzag(ax, ax0+1.6, ax0+2.7, 1.9, n_zig=3, amp=0.13, color=VD, lw=1.6)
-        ax.text(ax0+2.15, 2.18, "$R_{sr}$", fontsize=9.5, color=VD, ha="center")
-        ax.plot([ax0+2.7, ax0+3.6], [1.9, 1.9], color=TX, lw=1.5)
+            elm.CurrentLabel(top=False, length=1.25, ofst=.3).at(Ra).label('$I_a$').color(TX)
 
-        tx = ax0+3.6
-        ax.add_patch(plt.Circle((tx, 1.9), .05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.text(tx+0.18, 1.9, "+", fontsize=10, color=TX, va="center")
-        ax.text(tx-0.4, 2.15, "$I_t$", fontsize=9.5, color=TX)
-        ax.text((ax0+0.5+tx)/2+0.6, 0, "$V_t$", fontsize=10.5, color=TX, ha="center")
-
-        lx = ax0+5.6
-        ax.plot([tx, lx], [1.9, 1.9], color=TX, lw=1.5)
-        ax.plot([ax0, lx], [-1.9, -1.9], color=TX, lw=1.5)
-        ax.plot([lx, lx], [-1.9, 1.9], color=LR, lw=1.5)
-        _zigzag_v(ax, -1.3, 1.3, lx, n_zig=5, amp=0.13, color=LR, lw=1.5)
-        ax.text(lx+0.3, 0, "$R_L$", fontsize=9.5, color=LR, va="center")
-        ax.add_patch(plt.Circle((tx, -1.9), .05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.text(tx+0.18, -1.9, "$-$", fontsize=10, color=TX, va="center")
-
-        fig.tight_layout()
+        fig = d.fig.getfig()
+        fig.patch.set_alpha(0)
         return fig
 
 
@@ -2300,7 +2285,15 @@ def run():
     em ligação **curta** ou **longa**:
     """)
 
-    show_fig(fig_gerador_composto_circuitos(), 0.92)
+    col_curto, col_longo = st.columns(2)
+    with col_curto:
+        st.markdown("<p style='text-align:center;'><b>Ligação curta</b> (short shunt)</p>",
+                    unsafe_allow_html=True)
+        show_fig(fig_gerador_composto_curto_circuito(), 1.0)
+    with col_longo:
+        st.markdown("<p style='text-align:center;'><b>Ligação longa</b> (long shunt)</p>",
+                    unsafe_allow_html=True)
+        show_fig(fig_gerador_composto_longo_circuito(), 1.0)
 
     st.markdown(r"""
     Em ambos os casos, o fluxo total por polo passa a ser a combinação dos dois
