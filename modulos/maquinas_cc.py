@@ -5,17 +5,21 @@ Curso: Engenharia de Energia
 Instituição: IFRN — Campus Natal-Central (CNAT)
 Autor: Marcus V A Fernandes · marcus.fernandes@ifrn.edu.br · v1.0
 
-Fonte: 1º e 2º PPTX-fonte do Módulo 3 — "CEEI - MCC - 01 - Conceitos" (conceitos
+Fonte: os três PPTX-fonte do Módulo 3 — "CEEI - MCC - 01 - Conceitos" (conceitos
 elementares, estrutura construtiva, tensão na armadura, torque eletromagnético,
-curva de magnetização, reação da armadura e interpolos) e "CEEI - MCC - 02 - Gerador"
+curva de magnetização, reação da armadura e interpolos), "CEEI - MCC - 02 - Gerador"
 (classificação dos geradores, regulação de tensão, excitação independente, shunt,
-composto e série). Tópicos de motor e dinâmica de regime aguardam o 3º PPTX-fonte.
+composto e série) e "CEEI - MCC - 03 - Motor" (operação como motor, característica
+torque-velocidade, regulação e os três métodos de controle de velocidade — tensão
+terminal, fluxo de campo e resistência de armadura —, partida, controle em malha
+fechada e eficiência/fluxo de potência).
 """
 
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.transforms as mtransforms
 import plotly.graph_objects as go
 import schemdraw
 import schemdraw.elements as elm
@@ -130,6 +134,45 @@ def run():
         ys = [y0] + list(yb) + [y1]
         xs = [x] + xb + [x]
         ax.plot(xs, ys, color=color, lw=lw, solid_joinstyle="round", solid_capstyle="round")
+
+    def _add_mech_load(fig, ax, Ea, ang_deg=235, shaft_len=1.85, label="Carga\nmecânica"):
+        """Acrescenta um eixo + bloco de 'carga mecânica' (com seta de ωm) a um circuito de
+        motor desenhado com schemdraw, ancorado no elemento Ea (Motor). Usado para mostrar a
+        saída mecânica nos circuitos de motor CC, mantendo o estilo do desenho de referência."""
+        cx, cy = Ea.center.x, Ea.center.y
+        r = abs(Ea.end.y - Ea.start.y) / 2
+        ang = np.radians(ang_deg)
+        sx0, sy0 = cx + r*np.cos(ang), cy + r*np.sin(ang)
+        sx1, sy1 = cx + (r+shaft_len)*np.cos(ang), cy + (r+shaft_len)*np.sin(ang)
+        ax.plot([sx0, sx1], [sy0, sy1], color=TX, lw=2.2, zorder=4, solid_capstyle='round')
+        box_w, box_h = 1.5, 0.85
+        box_center = (sx1 - 0.55*np.cos(ang), sy1 - 0.55*np.sin(ang))
+        rot = ang_deg - 180
+        t = mtransforms.Affine2D().rotate_deg_around(box_center[0], box_center[1], rot) + ax.transData
+        rect = mpatches.FancyBboxPatch((box_center[0]-box_w/2, box_center[1]-box_h/2), box_w, box_h,
+                                        boxstyle="round,pad=0.02,rounding_size=0.05",
+                                        fc="white", ec=TX, lw=1.4, zorder=5, transform=t)
+        ax.add_patch(rect)
+        ax.text(box_center[0], box_center[1], label, fontsize=8.5, color=TX,
+                ha="center", va="center", zorder=6, rotation=rot, rotation_mode='anchor')
+        mx, my = (sx0+sx1)/2, (sy0+sy1)/2
+        perp = ang + np.radians(90)
+        ox, oy = 0.25*np.cos(perp), 0.25*np.sin(perp)
+        arc = np.linspace(np.radians(150), np.radians(40), 15)
+        rr = 0.26
+        ax.plot(mx+ox+rr*np.cos(arc), my+oy+rr*np.sin(arc), color=CZ, lw=1.2, zorder=6)
+        ax.annotate("", xy=(mx+ox+rr*np.cos(arc[0]), my+oy+rr*np.sin(arc[0])),
+                    xytext=(mx+ox+rr*np.cos(arc[2]), my+oy+rr*np.sin(arc[2])),
+                    arrowprops=dict(arrowstyle="-|>", color=CZ, lw=1.2), zorder=6)
+        ax.text(mx+ox-0.05, my+oy+0.42, "$\\omega_m$", fontsize=9.5, color=CZ, ha="center")
+        # schemdraw fixa xlim/ylim a partir dos elementos do circuito; expandimos para caber
+        # o bloco de carga mecânica acrescentado por cima, evitando que seja cortado
+        diag = 0.5*(box_w+box_h)
+        pts_x = [box_center[0]-diag, box_center[0]+diag]
+        pts_y = [box_center[1]-diag, box_center[1]+diag]
+        x0, x1 = ax.get_xlim(); y0, y1 = ax.get_ylim()
+        ax.set_xlim(min(x0, min(pts_x)-0.2), max(x1, max(pts_x)+0.2))
+        ax.set_ylim(min(y0, min(pts_y)-0.2), max(y1, max(pts_y)+0.2))
 
     # ════════════════════════════════════════════════════════════════════════
     # FIGURAS — ESTRUTURA CONSTRUTIVA E ENROLAMENTOS (matplotlib)
@@ -1364,6 +1407,651 @@ def run():
         return fig
 
     # ════════════════════════════════════════════════════════════════════════
+    # FIGURAS — OPERAÇÃO COMO MOTOR E CONTROLE DE VELOCIDADE (schemdraw + matplotlib)
+    # ════════════════════════════════════════════════════════════════════════
+
+    def fig_motor_shunt_circuito():
+        """Circuito do motor CC shunt (campo em paralelo): convenção de motor — Ia, If e
+        It entram pelos terminais — alimentando a armadura (Ea, Ra) e a carga mecânica
+        acoplada ao eixo. Reaproveitado também para o controle por fluxo de campo."""
+        with schemdraw.Drawing() as d:
+            d.config(unit=2.2)
+            d.push()
+            Nf = elm.Inductor().right().label('$N_{f}$').color(AZ)
+            If = elm.Line().up().color(AZ)
+            Rfw = elm.Resistor().up().label('$R_{fw}$').color(AZ)
+            elm.Line().right().dot(open=True).color(AZ)
+            d.pop()
+            elm.ResistorVar().down().label('$R_{fc}$').color(AZ)
+            elm.Line().right().color(AZ)
+            elm.Line().right().dot(open=True).color(AZ)
+            d.push()
+            Vtm = elm.Line().right().dot(open=True).color(TX)
+            d.pop()
+            elm.Line().up().color(TX)
+            Ea = elm.Motor().up().label('$E_a$').color(TX)
+            Ra = elm.Resistor().up().label('$R_{a}$').color(TX)
+            Vtp = elm.Line().right().dot(open=True).color(TX)
+            elm.Line().right().color(TX)
+            elm.Line().down().color(TX)
+            elm.Line().down().color(TX)
+            elm.Line().left().color(TX)
+            elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(Vtp.end, Vtm.end).color(TX)
+            elm.CurrentLabel(top=False, length=1.25, ofst=.3).reverse().at(Ra).label('$I_a$').color(TX)
+            elm.CurrentLabel(top=True, length=1.25, ofst=.3).at(If).label('$I_f$').color(AZ)
+            elm.CurrentLabel(top=True, length=1.25, ofst=.3).reverse().at(Vtp).label('$I_t$').color(TX)
+        fig = d.fig.getfig()
+        ax = fig.axes[0]
+        _add_mech_load(fig, ax, Ea, ang_deg=235, shaft_len=1.85)
+        fig.patch.set_alpha(0)
+        return fig
+
+    def fig_motor_independente_circuito():
+        """Circuito do motor CC de excitação independente: malha de campo isolada
+        (Vf, Rfc, Rfw, Nf) e malha de armadura (Ea, Ra) acoplada à carga mecânica."""
+        with schemdraw.Drawing() as d:
+            d.config(unit=2.2)
+            d.push()
+            Nf = elm.Inductor().right().label('$N_f$').color(AZ)
+            If = elm.Line().down().color(AZ)
+            elm.Line().down().dot(open=True).color(AZ)
+            d.pop()
+            d.push()
+            elm.Resistor().down().label('$R_{fw}$').color(AZ)
+            elm.ResistorVar().down().label('$R_{fc}$').color(AZ).dot(open=True)
+            elm.Gap().right().label(('+', '$V_f$', '-')).color(AZ)
+            d.pop()
+            d.move_from(Nf.end, dx=2, dy=1)
+            d.push()
+            Ea = elm.Motor().down().label('$E_a$').color(TX)
+            elm.Line().down().color(TX)
+            Vtm = elm.Line().right().dot(open=True).color(TX)
+            d.pop()
+            Ia = elm.Line().up().color(TX)
+            Vtp = elm.Resistor().right().label('$R_a$').color(TX).dot(open=True)
+            elm.Line().right().color(TX)
+            elm.Line().down().color(TX)
+            elm.Line().down().color(TX)
+            elm.Line().left().color(TX)
+            elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(Vtp.end, Vtm.end).color(TX)
+            elm.CurrentLabel(top=False, length=1.25, ofst=.3).reverse().at(Ia).label('$I_a$').color(TX)
+            elm.CurrentLabel(top=False, length=1.25, ofst=.3).at(If).label('$I_f$').color(AZ)
+        fig = d.fig.getfig()
+        ax = fig.axes[0]
+        _add_mech_load(fig, ax, Ea, ang_deg=235, shaft_len=1.85)
+        fig.patch.set_alpha(0)
+        return fig
+
+    def fig_motor_shunt_rae_circuito():
+        """Motor shunt com resistência de armadura adicional (Rae) em série com Ra,
+        para controle de velocidade por resistência de armadura."""
+        with schemdraw.Drawing() as d:
+            d.config(unit=2.2)
+            d.push()
+            Nf = elm.Inductor().right().label('$N_{f}$').color(AZ)
+            If = elm.Line().up().color(AZ)
+            Rfw = elm.Resistor().up().label('$R_{fw}$').color(AZ)
+            elm.Line().right().dot(open=True).color(AZ)
+            d.pop()
+            elm.ResistorVar().down().label('$R_{fc}$').color(AZ)
+            elm.Line().right().color(AZ)
+            elm.Line().right().dot(open=True).color(AZ)
+            d.push()
+            Vtm = elm.Line().right().dot(open=True).color(TX)
+            d.pop()
+            elm.Line().up().color(TX)
+            Ea = elm.Motor().up().label('$E_a$').color(TX)
+            Ra = elm.Resistor().up().label('$R_{a}$').color(TX)
+            Rae = elm.ResistorVar().up().label('$R_{ae}$').color(TX)
+            Vtp = elm.Line().right().dot(open=True).color(TX)
+            elm.Line().right().color(TX)
+            elm.Line().down().color(TX)
+            elm.Line().down().color(TX)
+            elm.Line().left().color(TX)
+            elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(Vtp.end, Vtm.end).color(TX)
+            elm.CurrentLabel(top=False, length=1.25, ofst=.3).reverse().at(Ra).label('$I_a$').color(TX)
+            elm.CurrentLabel(top=True, length=1.25, ofst=.3).at(If).label('$I_f$').color(AZ)
+            elm.CurrentLabel(top=True, length=1.25, ofst=.3).reverse().at(Vtp).label('$I_t$').color(TX)
+        fig = d.fig.getfig()
+        ax = fig.axes[0]
+        _add_mech_load(fig, ax, Ea, ang_deg=235, shaft_len=1.85)
+        fig.patch.set_alpha(0)
+        return fig
+
+    def fig_motor_serie_rae_circuito():
+        """Motor série com resistência de armadura adicional (Rae): Ra+Rae em série com
+        Ea e com o próprio enrolamento de campo série (Nsr, Rsr)."""
+        with schemdraw.Drawing() as d:
+            d.config(unit=2.2)
+            d.push()
+            Ea = elm.Motor().down().label('$E_a$').color(TX)
+            elm.Line().right().color(TX)
+            elm.Line().right().color(TX)
+            elm.Line().right().color(TX)
+            T2 = elm.Dot(open=True).color(TX)
+            d.pop()
+            Ra = elm.Resistor().up().label('$R_{a}$').color(TX)
+            Rae = elm.ResistorVar().up().label('$R_{ae}$').color(TX)
+            elm.Line().right().color(TX)
+            elm.Line().down().color(TX)
+            elm.Inductor().right().label('$N_{sr}$').color(VD)
+            elm.Line().up().color(TX)
+            elm.Resistor().right().label('$R_{sr}$').color(VD)
+            T1 = elm.Dot(open=True).color(TX)
+            elm.Line().right().color(TX)
+            elm.Line().down(length=1.0).color(TX)
+            elm.Line().down(length=1.0).color(TX)
+            elm.Line().left().color(TX)
+            elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(T1.end, T2.end).color(TX)
+            elm.CurrentLabel(top=False, length=1.25, ofst=.3).reverse().at(Ra).label('$I_a$').color(TX)
+        fig = d.fig.getfig()
+        ax = fig.axes[0]
+        _add_mech_load(fig, ax, Ea, ang_deg=210, shaft_len=2.0)
+        fig.patch.set_alpha(0)
+        return fig
+
+    def fig_motor_partida_circuito():
+        """Motor shunt com resistor de partida (Rpartida) em série com a armadura,
+        curto-circuitado gradualmente conforme o motor acelera."""
+        with schemdraw.Drawing() as d:
+            d.config(unit=2.2)
+            d.push()
+            Nf = elm.Inductor().right().label('$N_{f}$').color(AZ)
+            If = elm.Line().up().color(AZ)
+            Rfw = elm.Resistor().up().label('$R_{fw}$').color(AZ)
+            elm.Line().right().dot(open=True).color(AZ)
+            d.pop()
+            elm.ResistorVar().down().label('$R_{fc}$').color(AZ)
+            elm.Line().right().color(AZ)
+            elm.Line().right().dot(open=True).color(AZ)
+            d.push()
+            Vtm = elm.Line().right().dot(open=True).color(TX)
+            d.pop()
+            elm.Line().up().color(TX)
+            Ea = elm.Motor().up().label('$E_a$').color(TX)
+            Ra = elm.Resistor().up().label('$R_{a}$').color(TX)
+            Rp = elm.ResistorVar().up().label('$R_{partida}$').color(LR)
+            Vtp = elm.Line().right().dot(open=True).color(TX)
+            elm.Line().right().color(TX)
+            elm.Line().down().color(TX)
+            elm.Line().down().color(TX)
+            elm.Line().left().color(TX)
+            elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(Vtp.end, Vtm.end).color(TX)
+            elm.CurrentLabel(top=False, length=1.25, ofst=.3).reverse().at(Ra).label('$I_a$').color(TX)
+            elm.CurrentLabel(top=True, length=1.25, ofst=.3).at(If).label('$I_f$').color(AZ)
+        fig = d.fig.getfig()
+        ax = fig.axes[0]
+        _add_mech_load(fig, ax, Ea, ang_deg=235, shaft_len=1.85)
+        ax.annotate("curto-circuitado\ngradualmente\napós a partida", xy=(Rp.center.x+0.15, Rp.center.y),
+                    xytext=(Rp.center.x+1.4, Rp.center.y+0.9), fontsize=8, color=LR, ha="left",
+                    arrowprops=dict(arrowstyle="-|>", color=LR, lw=1.0))
+        fig.patch.set_alpha(0)
+        return fig
+
+    def fig_eficiencia_circuito():
+        """Circuito da máquina composta usado para a análise de eficiência (convenção de
+        motor: Ia, If, It entrando pelos terminais; basta inverter as setas para a
+        convenção de gerador)."""
+        with schemdraw.Drawing() as d:
+            d.config(unit=2.2)
+            d.push()
+            Nf = elm.Inductor().right().label('$N_{f}$').color(AZ)
+            elm.Line().up().color(AZ)
+            Rfc = elm.ResistorVar().up().label('$R_{fc}$').color(AZ)
+            elm.Line().right().color(AZ)
+            Rfw = elm.Resistor().right().label('$R_{fw}$').color(AZ)
+            If = elm.Line().right().color(AZ)
+            elm.Line().down().dot(open=False).color(AZ)
+            d.pop()
+            elm.Line().down().color(TX)
+            elm.Line().right().color(TX)
+            elm.Line().right().dot(open=False).color(TX)
+            d.push()
+            elm.Line().right().color(TX)
+            elm.Line().right().color(TX)
+            Vtm = elm.Line().right().dot(open=True).color(TX)
+            d.pop()
+            Ea = elm.Motor().up().label('$E_a$').color(TX)
+            Ra = elm.Resistor().up().label('$R_{a}$').color(TX)
+            Va = elm.Dot(open=False).color(TX)
+            Nsr = elm.Inductor().right().label('$N_{sr}$').color(VD)
+            Rsr = elm.Resistor().right().label('$R_{sr}$').color(VD)
+            Vtp = elm.Line().right().dot(open=True).color(TX)
+            elm.Line().right().color(TX)
+            elm.Line().down(length=1.0).color(TX)
+            elm.Line().down(length=1.0).color(TX)
+            elm.Line().left().color(TX)
+            elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(Vtp.end, Vtm.end).color(TX)
+            elm.CurrentLabel(top=False, length=1.25, ofst=.3).reverse().at(Ra).label('$I_a$').color(TX)
+            elm.CurrentLabel(top=True, length=1.25, ofst=.3).at(If).label('$I_f$').color(AZ)
+            elm.CurrentLabel(top=True, length=1.25, ofst=.3).reverse().at(Vtp).label('$I_t$').color(TX)
+        fig = d.fig.getfig()
+        ax = fig.axes[0]
+        _add_mech_load(fig, ax, Ea, ang_deg=238, shaft_len=1.5)
+        fig.patch.set_alpha(0)
+        return fig
+
+    def fig_motor_malha_fechada_diagrama():
+        """Diagrama de blocos do controle em malha fechada (cascata velocidade→corrente)
+        de um acionamento de motor CC."""
+        fig, ax = plt.subplots(figsize=(12, 5.6))
+        fig.patch.set_alpha(0); ax.set_facecolor("none")
+        ax.set_xlim(-0.5, 14.2); ax.set_ylim(-3.0, 3.0)
+        ax.axis("off"); ax.set_aspect("equal")
+
+        def box(x, y, w, h, text, fontsize=9.5):
+            ax.add_patch(mpatches.FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.02,rounding_size=0.04",
+                                                  fc="white", ec=TX, lw=1.4, zorder=4))
+            ax.text(x+w/2, y+h/2, text, ha="center", va="center", fontsize=fontsize, color=TX, zorder=5)
+
+        def arrow(x0, y0, x1, y1, color=TX, lw=1.4):
+            ax.annotate("", xy=(x1, y1), xytext=(x0, y0),
+                        arrowprops=dict(arrowstyle="-|>", color=color, lw=lw), zorder=3)
+
+        def sumjunction(x, y, r=0.22, signs=("+", "-"), positions=("left", "bottom")):
+            ax.add_patch(plt.Circle((x, y), r, fc="white", ec=TX, lw=1.4, zorder=4))
+            ax.text(x, y, "$\\Sigma$", ha="center", va="center", fontsize=10, color=TX, zorder=5)
+            offs = {"left": (-r-0.13, 0.1), "bottom": (-0.08, -r-0.18), "top": (-0.08, r+0.05)}
+            for s, p in zip(signs, positions):
+                dx, dy = offs[p]
+                ax.text(x+dx, y+dy, s, fontsize=9, color=TX, zorder=5, ha="center")
+
+        y0 = 0.8
+        ax.text(-0.4, y0, "$N^{*}$", fontsize=11, color=TX, ha="right", va="center")
+        arrow(-0.25, y0, 0.55, y0)
+        sumjunction(0.85, y0, signs=("+", "-"), positions=("top", "bottom"))
+        arrow(1.07, y0, 1.55, y0)
+        box(1.6, y0-0.4, 1.7, 0.8, "Controlador\nde velocidade", fontsize=8.5)
+        arrow(3.3, y0, 3.85, y0)
+        ax.text(3.55, y0+0.28, "$I_a^{*}$", fontsize=9.5, color=TX, ha="center")
+        sumjunction(4.15, y0, signs=("+", "-"), positions=("top", "bottom"))
+        arrow(4.37, y0, 4.85, y0)
+        box(4.9, y0-0.4, 1.7, 0.8, "Controlador\nde corrente", fontsize=8.5)
+        arrow(6.6, y0, 7.15, y0)
+        ax.text(6.85, y0+0.28, "$V_c$", fontsize=9.5, color=TX, ha="center")
+        box(7.2, y0-0.4, 1.5, 0.8, "Conversor", fontsize=9)
+        arrow(8.7, y0, 9.25, y0)
+        ax.text(8.97, y0+0.28, "$V_t$", fontsize=9.5, color=TX, ha="center")
+        arrow(7.95, 2.1, 7.95, y0+0.42)
+        ax.text(7.95, 2.3, "Fonte de\nalimentação", fontsize=8, color=CZ, ha="center", va="bottom")
+        box(9.3, y0-0.4, 1.4, 0.8, "Motor", fontsize=9.5)
+        arrow(10.7, y0, 11.25, y0)
+        ax.text(10.97, y0+0.28, "$N$", fontsize=9.5, color=TX, ha="center")
+        box(11.3, y0-0.4, 1.2, 0.8, "Carga", fontsize=9.5)
+
+        ax.plot([9.95, 9.95], [y0-0.4, -1.15], color=TX, lw=1.3, zorder=3)
+        ax.text(10.1, -0.85, "$I_a$", fontsize=9, color=TX)
+        ax.plot([9.95, 6.5], [-1.15, -1.15], color=TX, lw=1.3, zorder=3)
+        box(5.95, -1.45, 0.85, 0.6, "$K$", fontsize=9.5)
+        arrow(5.95, -1.15, 4.37, -1.15)
+        ax.plot([4.15, 4.15], [-1.15, y0-0.22], color=TX, lw=1.3, zorder=3)
+        arrow(4.15, -0.5, 4.15, y0-0.23)
+
+        ax.plot([11.0, 11.0], [y0-0.4, -2.35], color=TX, lw=1.3, zorder=3)
+        ax.plot([11.0, 2.95], [-2.35, -2.35], color=TX, lw=1.3, zorder=3)
+        box(2.0, -2.65, 1.55, 0.6, "Realimentação", fontsize=8.2)
+        arrow(2.0, -2.35, 0.85, -2.35)
+        ax.plot([0.85, 0.85], [-2.35, y0-0.22], color=TX, lw=1.3, zorder=3)
+        arrow(0.85, -0.5, 0.85, y0-0.23)
+        ax.text(0.55, -1.3, "$N$", fontsize=9, color=TX)
+
+        fig.tight_layout()
+        return fig
+
+    def fig_caracteristica_torque_velocidade_tipos():
+        """Comparação da característica ωm × T para os quatro tipos de motor CC."""
+        fig, ax = plt.subplots(figsize=(7.0, 4.8))
+        fig.patch.set_alpha(0); ax.set_facecolor("none")
+
+        T = np.linspace(0, 10, 200)
+        w0 = 10.0
+        w_sep = w0 - 0.45*T
+        w_cum = w0 - 0.10*T - 0.075*T**2
+        w_dif = w0 + 0.30*np.sqrt(T)
+        w_ser = w0/np.sqrt(1+0.55*T)
+        w_ser[0] = w0
+
+        ax.plot(T, w_dif, color=VD, lw=2.2)
+        ax.plot(T, w_sep, color=AZ, lw=2.2)
+        ax.plot(T, w_cum, color=LR, lw=2.2)
+        ax.plot(T, w_ser, color=RX, lw=2.2)
+        ax.plot(T, np.full_like(T, w0), color=CZ, lw=1.0, ls="--")
+
+        ax.text(10.2, w_dif[-1], "Composto\ndiferencial", fontsize=9.5, color=VD, va="center")
+        ax.text(7.7, w_sep[154], "Excitação\nindependente", fontsize=9.5, color=AZ, va="center")
+        ax.text(5.6, w_cum[112]+0.6, "Composto\ncumulativo", fontsize=9.5, color=LR, va="bottom")
+        ax.text(3.0, w_ser[60]-1.0, "Série", fontsize=9.5, color=RX, va="top")
+
+        ax.set_xlim(0, 14.5); ax.set_ylim(0, 13.0)
+        ax.set_xlabel("$T$", fontsize=11, color=TX)
+        ax.set_ylabel("$\\omega_m$", fontsize=11, color=TX)
+        for s in ["top", "right"]: ax.spines[s].set_visible(False)
+        ax.spines["left"].set_color(TX); ax.spines["bottom"].set_color(TX)
+        ax.set_xticks([]); ax.set_yticks([])
+        ax.spines["left"].set_position(("data", 0))
+        ax.spines["bottom"].set_position(("data", 0))
+        fig.tight_layout()
+        return fig
+
+    def fig_regulacao_velocidade_def():
+        """Ilustra a definição de regulação de velocidade: ωm,sc (vazio) e ωm,nom
+        (carga nominal) sobre a reta característica ωm × T."""
+        fig, ax = plt.subplots(figsize=(6.6, 4.6))
+        fig.patch.set_alpha(0); ax.set_facecolor("none")
+
+        T = np.linspace(0, 10, 200)
+        w_sc = 10.0
+        T_nom = 8.0
+        w = w_sc - 0.2*T
+        wn = w_sc - 0.2*T_nom
+
+        ax.plot(T, w, color=AZ, lw=2.4)
+        ax.plot([T_nom, T_nom], [0, wn], color=CZ, lw=1.0, ls=":")
+        ax.plot([0, T_nom], [wn, wn], color=CZ, lw=1.0, ls=":")
+        ax.plot(0, w_sc, marker="o", color=TX, ms=6, zorder=5)
+        ax.plot(T_nom, wn, marker="o", color=TX, ms=6, zorder=5)
+
+        ax.annotate("", xy=(-0.55, wn), xytext=(-0.55, w_sc),
+                    arrowprops=dict(arrowstyle="<->", color=RX, lw=1.3))
+        ax.text(-0.95, (wn+w_sc)/2, "$\\Delta\\omega_m$", fontsize=10.5, color=RX, ha="center", va="center")
+        ax.text(-0.25, w_sc, "$\\omega_{m,sc}$", fontsize=10.5, color=TX, ha="right", va="center")
+        ax.text(-0.25, wn, "$\\omega_{m,nom}$", fontsize=10.5, color=TX, ha="right", va="center")
+        ax.text(T_nom, -0.55, "$T_{nom}$", fontsize=10.5, color=TX, ha="center")
+
+        ax.set_xlim(-2.3, 11); ax.set_ylim(0, 11.3)
+        ax.set_xlabel("$T$", fontsize=11, color=TX)
+        ax.set_ylabel("$\\omega_m$", fontsize=11, color=TX)
+        for s in ["top", "right"]: ax.spines[s].set_visible(False)
+        ax.spines["left"].set_color(TX); ax.spines["bottom"].set_color(TX)
+        ax.set_xticks([]); ax.set_yticks([])
+        ax.spines["left"].set_position(("data", 0))
+        ax.spines["bottom"].set_position(("data", 0))
+        fig.tight_layout()
+        return fig
+
+    def fig_motor_linear_tv():
+        """Reta ωm × T (ou Ia) do motor de excitação independente/shunt, com a
+        inclinação Ra/(KaΦ)² destacada."""
+        fig, ax = plt.subplots(figsize=(6.6, 4.4))
+        fig.patch.set_alpha(0); ax.set_facecolor("none")
+
+        T = np.linspace(0, 10, 50)
+        w0 = 9.5
+        w = w0 - 0.55*T
+
+        ax.plot(T, w, color=AZ, lw=2.6)
+        ax.plot(0, w0, marker="o", color=TX, ms=6, zorder=5)
+        ax.plot(T[-1], w[-1], marker="o", color=TX, ms=6, zorder=5)
+
+        ax.annotate("", xy=(2.6, w0-0.55*2.6-0.35), xytext=(1.7, w0-0.55*1.7+0.65),
+                    arrowprops=dict(arrowstyle="-|>", color=CZ, lw=1.2, connectionstyle="arc3,rad=-0.35"))
+        ax.text(6.0, w0-0.55*4.6+0.3, "Inclinação $\\dfrac{R_a}{(K_a\\Phi)^2}$", fontsize=11, color=TX, va="center")
+
+        ax.set_xlim(-0.6, 11); ax.set_ylim(0, 10.6)
+        ax.set_xlabel("$T,\\ I_a$", fontsize=11, color=TX)
+        ax.set_ylabel("$\\omega_m$", fontsize=11, color=TX)
+        for s in ["top", "right"]: ax.spines[s].set_visible(False)
+        ax.spines["left"].set_color(TX); ax.spines["bottom"].set_color(TX)
+        ax.set_xticks([]); ax.set_yticks([])
+        ax.spines["left"].set_position(("data", 0))
+        ax.spines["bottom"].set_position(("data", 0))
+        fig.tight_layout()
+        return fig
+
+    def fig_motor_tensao_painel():
+        """Controle por tensão terminal: (a) ωm × Vt para diferentes torques;
+        (b) ωm × T para diferentes tensões terminais (retas paralelas deslocadas)."""
+        fig, axes = plt.subplots(1, 2, figsize=(11.6, 4.6))
+        fig.patch.set_alpha(0)
+
+        ax = axes[0]
+        ax.set_facecolor("none")
+        Vt = np.linspace(0, 10, 50)
+        Ts = [0, 2.0, 4.0]
+        labels = ["$T=0$", "$T_1$", "$T_2$"]
+        colors = [TX, AZ, "#7fb2ee"]
+        for Tv, c, lb in zip(Ts, colors, labels):
+            w = np.clip(Vt - Tv*0.55, 0, None)
+            ax.plot(Vt, w, color=c, lw=2.2)
+            ax.text(Vt[-1]*0.62, (Vt[-1]*0.62-Tv*0.55)+0.35, lb, fontsize=9.5, color=c, ha="center")
+        ax.set_xlim(0, 11); ax.set_ylim(0, 12.5)
+        ax.set_xlabel("$V_t$", fontsize=10.5, color=TX); ax.set_ylabel("$\\omega_m$", fontsize=10.5, color=TX)
+        ax.text(0.3, 11.6, "(a)", fontsize=10, color=CZ)
+        for s in ["top", "right"]: ax.spines[s].set_visible(False)
+        ax.spines["left"].set_color(TX); ax.spines["bottom"].set_color(TX)
+        ax.set_xticks([]); ax.set_yticks([])
+
+        ax = axes[1]
+        ax.set_facecolor("none")
+        T = np.linspace(0, 7, 50)
+        Vts = [10.0, 8.2, 6.4, 4.6]
+        labels = ["$V_{t1}$", "$V_{t2}$", "$V_{t3}$", "$V_{t4}$"]
+        colors = [TX, AZ, "#6fa8e8", "#aecdf2"]
+        for Vtv, c, lb in zip(Vts, colors, labels):
+            w = Vtv - 0.35*T
+            ax.plot(T, w, color=c, lw=2.2)
+            ax.text(T[-1]+0.2, w[-1], lb, fontsize=9.5, color=c, va="center")
+        ax.annotate("", xy=(3.6, 9.2), xytext=(3.6, 4.2), arrowprops=dict(arrowstyle="-|>", color=CZ, lw=1.1))
+        ax.text(3.85, 6.5, "$V_t$", fontsize=10, color=CZ)
+        ax.set_xlim(0, 8.8); ax.set_ylim(0, 12.5)
+        ax.set_xlabel("$T$", fontsize=10.5, color=TX)
+        ax.text(0.2, 11.6, "(b)", fontsize=10, color=CZ)
+        for s in ["top", "right"]: ax.spines[s].set_visible(False)
+        ax.spines["left"].set_color(TX); ax.spines["bottom"].set_color(TX)
+        ax.set_xticks([]); ax.set_yticks([])
+
+        fig.tight_layout()
+        return fig
+
+    def fig_motor_campo_curva():
+        """Curva ωm × If do controle por fluxo de campo: do reostato Rfc máximo
+        (menor If, maior ωm) até Rfc = 0 (maior If, menor ωm)."""
+        fig, ax = plt.subplots(figsize=(6.2, 4.6))
+        fig.patch.set_alpha(0); ax.set_facecolor("none")
+
+        If = np.linspace(2.4, 6.0, 100)
+        w = 3.0 + 18.0/If
+
+        ax.plot(If, w, color=AZ, lw=2.6)
+        ax.plot(If[0], w[0], marker="o", color=TX, ms=6, zorder=5)
+        ax.plot(If[-1], w[-1], marker="o", color=TX, ms=6, zorder=5)
+
+        ax.annotate("$R_{fc,max}$", xy=(If[0], w[0]), xytext=(If[0]+0.8, w[0]+0.5),
+                    fontsize=10.5, color=TX, arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.0,
+                                                               connectionstyle="arc3,rad=0.3"))
+        ax.annotate("$R_{fc}=0$", xy=(If[-1], w[-1]), xytext=(If[-1]+0.15, w[-1]+1.4),
+                    fontsize=10.5, color=TX, arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.0,
+                                                               connectionstyle="arc3,rad=0.25"))
+
+        ax.set_xlim(0, 7.6); ax.set_ylim(0, 11.0)
+        ax.set_xlabel("$I_f$", fontsize=11, color=TX)
+        ax.set_ylabel("$\\omega_m$", fontsize=11, color=TX)
+        for s in ["top", "right"]: ax.spines[s].set_visible(False)
+        ax.spines["left"].set_color(TX); ax.spines["bottom"].set_color(TX)
+        ax.set_xticks([]); ax.set_yticks([])
+        fig.tight_layout()
+        return fig
+
+    def fig_motor_campo_familia_combinado():
+        """(esquerda) Família de retas ωm × T para diferentes correntes de campo;
+        (direita) estratégia combinada Vt (torque constante) + If (potência
+        constante), em torno de ωbase."""
+        fig, axes = plt.subplots(1, 2, figsize=(11.6, 4.6))
+        fig.patch.set_alpha(0)
+
+        ax = axes[0]
+        ax.set_facecolor("none")
+        T = np.linspace(0, 10, 50)
+        Ifs = [1.0, 1.22, 1.5, 1.9]
+        colors = [TX, AZ, "#6fa8e8", "#aecdf2"]
+        labels = ["$I_{f1}$", "$I_{f2}$", "$I_{f3}$", "$I_{f4}$"]
+        for i, (If_, c) in enumerate(zip(Ifs, colors)):
+            w0 = 4.0 + 7.0/If_
+            slope = 0.15/If_
+            w = w0 - slope*T
+            ax.plot(T, w, color=c, lw=2.2)
+            ax.text(T[-1]+0.2, w[-1], labels[i], fontsize=9.5, color=c, va="center")
+        ax.annotate("$R_{fc}=0$", xy=(1.6, 4.0+7.0/Ifs[0]-0.15/Ifs[0]*1.6), xytext=(0.4, 3.0),
+                    fontsize=9, color=TX, arrowprops=dict(arrowstyle="-|>", color=TX, lw=0.9))
+        ax.annotate("$R_{fc}\\,máx$", xy=(1.6, 4.0+7.0/Ifs[-1]-0.15/Ifs[-1]*1.6), xytext=(3.4, 10.6),
+                    fontsize=9, color=TX, arrowprops=dict(arrowstyle="-|>", color=TX, lw=0.9))
+        ax.set_xlim(0, 13.5); ax.set_ylim(0, 12.2)
+        ax.set_xlabel("$T$", fontsize=10.5, color=TX); ax.set_ylabel("$\\omega_m$", fontsize=10.5, color=TX)
+        for s in ["top", "right"]: ax.spines[s].set_visible(False)
+        ax.spines["left"].set_color(TX); ax.spines["bottom"].set_color(TX)
+        ax.set_xticks([]); ax.set_yticks([])
+
+        ax = axes[1]
+        ax.set_facecolor("none")
+        wbase = 5.0
+        w1 = np.linspace(0, wbase, 60)
+        T1 = np.full_like(w1, 8.0)
+        P1 = (8.0/wbase)*w1
+        w2 = np.linspace(wbase, 9.5, 60)
+        P2 = np.full_like(w2, 8.0)
+        T2 = 8.0*wbase/w2
+        ax.plot(w1, T1, color=TX, lw=2.2)
+        ax.plot(w2, T2, color=TX, lw=2.2)
+        ax.plot(w1, P1, color=LR, lw=2.2)
+        ax.plot(w2, P2, color=LR, lw=2.2)
+        ax.axvline(wbase, color=CZ, lw=1.0, ls="--")
+        ax.text(wbase, -0.7, "$\\omega_{base}$", fontsize=9.5, color=TX, ha="center")
+        ax.text(wbase/2, 8.5, "$T$", fontsize=10, color=TX, ha="center")
+        ax.text(wbase+2.0, 5.0, "$T$", fontsize=10, color=TX, ha="center")
+        ax.text(wbase/2, 3.0, "$P$", fontsize=10, color=LR, ha="center")
+        ax.text(wbase+2.0, 8.9, "$P$", fontsize=10, color=LR, ha="center")
+        ax.annotate("", xy=(wbase-0.15, 9.7), xytext=(0.15, 9.7), arrowprops=dict(arrowstyle="<->", color=CZ, lw=1.0))
+        ax.text(wbase/2, 10.0, "Controle por $V_t$\n(torque constante)", fontsize=8, color=CZ, ha="center")
+        ax.annotate("", xy=(9.3, 9.7), xytext=(wbase+0.15, 9.7), arrowprops=dict(arrowstyle="<->", color=CZ, lw=1.0))
+        ax.text(wbase+2.2, 10.0, "Controle por $I_f$\n(potência constante)", fontsize=8, color=CZ, ha="center")
+        ax.set_xlim(0, 9.8); ax.set_ylim(0, 10.8)
+        ax.set_xlabel("$\\omega_m$", fontsize=10.5, color=TX)
+        for s in ["top", "right"]: ax.spines[s].set_visible(False)
+        ax.spines["left"].set_color(TX); ax.spines["bottom"].set_color(TX)
+        ax.set_xticks([]); ax.set_yticks([])
+
+        fig.tight_layout()
+        return fig
+
+    def fig_motor_rae_familia():
+        """(esquerda) Família de retas ωm × T para Rae crescente, todas convergindo
+        para a mesma velocidade a vazio; (direita) T constante e P decrescente
+        conforme Rae aumenta."""
+        fig, axes = plt.subplots(1, 2, figsize=(11.6, 4.6))
+        fig.patch.set_alpha(0)
+
+        ax = axes[0]
+        ax.set_facecolor("none")
+        T = np.linspace(0, 10, 50)
+        w0 = 10.0
+        Raes = [0, 0.35, 0.75, 1.25]
+        colors = [TX, AZ, "#6fa8e8", "#aecdf2"]
+        for Rae, c in zip(Raes, colors):
+            slope = 0.45 + Rae*0.85
+            w = w0 - slope*T
+            ax.plot(T, w, color=c, lw=2.2)
+        ax.annotate("$R_{ae}=0$", xy=(8.5, w0-0.45*8.5), xytext=(9.6, w0-0.45*8.5+0.6),
+                    fontsize=9, color=TX, arrowprops=dict(arrowstyle="-|>", color=TX, lw=0.9))
+        ax.annotate("$R_{ae}\\,máx$", xy=(3.2, w0-(0.45+1.25*0.85)*3.2), xytext=(4.6, 3.2),
+                    fontsize=9, color=TX, arrowprops=dict(arrowstyle="-|>", color=TX, lw=0.9))
+        ax.set_xlim(0, 11.5); ax.set_ylim(0, 11)
+        ax.set_xlabel("$T$", fontsize=10.5, color=TX); ax.set_ylabel("$\\omega_m$", fontsize=10.5, color=TX)
+        for s in ["top", "right"]: ax.spines[s].set_visible(False)
+        ax.spines["left"].set_color(TX); ax.spines["bottom"].set_color(TX)
+        ax.set_xticks([]); ax.set_yticks([])
+
+        ax = axes[1]
+        ax.set_facecolor("none")
+        Rae_ax = np.linspace(0, 10, 50)
+        T_curve = np.full_like(Rae_ax, 8.0)
+        P_curve = 8.0 - 0.55*Rae_ax
+        ax.plot(Rae_ax, T_curve, color=TX, lw=2.2)
+        ax.plot(Rae_ax, P_curve, color=LR, lw=2.2)
+        ax.text(8.5, 8.4, "$T$", fontsize=10.5, color=TX)
+        ax.text(8.5, P_curve[-2]-0.9, "$P$", fontsize=10.5, color=LR)
+        ax.set_xlim(0, 11); ax.set_ylim(0, 10)
+        ax.set_xlabel("$R_{ae}$", fontsize=10.5, color=TX)
+        for s in ["top", "right"]: ax.spines[s].set_visible(False)
+        ax.spines["left"].set_color(TX); ax.spines["bottom"].set_color(TX)
+        ax.set_xticks([]); ax.set_yticks([])
+
+        fig.tight_layout()
+        return fig
+
+    def fig_motor_serie_rae_curvas():
+        """Família de curvas hiperbólicas ωm × T do motor série, para Rae crescente
+        (Vt constante): torques altos em baixas velocidades."""
+        fig, ax = plt.subplots(figsize=(6.8, 4.8))
+        fig.patch.set_alpha(0); ax.set_facecolor("none")
+
+        T = np.linspace(0.4, 10, 100)
+        Raes = [0, 0.3, 0.7, 1.3, 2.2]
+        colors = [TX, AZ, "#5b9bea", "#8fbdf0", "#bdd9f7"]
+        for Rae, c in zip(Raes, colors):
+            w = 9.0/np.sqrt(T) - 0.55 - Rae*0.55
+            w = np.clip(w, 0, None)
+            ax.plot(T, w, color=c, lw=2.2)
+
+        ax.annotate("$R_{ae}=0$", xy=(2.0, 9.0/np.sqrt(2.0)-0.55), xytext=(2.7, 8.6),
+                    fontsize=9.5, color=TX, arrowprops=dict(arrowstyle="-|>", color=TX, lw=0.9))
+        ax.annotate("$R_{ae}$", xy=(1.1, 9.0/np.sqrt(1.1)-0.55-2.2*0.55), xytext=(0.35, 2.3),
+                    fontsize=9.5, color=TX, arrowprops=dict(arrowstyle="-|>", color=TX, lw=0.9,
+                                                               connectionstyle="arc3,rad=-0.3"))
+        ax.text(7.0, 5.3, "$V_t = $ constante", fontsize=9.5, color=CZ)
+
+        ax.set_xlim(0, 10.5); ax.set_ylim(0, 10)
+        ax.set_xlabel("$T$", fontsize=11, color=TX)
+        ax.set_ylabel("$\\omega_m$", fontsize=11, color=TX)
+        for s in ["top", "right"]: ax.spines[s].set_visible(False)
+        ax.spines["left"].set_color(TX); ax.spines["bottom"].set_color(TX)
+        ax.set_xticks([]); ax.set_yticks([])
+        fig.tight_layout()
+        return fig
+
+    def fig_eficiencia_fluxo_potencia():
+        """Fluxo de potência do gerador (acima) e do motor (abaixo): perdas
+        rotacionais, de armadura, de campo shunt e de campo série subtraídas
+        progressivamente da potência de entrada."""
+        def panel(ax, mode="motor"):
+            y_lines = [0.9, 0.6, 0.3]
+            x0, x1 = 0.5, 9.5
+            for y in y_lines:
+                ax.plot([x0, x1], [y, y], color=TX, lw=1.6, zorder=2)
+            ax.annotate("", xy=(x1+0.4, 0.6), xytext=(x1, 0.6),
+                        arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.6))
+            if mode == "motor":
+                in_label = "$P_{input}$\n$=P_{elétrica}$\n$=V_tI_t$"
+                out_label = "$P_{output}$\n$=P_{mecânica}$\n$=P_{eixo}$"
+                loss_labels = ["$I_t^2R_{sr}$\n1–2%", "$I_f^2R_f$\n1–5%", "$I_a^2R_a$\n2–4%",
+                                "Perdas\nrotacionais\n3–15%"]
+            else:
+                in_label = "$P_{input}$\n$=P_{mecânica}$\n$=P_{eixo}$"
+                out_label = "$P_{output}$\n$=P_{elétrica}$\n$=V_tI_t$"
+                loss_labels = ["Perdas\nrotacionais\n3–15%", "$I_a^2R_a$\n2–4%", "$I_f^2R_f$\n1–5%",
+                                "$I_t^2R_{sr}$\n1–2%"]
+            loss_x = [1.6, 3.7, 5.8, 7.6]
+            ax.text(x0-0.15, 0.6, in_label, fontsize=8.5, color=TX, ha="right", va="center")
+            ax.text(x1+0.55, 0.6, out_label, fontsize=8.5, color=TX, ha="left", va="center")
+            for lx, lb in zip(loss_x, loss_labels):
+                ax.annotate("", xy=(lx, -0.55), xytext=(lx, 0.85),
+                            arrowprops=dict(arrowstyle="-|>", color=LR, lw=1.3))
+                ax.text(lx, -0.75, lb, fontsize=7.6, color=LR, ha="center", va="top")
+            ax.set_xlim(-2.3, 11.5); ax.set_ylim(-1.9, 1.3)
+            ax.axis("off")
+            title = ("Motor (entrada elétrica → saída mecânica)" if mode == "motor"
+                      else "Gerador (entrada mecânica → saída elétrica)")
+            ax.set_title(title, fontsize=10, color=TX, pad=4)
+
+        fig, axes = plt.subplots(2, 1, figsize=(10.5, 6.6))
+        fig.patch.set_alpha(0)
+        for ax in axes: ax.set_facecolor("none")
+        panel(axes[0], mode="gerador")
+        panel(axes[1], mode="motor")
+        fig.tight_layout()
+        return fig
+
+
+    # ════════════════════════════════════════════════════════════════════════
     # EXPLORADORES INTERATIVOS (Plotly)
     # ════════════════════════════════════════════════════════════════════════
 
@@ -2362,7 +3050,389 @@ def run():
     **complementar** — e não substituir — a excitação shunt.
     """)
 
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 18 — OPERAÇÃO COMO MOTOR
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("18. Operação como Motor")
+
+    st.markdown(r"""
+    Até aqui tratamos a máquina CC como **gerador**: energia mecânica entra pelo eixo e
+    energia elétrica sai pelos terminais. A mesma máquina, com a mesma estrutura física,
+    opera igualmente bem como **motor** — basta inverter o sentido do fluxo de potência.
+    Os circuitos equivalentes permanecem os mesmos; o que muda é a convenção de sinais:
+    $I_a$, $I_f$ e $I_t$ passam a **entrar** pelos terminais, alimentados por uma fonte
+    externa $V_t$, e a máquina entrega potência mecânica à carga acoplada ao seu eixo.
+
+    O exemplo abaixo mostra um motor CC com enrolamento de campo em paralelo (shunt):
+    """)
+
+    show_fig(fig_motor_shunt_circuito(), 0.62)
+
+    st.markdown(r"""
+    $$V_f = V_t \qquad\quad V_t = R_a\cdot I_a + E_a \qquad\quad I_t = I_a + I_f \qquad\quad E_a = K_a\,\Phi\,\omega_m \qquad\quad V_f = R_f\cdot I_f$$
+
+    Note a diferença em relação ao gerador: agora $V_t$ é **imposta** pela fonte externa,
+    e a malha de armadura satisfaz $V_t = E_a + R_a\cdot I_a$ — a tensão aplicada é maior
+    que a força contraeletromotriz $E_a$, com a diferença caindo sobre $R_a$. É essa
+    diferença $(V_t - E_a)$, dividida por $R_a$, que determina a corrente de armadura e,
+    por consequência, o torque desenvolvido no eixo.
+    """)
+
     st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 19 — CARACTERÍSTICA TORQUE-VELOCIDADE E REGULAÇÃO DE VELOCIDADE
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("19. Característica Torque-Velocidade e Regulação de Velocidade")
+
+    st.markdown(r"""
+    A forma como a velocidade $\omega_m$ varia com o torque de carga $T$ depende do tipo
+    de excitação do motor. Comparando os quatro tipos lado a lado:
+    """)
+
+    show_fig(fig_caracteristica_torque_velocidade_tipos(), 0.66)
+
+    st.markdown(r"""
+    O motor de **excitação independente** (ou shunt) tem queda suave e aproximadamente
+    linear — o fluxo $\Phi$ é mantido praticamente constante pela fonte de campo separada,
+    de modo que apenas a queda $R_a\cdot I_a$ reduz a velocidade com a carga. No motor
+    **composto cumulativo**, o enrolamento série reforça o campo shunt à medida que $I_a$
+    cresce, acentuando a queda de velocidade. No **composto diferencial**, o enrolamento
+    série se opõe ao shunt, enfraquecendo o fluxo total com a carga — o que tende a
+    **elevar** a velocidade (efeito instável e raramente desejado). Já o motor **série**
+    tem o fluxo proporcional à própria corrente de armadura, produzindo a característica
+    mais acentuada: altíssimo torque de partida e velocidade que cresce sem limite teórico
+    à medida que a carga se aproxima de zero — por isso motores série **nunca devem
+    operar sem carga mecânica** acoplada.
+
+    Essa sensibilidade da velocidade à carga é quantificada pela **regulação de
+    velocidade**:
+    """)
+
+    show_fig(fig_regulacao_velocidade_def(), 0.58)
+
+    st.markdown(r"""
+    $$R_{\omega_m} = \dfrac{\omega_{m,sc} - \omega_{m,nom}}{\omega_{m,nom}}$$
+
+    em que $\omega_{m,sc}$ é a velocidade angular a vazio (sem carga) e $\omega_{m,nom}$
+    é a velocidade na carga nominal. Quanto **menor** a regulação, mais "rígida" é a
+    velocidade do motor frente a variações de carga — característica desejável na maioria
+    das aplicações industriais, e a razão pela qual motores de excitação independente ou
+    shunt dominam aplicações que exigem velocidade estável.
+    """)
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 20 — CONTROLE DE TORQUE E VELOCIDADE: PRINCÍPIOS
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("20. Controle de Torque e Velocidade — Princípios")
+
+    st.markdown(r"""
+    Tome o motor de excitação independente como referência — sua característica linear
+    torna a análise direta e o resultado se generaliza, com adaptações, aos demais tipos.
+    """)
+
+    show_fig(fig_motor_independente_circuito(), 0.62)
+
+    st.markdown(r"""
+    Partindo da malha de armadura e da equação de torque, isolamos $\omega_m$:
+
+    $$E_a = K_a\,\Phi\,\omega_m = V_t - R_a\cdot I_a \qquad\quad T = K_a\,\Phi\,I_a$$
+
+    $$\omega_m = \dfrac{V_t - R_a\cdot I_a}{K_a\,\Phi} = \dfrac{V_t}{K_a\,\Phi} - \dfrac{R_a\cdot I_a}{K_a\,\Phi}$$
+
+    Substituindo $I_a = T/(K_a\Phi)$ a partir da equação de torque, chega-se à forma mais
+    útil — $\omega_m$ como função **direta** do torque de carga:
+
+    $$\omega_m = \dfrac{V_t}{K_a\,\Phi} - \dfrac{R_a}{(K_a\,\Phi)^2}\cdot T$$
+
+    Esta é a equação de uma **reta**: o termo $V_t/(K_a\Phi)$ é a velocidade a vazio
+    (intercepto), e o coeficiente $R_a/(K_a\Phi)^2$ é a inclinação — quanto **menor** a
+    resistência de armadura, mais "rígida" (plana) é a reta:
+    """)
+
+    show_fig(fig_motor_linear_tv(), 0.58)
+
+    st.markdown(r"""
+    A equação evidencia exatamente os **três** parâmetros disponíveis para controlar
+    $\omega_m$ a um dado torque de carga, cada um atuando de forma diferente:
+    """)
+
+    st.markdown(r"""
+    - **Tensão terminal** $V_t$ — controle **diretamente proporcional**: desloca a reta
+      inteira para cima ou para baixo, mantendo a inclinação;
+    - **Fluxo de campo** $\Phi$ — controle **inversamente proporcional**: altera tanto o
+      intercepto quanto a inclinação (ao quadrado), permitindo velocidades **acima** da
+      nominal;
+    - **Resistência de armadura** $R_a$ (via $R_{ae}$ adicional) — controle **inversamente
+      proporcional** apenas na inclinação: mantém o intercepto e "inclina" a reta,
+      reduzindo a velocidade para um mesmo torque.
+    """)
+
+    st.markdown(r"""
+    O controle por tensão terminal exige uma fonte de tensão variável (maior custo), mas
+    em compensação produz variação suave, rápida e linear de velocidade — é o método
+    preferido sempre que a eletrônica de potência permitir.
+    """)
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 21 — CONTROLE POR TENSÃO TERMINAL
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("21. Controle por Tensão Terminal")
+
+    st.markdown(r"""
+    Como o intercepto $V_t/(K_a\Phi)$ depende linearmente de $V_t$, variar a tensão
+    terminal desloca a reta $\omega_m \times T$ inteira, **sem alterar sua inclinação** —
+    todas as retas permanecem paralelas:
+    """)
+
+    show_fig(fig_motor_tensao_painel(), 0.86)
+
+    st.markdown(r"""
+    No painel (a), para um torque fixo, $\omega_m$ cresce linearmente com $V_t$ — daí o
+    nome "controle diretamente proporcional". No painel (b), cada valor de $V_t$ gera uma
+    reta $\omega_m \times T$ paralela às demais, deslocada verticalmente: aumentar $V_t$
+    eleva a velocidade em **todo** o intervalo de torque, sem comprometer a rigidez da
+    característica. Esse é o método mais "limpo" de controle de velocidade — produz
+    variação suave e previsível — mas tem como limite físico a própria tensão nominal de
+    projeto da armadura: **não é possível elevar $V_t$ indefinidamente** sem ultrapassar
+    o isolamento e a saturação magnética da máquina. Por isso, o controle por tensão
+    terminal cobre a faixa de velocidades **da zero até a nominal** (chamada de
+    $\omega_{base}$), operando em **torque constante** — acima dela, é necessário recorrer
+    ao enfraquecimento de campo (Seção 22).
+    """)
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 22 — CONTROLE POR FLUXO DE CAMPO
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("22. Controle por Fluxo de Campo")
+
+    st.markdown(r"""
+    O controle por fluxo atua sobre a corrente de campo $I_f$ — tipicamente variando o
+    reostato $R_{fc}$ em série com o enrolamento shunt. É um método de **baixo custo** e
+    simples implementação, já que a potência manipulada no circuito de campo é pequena
+    (apenas $I_f$, não $I_a$); em compensação, a resposta é **lenta** (o enrolamento de
+    campo tem indutância elevada) e **não linear**.
+
+    Reescrevendo o fluxo como $\Phi = k\cdot I_f$ e definindo $K_f = k\cdot K_a$, a
+    equação de velocidade da Seção 20 torna-se:
+    """)
+
+    show_fig(fig_motor_shunt_circuito(), 0.62)
+
+    st.markdown(r"""
+    $$\Phi = k\cdot I_f \qquad\quad K_f = k\cdot K_a \qquad\quad \omega_m = \dfrac{V_t}{K_f\,I_f} - \dfrac{R_a}{(K_f\,I_f)^2}\cdot T$$
+
+    Como $I_f$ aparece no **denominador**, a relação é inversa: **reduzir** $I_f$ (aumentando
+    $R_{fc}$) **eleva** a velocidade — o efeito chamado de "enfraquecimento de campo"
+    (*field weakening*):
+    """)
+
+    show_fig(fig_motor_campo_curva(), 0.56)
+
+    st.markdown(r"""
+    Variando $R_{fc}$ entre zero e seu valor máximo obtém-se uma família de retas
+    $\omega_m \times T$, cada uma com intercepto **e** inclinação diferentes — diferente do
+    controle por tensão, aqui as retas **não são paralelas**:
+    """)
+
+    show_fig(fig_motor_campo_familia_combinado(), 0.86)
+
+    st.markdown(r"""
+    O enfraquecimento de campo é exatamente o complemento que falta ao controle por
+    tensão terminal: como ele eleva a velocidade **além** da nominal (à custa de reduzir o
+    torque máximo disponível, já que $T = K_a\Phi I_a$ também cai com $\Phi$), os dois
+    métodos são tipicamente combinados — tensão terminal do repouso até $\omega_{base}$
+    (região de **torque constante**), e enfraquecimento de campo de $\omega_{base}$ até
+    $\omega_{max}$ (região de **potência constante**, painel à direita acima). Essa
+    estratégia combinada é a base do controle de velocidade na maioria dos acionamentos
+    industriais de motores CC.
+    """)
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 23 — CONTROLE POR RESISTÊNCIA DE ARMADURA
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("23. Controle por Resistência de Armadura")
+
+    st.markdown(r"""
+    O terceiro método insere uma resistência adicional $R_{ae}$ em série com a armadura.
+    É de implementação simples — basta um reostato de potência — mas **ineficiente**: a
+    energia dissipada em $R_{ae}$ é proporcional a $I_a^2$, e como $I_a > I_f$ na maioria
+    das máquinas, a potência manipulada (e o custo do reostato) é **maior** que no
+    controle por fluxo.
+    """)
+
+    show_fig(fig_motor_shunt_rae_circuito(), 0.62)
+
+    st.markdown(r"""
+    $$\omega_m = \dfrac{V_t}{K_a\,\Phi} - \dfrac{R_a + R_{ae}}{(K_a\,\Phi)^2}\cdot T$$
+
+    Como $R_{ae}$ soma-se a $R_a$ apenas no termo de **inclinação**, o intercepto (velocidade
+    a vazio) permanece inalterado — todas as retas convergem para o mesmo ponto em $T=0$,
+    "abrindo-se em leque" conforme $R_{ae}$ cresce:
+    """)
+
+    show_fig(fig_motor_rae_familia(), 0.86)
+
+    st.markdown(r"""
+    Esse "leque" reduz a velocidade disponível em qualquer torque de carga não nulo, à
+    custa de dissipar energia em $R_{ae}$ — por isso a potência útil entregue à carga cai
+    conforme $R_{ae}$ aumenta (painel à direita), mesmo mantendo o torque constante.
+
+    O mesmo princípio se aplica ao motor **série**, com uma diferença importante: como o
+    próprio enrolamento série conduz a corrente de armadura, o fluxo passa a depender de
+    $I_a$ — e a álgebra muda:
+    """)
+
+    show_fig(fig_motor_serie_rae_circuito(), 0.62)
+
+    st.markdown(r"""
+    $$E_a = K_a\,\Phi\,\omega_m = V_t - (R_a + R_{ae} + R_{sr})\cdot I_a \qquad\quad T = K_a\,\Phi\,I_a \qquad\quad \Phi = k\cdot I_a$$
+
+    Substituindo $\Phi = k\cdot I_a$ na equação de torque obtém-se $T = K_a\,k\,I_a^2$.
+    Definindo $K_{sr} = K_a\,k$, o torque do motor série é proporcional ao **quadrado**
+    da corrente de armadura — $T = K_{sr}\,I_a^2$ — o que, isolando $I_a = \sqrt{T/K_{sr}}$
+    e substituindo de volta na equação de $\omega_m$, leva à característica **hiperbólica**
+    do motor série:
+
+    $$\omega_m = \dfrac{V_t}{\sqrt{K_{sr}}\,\sqrt{T}} - \dfrac{R_a + R_{ae} + R_{sr}}{K_{sr}}$$
+    """)
+
+    show_fig(fig_motor_serie_rae_curvas(), 0.6)
+
+    st.markdown(r"""
+    Essa relação $\omega_m \propto 1/\sqrt{T}$ é a assinatura do motor série: torques
+    extremamente altos em baixas velocidades (ideal para partida sob carga pesada, como em
+    tração elétrica e guindastes), com a velocidade subindo rapidamente conforme o torque
+    de carga diminui — reforçando, mais uma vez, por que esse motor nunca deve ser operado
+    sem carga mecânica firmemente acoplada ao eixo.
+    """)
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 24 — PARTIDA DE MOTORES CC
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("24. Partida de Motores CC")
+
+    st.markdown(r"""
+    No instante da partida, o motor está parado: $\omega_m = 0$ e, portanto, $E_a = 0$ —
+    não há força contraeletromotriz para limitar a corrente. Nesse instante a malha de
+    armadura se reduz a $V_t = R_a\cdot I_a$, e como $R_a$ é tipicamente muito pequena
+    (poucos ohms ou menos), a corrente de partida pode atingir **dezenas de vezes** a
+    corrente nominal — o suficiente para danificar o comutador, queimar o isolamento da
+    armadura ou disparar a proteção de sobrecorrente da alimentação.
+
+    A solução clássica é inserir uma resistência de partida $R_{partida}$ em série com a
+    armadura apenas durante a aceleração, retirando-a (curto-circuitando-a) gradualmente
+    à medida que $\omega_m$ — e, com ela, $E_a$ — cresce e passa a limitar naturalmente a
+    corrente:
+    """)
+
+    show_fig(fig_motor_partida_circuito(), 0.62)
+
+    st.markdown(r"""
+    $$I_{a,partida} = \dfrac{V_t}{R_a + R_{partida}}$$
+
+    Na prática, $R_{partida}$ costuma ser retirada em **degraus** discretos (um reostato
+    com contatos progressivos, historicamente acionado por uma alavanca manual com retenção
+    eletromagnética), de modo que a corrente de armadura oscile dentro de uma faixa seguro
+    a cada degrau, sem nunca atingir o valor de rotor bloqueado. Alternativas modernas
+    dispensam o reostato e usam uma **fonte de tensão variável**, elevando $V_t$ suavemente
+    — em rampa ou em perfil exponencial — desde zero até o valor nominal, o que equivale a
+    aplicar o próprio controle por tensão terminal (Seção 21) já durante a partida.
+    """)
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 25 — CONTROLE EM MALHA FECHADA
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("25. Controle em Malha Fechada")
+
+    st.markdown(r"""
+    Os métodos das seções anteriores especificam **como** atuar sobre $V_t$, $\Phi$ ou
+    $R_a$ para alcançar uma velocidade desejada — mas, em malha aberta, qualquer variação
+    de carga desloca o ponto de operação ao longo da reta $\omega_m \times T$, afastando a
+    velocidade real do valor pretendido. Acionamentos industriais corrigem isso com
+    controle em **malha fechada**, tipicamente em cascata: um laço externo de velocidade
+    define a corrente de armadura necessária, e um laço interno, mais rápido, de corrente
+    garante que essa corrente seja de fato entregue à máquina:
+    """)
+
+    show_fig(fig_motor_malha_fechada_diagrama(), 0.92)
+
+    st.markdown(r"""
+    A velocidade medida $N$ é realimentada e comparada à referência $N^{*}$; o erro
+    alimenta o controlador de velocidade, que produz uma corrente de armadura de
+    referência $I_a^{*}$. Esse sinal, por sua vez, é comparado à corrente medida $I_a$
+    (via o bloco $K$) em um segundo somador, cujo erro alimenta o controlador de corrente
+    — este produz o sinal de comando $V_c$ que governa o conversor eletrônico de potência,
+    responsável por sintetizar a tensão terminal $V_t$ efetivamente aplicada ao motor.
+
+    Essa estrutura em **cascata** é deliberada: o laço de corrente, por ser muito mais
+    rápido que a dinâmica mecânica, mantém $I_a$ — e, portanto, o torque — sob controle
+    quase instantâneo, inclusive limitando-o a valores seguros durante transitórios (como
+    a própria partida, substituindo o resistor de partida da Seção 24). O laço de
+    velocidade, mais lento, ajusta esse limite de torque conforme necessário para que a
+    velocidade real convirja à referência, mesmo sob variações de carga.
+    """)
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 26 — EFICIÊNCIA E FLUXO DE POTÊNCIA
+    # ═══════════════════════════════════════════════════════════════════════════════
+    st.header("26. Eficiência e Fluxo de Potência")
+
+    st.markdown(r"""
+    Gerador e motor são a mesma máquina operando com o fluxo de potência invertido — o
+    que torna natural analisar as perdas de ambos a partir de um único circuito composto,
+    bastando inverter o sentido das correntes:
+    """)
+
+    show_fig(fig_eficiencia_circuito(), 0.62)
+
+    st.markdown(r"""
+    Em qualquer um dos dois sentidos, a potência que entra na máquina não é integralmente
+    convertida: parte é dissipada como perdas ao longo do caminho, em cada elemento
+    resistivo do circuito **e** no próprio atrito/ventilação do rotor (perdas
+    rotacionais — atrito nos mancais, ventilação e perdas no núcleo por
+    histerese/correntes parasitas). A eficiência é definida simplesmente como a razão
+    entre o que sai e o que entra:
+
+    $$Eff = \dfrac{P_{out}}{P_{in}}$$
+
+    O diagrama abaixo mostra, passo a passo, como a potência de entrada é reduzida por
+    cada parcela de perda até restar a potência de saída — para o gerador (entrada
+    mecânica, saída elétrica) e para o motor (entrada elétrica, saída mecânica), com
+    faixas típicas de cada perda em máquinas CC de porte industrial:
+    """)
+
+    show_fig(fig_eficiencia_fluxo_potencia(), 0.78)
+
+    st.markdown(r"""
+    As perdas **rotacionais** (3–15%) tendem a ser a maior parcela isolada, seguidas pelas
+    perdas ôhmicas na **armadura** ($I_a^2R_a$, 2–4%) — o produto da própria corrente de
+    carga atravessando a resistência do enrolamento mais sujeito a aquecimento. As perdas
+    nos enrolamentos de campo, shunt ($I_f^2R_f$, 1–5%) e série ($I_t^2R_{sr}$, 1–2%), são
+    tipicamente menores, já que $I_f \ll I_a$ e $R_{sr}$ é deliberadamente pequena. Note
+    que a ordem em que as perdas são subtraídas reflete o sentido físico do fluxo de
+    potência: no motor, as perdas elétricas ($I^2R$) ocorrem primeiro — na conversão de
+    energia elétrica em energia no entreferro — e a perda rotacional por último, já na
+    etapa mecânica de transmissão ao eixo; no gerador, a ordem se inverte.
+    """)
+
+    st.divider()
+
 
     # ═══════════════════════════════════════════════════════════════════════════════
     # EXPLORADORES INTERATIVOS
