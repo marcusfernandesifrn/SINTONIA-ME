@@ -4,15 +4,6 @@ Disciplina: Máquinas Elétricas
 Curso: Engenharia de Energia
 Instituição: IFRN — Campus Natal-Central (CNAT)
 Autor: Marcus V A Fernandes · marcus.fernandes@ifrn.edu.br · v1.0
-
-Fonte: os três PPTX-fonte do Módulo 3 — "CEEI - MCC - 01 - Conceitos" (conceitos
-elementares, estrutura construtiva, tensão na armadura, torque eletromagnético,
-curva de magnetização, reação da armadura e interpolos), "CEEI - MCC - 02 - Gerador"
-(classificação dos geradores, regulação de tensão, excitação independente, shunt,
-composto e série) e "CEEI - MCC - 03 - Motor" (operação como motor, característica
-torque-velocidade, regulação e os três métodos de controle de velocidade — tensão
-terminal, fluxo de campo e resistência de armadura —, partida, controle em malha
-fechada e eficiência/fluxo de potência).
 """
 
 import streamlit as st
@@ -906,125 +897,25 @@ def run():
     # ════════════════════════════════════════════════════════════════════════
 
     def fig_classificacao_geradores():
-        """5 esquemas de conexão do campo: independente, shunt, série, composto
-        curto e composto longo."""
-        fig, axes = plt.subplots(1, 5, figsize=(13.5, 3.4))
+        """Visão geral dos 5 esquemas de conexão do campo — independente, shunt, série,
+        composto curto e composto longo — reaproveitando os circuitos schemdraw
+        detalhados de cada tipo (Seções 14–17), compostos lado a lado em miniatura."""
+        nomes_fig = [fig_gerador_independente_circuito, fig_gerador_shunt_circuito,
+                     fig_gerador_serie_circuito, fig_gerador_composto_curto_circuito,
+                     fig_gerador_composto_longo_circuito]
+        titulos = ["(a) Independente", "(b) Shunt", "(c) Série",
+                   "(d) Composto curto", "(e) Composto longo"]
+
+        fig, axes = plt.subplots(1, 5, figsize=(15.5, 3.7))
         fig.patch.set_alpha(0)
-
-        def armature(ax, cx, cy, r=0.34):
-            ax.add_patch(plt.Circle((cx, cy), r, fc="white", ec=TX, lw=1.6, zorder=5))
-            ax.text(cx, cy, "$E_a$", fontsize=9, color=TX, ha="center", va="center", zorder=6)
-            return cx, cy, r
-
-        def rheostat(ax, x0, x1, y, color=AZ):
-            _zigzag(ax, x0, x1, y, n_zig=3, amp=0.1, color=color, lw=1.4)
-            mx = (x0+x1)/2
-            ax.annotate("", xy=(mx+0.18, y+0.22), xytext=(mx-0.18, y-0.18),
-                        arrowprops=dict(arrowstyle="-|>", color=color, lw=1.2), zorder=6)
-
-        # ---- (a) Independente ----
-        ax = axes[0]; ax.set_facecolor("none"); ax.axis("off"); ax.set_aspect("equal")
-        ax.set_xlim(-0.3, 2.6); ax.set_ylim(-1.6, 1.6)
-        cx, cy, r = armature(ax, 1.6, 0)
-        ax.plot([cx, cx], [cy+r, 1.3], color=TX, lw=1.4); ax.plot([cx-0.05,cx+0.05],[1.3,1.3],color=TX,lw=0)
-        ax.add_patch(plt.Circle((cx,1.35),.05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.text(cx+0.15,1.35,"+",fontsize=10,color=TX, va="center")
-        ax.plot([cx, cx], [cy-r, -1.3], color=TX, lw=1.4)
-        ax.add_patch(plt.Circle((cx,-1.35),.05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.text(cx+0.15,-1.35,"$-$",fontsize=10,color=TX, va="center")
-        # campo separado, à esquerda
-        ax.plot([0.1,0.1],[-0.55,0.55], color=AZ, lw=1.4)
-        _zigzag_v(ax, -0.2, 0.2, 0.1, n_zig=3, amp=0.1, color=AZ, lw=1.4)
-        rheostat(ax, -0.05, 0.25, 0.55, color=AZ)
-        ax.add_patch(plt.Circle((0.1,-0.55),.05, fc="white", ec=AZ, lw=1.2, zorder=6))
-        ax.add_patch(plt.Circle((0.1,0.85),.05, fc="white", ec=AZ, lw=1.2, zorder=6))
-        ax.plot([0.1,0.1],[0.55,0.85], color=AZ, lw=1.4)
-        ax.set_title("(a) Independente", fontsize=9.5, color=TX, pad=6)
-
-        # ---- (b) Shunt (paralelo) ----
-        ax = axes[1]; ax.set_facecolor("none"); ax.axis("off"); ax.set_aspect("equal")
-        ax.set_xlim(-0.3, 2.6); ax.set_ylim(-1.6, 1.6)
-        cx, cy, r = armature(ax, 1.0, 0)
-        ax.plot([cx,cx],[cy+r,1.3], color=TX, lw=1.4)
-        ax.plot([cx,cx],[cy-r,-1.3], color=TX, lw=1.4)
-        ax.plot([cx,2.3],[1.3,1.3], color=TX, lw=1.4)
-        ax.plot([cx,2.3],[-1.3,-1.3], color=TX, lw=1.4)
-        ax.add_patch(plt.Circle((2.3,1.3),.05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.add_patch(plt.Circle((2.3,-1.3),.05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.text(2.45,1.3,"+",fontsize=10,color=TX, va="center")
-        ax.text(2.45,-1.3,"$-$",fontsize=10,color=TX, va="center")
-        fx = 0.25
-        ax.plot([fx,cx],[1.3,1.3], color=AZ, lw=1.4)
-        ax.plot([fx,cx],[-1.3,-1.3], color=AZ, lw=1.4)
-        _zigzag_v(ax, -0.6, 0.4, fx, n_zig=4, amp=0.1, color=AZ, lw=1.4)
-        rheostat(ax, fx-0.15, fx+0.15, 0.8, color=AZ)
-        ax.plot([fx,fx],[0.4,0.65], color=AZ, lw=1.4); ax.plot([fx,fx],[0.95,1.3], color=AZ, lw=1.4)
-        ax.plot([fx,fx],[-1.3,-0.6], color=AZ, lw=1.4)
-        ax.set_title("(b) Shunt (paralelo)", fontsize=9.5, color=TX, pad=6)
-
-        # ---- (c) Série ----
-        ax = axes[2]; ax.set_facecolor("none"); ax.axis("off"); ax.set_aspect("equal")
-        ax.set_xlim(-0.3, 2.6); ax.set_ylim(-1.6, 1.6)
-        cx, cy, r = armature(ax, 0.6, 0)
-        ax.plot([cx,cx],[cy+r,1.3], color=TX, lw=1.4)
-        ax.plot([cx,cx],[cy-r,-1.3], color=TX, lw=1.4)
-        ax.plot([cx,1.3],[1.3,1.3], color=TX, lw=1.4)
-        _zigzag(ax, 1.3, 2.0, 1.3, n_zig=3, amp=0.1, color=VD, lw=1.5)
-        ax.plot([2.0,2.3],[1.3,1.3], color=TX, lw=1.4)
-        ax.plot([cx,2.3],[-1.3,-1.3], color=TX, lw=1.4)
-        ax.add_patch(plt.Circle((2.3,1.3),.05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.add_patch(plt.Circle((2.3,-1.3),.05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.text(2.45,1.3,"+",fontsize=10,color=TX, va="center")
-        ax.text(2.45,-1.3,"$-$",fontsize=10,color=TX, va="center")
-        ax.set_title("(c) Série", fontsize=9.5, color=TX, pad=6)
-
-        # ---- (d) Composto curto (short shunt) ----
-        ax = axes[3]; ax.set_facecolor("none"); ax.axis("off"); ax.set_aspect("equal")
-        ax.set_xlim(-0.3, 2.7); ax.set_ylim(-1.6, 1.6)
-        cx, cy, r = armature(ax, 0.6, 0)
-        ax.plot([cx,cx],[cy+r,1.3], color=TX, lw=1.4)
-        ax.plot([cx,cx],[cy-r,-1.3], color=TX, lw=1.4)
-        nodex = 1.0
-        ax.plot([cx,nodex],[1.3,1.3], color=TX, lw=1.4)
-        ax.add_patch(plt.Circle((nodex,1.3), .035, fc=TX, ec=TX, zorder=7))
-        _zigzag(ax, nodex+0.3, nodex+1.0, 1.3, n_zig=3, amp=0.1, color=VD, lw=1.5)
-        ax.plot([nodex,nodex+0.3],[1.3,1.3], color=TX, lw=1.4)
-        ax.plot([nodex+1.0,2.4],[1.3,1.3], color=TX, lw=1.4)
-        ax.plot([cx,2.4],[-1.3,-1.3], color=TX, lw=1.4)
-        ax.add_patch(plt.Circle((2.4,1.3),.05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.add_patch(plt.Circle((2.4,-1.3),.05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.text(2.55,1.3,"+",fontsize=9,color=TX, va="center")
-        ax.text(2.55,-1.3,"$-$",fontsize=9,color=TX, va="center")
-        fx = nodex
-        _zigzag_v(ax, -0.6, 0.4, fx, n_zig=4, amp=0.1, color=AZ, lw=1.4)
-        rheostat(ax, fx-0.15, fx+0.15, 0.8, color=AZ)
-        ax.plot([fx,fx],[0.4,0.65], color=AZ, lw=1.4); ax.plot([fx,fx],[0.95,1.3], color=AZ, lw=1.4)
-        ax.plot([fx,fx],[-1.3,-0.6], color=AZ, lw=1.4)
-        ax.set_title("(d) Composto curto", fontsize=9.5, color=TX, pad=6)
-
-        # ---- (e) Composto longo (long shunt) ----
-        ax = axes[4]; ax.set_facecolor("none"); ax.axis("off"); ax.set_aspect("equal")
-        ax.set_xlim(-0.3, 2.7); ax.set_ylim(-1.6, 1.6)
-        cx, cy, r = armature(ax, 0.6, 0)
-        ax.plot([cx,cx],[cy+r,1.3], color=TX, lw=1.4)
-        ax.plot([cx,cx],[cy-r,-1.3], color=TX, lw=1.4)
-        _zigzag(ax, cx+0.3, cx+1.0, 1.3, n_zig=3, amp=0.1, color=VD, lw=1.5)
-        ax.plot([cx,cx+0.3],[1.3,1.3], color=TX, lw=1.4)
-        nodex = cx+1.0
-        ax.plot([nodex,2.4],[1.3,1.3], color=TX, lw=1.4)
-        ax.add_patch(plt.Circle((nodex,1.3), .035, fc=TX, ec=TX, zorder=7))
-        ax.plot([cx,2.4],[-1.3,-1.3], color=TX, lw=1.4)
-        ax.add_patch(plt.Circle((2.4,1.3),.05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.add_patch(plt.Circle((2.4,-1.3),.05, fc="white", ec=TX, lw=1.2, zorder=6))
-        ax.text(2.55,1.3,"+",fontsize=9,color=TX, va="center")
-        ax.text(2.55,-1.3,"$-$",fontsize=9,color=TX, va="center")
-        fx = nodex
-        _zigzag_v(ax, -0.6, 0.4, fx, n_zig=4, amp=0.1, color=AZ, lw=1.4)
-        rheostat(ax, fx-0.15, fx+0.15, 0.8, color=AZ)
-        ax.plot([fx,fx],[0.4,0.65], color=AZ, lw=1.4); ax.plot([fx,fx],[0.95,1.3], color=AZ, lw=1.4)
-        ax.plot([fx,fx],[-1.3,-0.6], color=AZ, lw=1.4)
-        ax.set_title("(e) Composto longo", fontsize=9.5, color=TX, pad=6)
-
+        for ax, fn, titulo in zip(axes, nomes_fig, titulos):
+            sub = fn()
+            sub.canvas.draw()
+            buf = np.asarray(sub.canvas.buffer_rgba())
+            ax.imshow(buf)
+            ax.axis("off")
+            ax.set_title(titulo, fontsize=10.5, color=TX, pad=6)
+            plt.close(sub)
         fig.tight_layout()
         return fig
 
@@ -1217,7 +1108,7 @@ def run():
     def fig_gerador_composto_curto_circuito():
         """Circuito do gerador CC composto, ligação curta (short shunt): o campo shunt
         (Nf, Rfw, Rfc) é tomado em paralelo apenas com a armadura (Ea, Ra) — antes do
-        enrolamento série (Ns, Rsr). Construído com schemdraw, fiel ao desenho de
+        enrolamento série (Nsr, Rsr). Construído com schemdraw, fiel ao desenho de
         referência (MCC_Desenhos.ipynb)."""
         with schemdraw.Drawing() as d:
             d.config(unit=2.2)
@@ -1236,15 +1127,15 @@ def run():
             d.pop()
             Ea = elm.Motor().up().label('$E_a$').color(TX)
             Ra = elm.Resistor().up().label('$R_{a}$').color(TX)
-            Ns = elm.Inductor().right().label('$N_{s}$').color(VD)
+            Ns = elm.Inductor().right().label('$N_{sr}$').color(VD)
             Rs = elm.Resistor().right().label('$R_{sr}$').color(VD)
             Vtp = elm.Line().right().dot(open=True).color(TX)
 
             elm.Line().right().color(TX)
             elm.Line().down(length=1.0).color(TX)
             elm.ResistorVar().down().label('$R_{L}$').color(TX)
-            elm.Line().down(length=1.0).color(TX)
-            elm.Line().left().color(TX)
+            elm.Line().toy(Vtm.end.y).color(TX)
+            elm.Line().to(Vtm.end).color(TX)
 
             elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(Vtp.end, Vtm.end).color(TX)
 
@@ -1260,7 +1151,7 @@ def run():
     def fig_gerador_composto_longo_circuito():
         """Circuito do gerador CC composto, ligação longa (long shunt): o campo shunt
         (Nf, Rfw, Rfc) é tomado em paralelo com a armadura somada ao enrolamento série
-        (Ea, Ra, Ns, Rsr). Construído com schemdraw, fiel ao desenho de referência
+        (Ea, Ra, Nsr, Rsr). Construído com schemdraw, fiel ao desenho de referência
         (MCC_Desenhos.ipynb)."""
         with schemdraw.Drawing() as d:
             d.config(unit=2.2)
@@ -1283,15 +1174,15 @@ def run():
             d.pop()
             Ea = elm.Motor().up().label('$E_a$').color(TX)
             Ra = elm.Resistor().up().label('$R_{a}$').color(TX)
-            Ns = elm.Inductor().right().label('$N_{s}$').color(VD)
+            Ns = elm.Inductor().right().label('$N_{sr}$').color(VD)
             Rs = elm.Resistor().right().label('$R_{sr}$').color(VD)
             Vtp = elm.Line().right().dot(open=True).color(TX)
 
             elm.Line().right().color(TX)
             elm.Line().down(length=1.0).color(TX)
             elm.ResistorVar().down().label('$R_{L}$').color(TX)
-            elm.Line().down(length=1.0).color(TX)
-            elm.Line().left().color(TX)
+            elm.Line().toy(Vtm.end.y).color(TX)
+            elm.Line().to(Vtm.end).color(TX)
 
             elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(Vtp.end, Vtm.end).color(TX)
 
@@ -1339,7 +1230,7 @@ def run():
 
 
     def fig_gerador_serie_circuito():
-        """Circuito do gerador CC série: enrolamento de campo (Ns, Rsr) em série com a
+        """Circuito do gerador CC série: enrolamento de campo (Nsr, Rsr) em série com a
         armadura (Ea, Ra) e a carga RL — uma única malha de corrente. Construído com
         schemdraw, fiel ao desenho de referência (MCC_Desenhos.ipynb)."""
         with schemdraw.Drawing() as d:
@@ -1354,15 +1245,15 @@ def run():
             Ra = elm.Resistor().up().label('$R_{a}$').color(TX)
             elm.Line().right().color(TX)
             elm.Line().down().color(TX)
-            elm.Inductor().right().label('$N_{s}$').color(VD)
+            elm.Inductor().right().label('$N_{sr}$').color(VD)
             elm.Line().up().color(TX)
             elm.Resistor().right().label('$R_{sr}$').color(VD)
             T1 = elm.Dot(open=True).color(TX)
             elm.Line().right().color(TX)
             elm.Line().down(length=1.0).color(TX)
             elm.ResistorVar().down().label('$R_{L}$').color(TX)
-            elm.Line().down(length=1.0).color(TX)
-            elm.Line().left().color(TX)
+            elm.Line().toy(T2.end.y).color(TX)
+            elm.Line().to(T2.end).color(TX)
 
             elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(T1.end, T2.end).color(TX)
 
@@ -1433,9 +1324,8 @@ def run():
             Ra = elm.Resistor().up().label('$R_{a}$').color(TX)
             Vtp = elm.Line().right().dot(open=True).color(TX)
             elm.Line().right().color(TX)
-            elm.Line().down().color(TX)
-            elm.Line().down().color(TX)
-            elm.Line().left().color(TX)
+            elm.Line().toy(Vtm.end.y).color(TX)
+            elm.Line().to(Vtm.end).color(TX)
             elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(Vtp.end, Vtm.end).color(TX)
             elm.CurrentLabel(top=False, length=1.25, ofst=.3).reverse().at(Ra).label('$I_a$').color(TX)
             elm.CurrentLabel(top=True, length=1.25, ofst=.3).at(If).label('$I_f$').color(AZ)
@@ -1470,9 +1360,8 @@ def run():
             Ia = elm.Line().up().color(TX)
             Vtp = elm.Resistor().right().label('$R_a$').color(TX).dot(open=True)
             elm.Line().right().color(TX)
-            elm.Line().down().color(TX)
-            elm.Line().down().color(TX)
-            elm.Line().left().color(TX)
+            elm.Line().toy(Vtm.end.y).color(TX)
+            elm.Line().to(Vtm.end).color(TX)
             elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(Vtp.end, Vtm.end).color(TX)
             elm.CurrentLabel(top=False, length=1.25, ofst=.3).reverse().at(Ia).label('$I_a$').color(TX)
             elm.CurrentLabel(top=False, length=1.25, ofst=.3).at(If).label('$I_f$').color(AZ)
@@ -1491,6 +1380,7 @@ def run():
             Nf = elm.Inductor().right().label('$N_{f}$').color(AZ)
             If = elm.Line().up().color(AZ)
             Rfw = elm.Resistor().up().label('$R_{fw}$').color(AZ)
+            elm.Line().up().color(AZ)
             elm.Line().right().dot(open=True).color(AZ)
             d.pop()
             elm.ResistorVar().down().label('$R_{fc}$').color(AZ)
@@ -1505,9 +1395,8 @@ def run():
             Rae = elm.ResistorVar().up().label('$R_{ae}$').color(TX)
             Vtp = elm.Line().right().dot(open=True).color(TX)
             elm.Line().right().color(TX)
-            elm.Line().down().color(TX)
-            elm.Line().down().color(TX)
-            elm.Line().left().color(TX)
+            elm.Line().toy(Vtm.end.y).color(TX)
+            elm.Line().to(Vtm.end).color(TX)
             elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(Vtp.end, Vtm.end).color(TX)
             elm.CurrentLabel(top=False, length=1.25, ofst=.3).reverse().at(Ra).label('$I_a$').color(TX)
             elm.CurrentLabel(top=True, length=1.25, ofst=.3).at(If).label('$I_f$').color(AZ)
@@ -1539,9 +1428,8 @@ def run():
             elm.Resistor().right().label('$R_{sr}$').color(VD)
             T1 = elm.Dot(open=True).color(TX)
             elm.Line().right().color(TX)
-            elm.Line().down(length=1.0).color(TX)
-            elm.Line().down(length=1.0).color(TX)
-            elm.Line().left().color(TX)
+            elm.Line().toy(T2.end.y).color(TX)
+            elm.Line().to(T2.end).color(TX)
             elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(T1.end, T2.end).color(TX)
             elm.CurrentLabel(top=False, length=1.25, ofst=.3).reverse().at(Ra).label('$I_a$').color(TX)
         fig = d.fig.getfig()
@@ -1559,6 +1447,7 @@ def run():
             Nf = elm.Inductor().right().label('$N_{f}$').color(AZ)
             If = elm.Line().up().color(AZ)
             Rfw = elm.Resistor().up().label('$R_{fw}$').color(AZ)
+            elm.Line().up().color(AZ)
             elm.Line().right().dot(open=True).color(AZ)
             d.pop()
             elm.ResistorVar().down().label('$R_{fc}$').color(AZ)
@@ -1573,9 +1462,8 @@ def run():
             Rp = elm.ResistorVar().up().label('$R_{partida}$').color(LR)
             Vtp = elm.Line().right().dot(open=True).color(TX)
             elm.Line().right().color(TX)
-            elm.Line().down().color(TX)
-            elm.Line().down().color(TX)
-            elm.Line().left().color(TX)
+            elm.Line().toy(Vtm.end.y).color(TX)
+            elm.Line().to(Vtm.end).color(TX)
             elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(Vtp.end, Vtm.end).color(TX)
             elm.CurrentLabel(top=False, length=1.25, ofst=.3).reverse().at(Ra).label('$I_a$').color(TX)
             elm.CurrentLabel(top=True, length=1.25, ofst=.3).at(If).label('$I_f$').color(AZ)
@@ -1618,9 +1506,8 @@ def run():
             Rsr = elm.Resistor().right().label('$R_{sr}$').color(VD)
             Vtp = elm.Line().right().dot(open=True).color(TX)
             elm.Line().right().color(TX)
-            elm.Line().down(length=1.0).color(TX)
-            elm.Line().down(length=1.0).color(TX)
-            elm.Line().left().color(TX)
+            elm.Line().toy(Vtm.end.y).color(TX)
+            elm.Line().to(Vtm.end).color(TX)
             elm.Gap().down().label(('+', '$V_t$', '-')).endpoints(Vtp.end, Vtm.end).color(TX)
             elm.CurrentLabel(top=False, length=1.25, ofst=.3).reverse().at(Ra).label('$I_a$').color(TX)
             elm.CurrentLabel(top=True, length=1.25, ofst=.3).at(If).label('$I_f$').color(AZ)
@@ -2377,11 +2264,10 @@ def run():
     como **motor** é amplamente predominante, sobretudo pela facilidade de **controle de
     velocidade**, historicamente mais simples na máquina CC do que nas máquinas CA.
 
-    Motores CC de grande potência acionam cargas como prensas de impressão, esteiras
-    transportadoras, ventiladores, bombas, guinchos, guindastes, máquinas de papel e
-    laminadores — aplicações em que o controle fino de velocidade e torque é decisivo.
-    Motores CC de pequeno porte, por sua vez, são amplamente empregados como **dispositivos
-    de controle** (servomotores, atuadores) em malhas de automação.
+    Motores CC de grande potência acionam cargas como laminadores, guindastes, esteiras
+    transportadoras e máquinas de papel — aplicações em que o controle fino de velocidade e
+    torque é decisivo. Motores CC de pequeno porte são amplamente empregados como
+    **dispositivos de controle** (servomotores, atuadores) em malhas de automação.
 
     > Hoje, motores CA com acionamento eletrônico já substituem boa parte dessas aplicações,
     > mas a máquina CC permanece a porta de entrada conceitual mais direta para torque,
@@ -2885,7 +2771,7 @@ def run():
     As equações do circuito seguem diretamente das leis de Kirchhoff e da relação
     $E_a=K_a\Phi\omega_m$ já estabelecida na Seção 8:
 
-    $$V_f \equiv R_f\cdot I_f \qquad\quad V_t \equiv E_a - R_a\cdot I_a \qquad\quad E_a = K_a\,\Phi\,\omega_m \qquad\quad I_a = I_t \qquad\quad V_t = R_L\cdot I_t$$
+    $$V_f = R_f\cdot I_f \qquad\quad V_t = E_a - R_a\cdot I_a \qquad\quad E_a = K_a\,\Phi\,\omega_m \qquad\quad I_a = I_t \qquad\quad V_t = R_L\cdot I_t$$
 
     com $R_f=R_{fw}+R_{fc}$ a resistência total do circuito de campo, e $R_a$ a resistência
     do circuito de armadura (incluindo, se necessário, o efeito das escovas — quando não
@@ -2928,7 +2814,7 @@ def run():
     As equações mudam em um ponto essencial — a corrente de armadura agora se divide
     entre a carga e o próprio campo:
 
-    $$V_t \equiv E_a - R_a\cdot I_a \qquad\quad V_f = V_t = R_f\cdot I_f \qquad\quad I_a \equiv I_t + I_f \qquad\quad V_t = R_L\cdot I_t$$
+    $$V_t = E_a - R_a\cdot I_a \qquad\quad V_f = V_t = R_f\cdot I_f \qquad\quad I_a = I_t + I_f \qquad\quad V_t = R_L\cdot I_t$$
 
     ### 15.1 Como a autoexcitação ocorre
 
@@ -3050,6 +2936,7 @@ def run():
     **complementar** — e não substituir — a excitação shunt.
     """)
 
+    st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════════════
     # SEÇÃO 18 — OPERAÇÃO COMO MOTOR
@@ -3094,17 +2981,18 @@ def run():
     show_fig(fig_caracteristica_torque_velocidade_tipos(), 0.66)
 
     st.markdown(r"""
-    O motor de **excitação independente** (ou shunt) tem queda suave e aproximadamente
-    linear — o fluxo $\Phi$ é mantido praticamente constante pela fonte de campo separada,
-    de modo que apenas a queda $R_a\cdot I_a$ reduz a velocidade com a carga. No motor
-    **composto cumulativo**, o enrolamento série reforça o campo shunt à medida que $I_a$
-    cresce, acentuando a queda de velocidade. No **composto diferencial**, o enrolamento
-    série se opõe ao shunt, enfraquecendo o fluxo total com a carga — o que tende a
-    **elevar** a velocidade (efeito instável e raramente desejado). Já o motor **série**
-    tem o fluxo proporcional à própria corrente de armadura, produzindo a característica
-    mais acentuada: altíssimo torque de partida e velocidade que cresce sem limite teórico
-    à medida que a carga se aproxima de zero — por isso motores série **nunca devem
-    operar sem carga mecânica** acoplada.
+    - **Excitação independente (ou shunt)**: queda suave, aproximadamente linear — o fluxo
+      $\Phi$ é mantido praticamente constante, e apenas a queda $R_a\cdot I_a$ reduz a
+      velocidade com a carga.
+    - **Composto cumulativo**: o enrolamento série reforça o campo shunt conforme $I_a$
+      cresce, acentuando a queda de velocidade.
+    - **Composto diferencial**: o enrolamento série se opõe ao shunt, enfraquecendo o
+      fluxo total com a carga — tendendo a **elevar** a velocidade (efeito instável,
+      raramente desejado).
+    - **Série**: fluxo proporcional à própria corrente de armadura — característica mais
+      acentuada, com altíssimo torque de partida e velocidade que cresce sem limite teórico
+      quando a carga se aproxima de zero. Por isso, **nunca deve operar sem carga mecânica**
+      acoplada.
 
     Essa sensibilidade da velocidade à carga é quantificada pela **regulação de
     velocidade**:
@@ -3193,17 +3081,14 @@ def run():
     show_fig(fig_motor_tensao_painel(), 0.86)
 
     st.markdown(r"""
-    No painel (a), para um torque fixo, $\omega_m$ cresce linearmente com $V_t$ — daí o
-    nome "controle diretamente proporcional". No painel (b), cada valor de $V_t$ gera uma
-    reta $\omega_m \times T$ paralela às demais, deslocada verticalmente: aumentar $V_t$
-    eleva a velocidade em **todo** o intervalo de torque, sem comprometer a rigidez da
-    característica. Esse é o método mais "limpo" de controle de velocidade — produz
-    variação suave e previsível — mas tem como limite físico a própria tensão nominal de
-    projeto da armadura: **não é possível elevar $V_t$ indefinidamente** sem ultrapassar
-    o isolamento e a saturação magnética da máquina. Por isso, o controle por tensão
-    terminal cobre a faixa de velocidades **da zero até a nominal** (chamada de
-    $\omega_{base}$), operando em **torque constante** — acima dela, é necessário recorrer
-    ao enfraquecimento de campo (Seção 22).
+    No painel (a), para um torque fixo, $\omega_m$ cresce linearmente com $V_t$. No painel
+    (b), cada valor de $V_t$ gera uma reta $\omega_m \times T$ paralela às demais — elevar
+    $V_t$ aumenta a velocidade em todo o intervalo de torque, sem comprometer a rigidez da
+    característica. É o método mais "limpo" de controle, mas tem como limite físico a
+    própria tensão nominal de projeto da armadura: **não é possível elevar $V_t$
+    indefinidamente** sem ultrapassar o isolamento e a saturação da máquina. Por isso, ele
+    cobre a faixa de velocidades **da zero até a nominal** ($\omega_{base}$), em **torque
+    constante** — acima dela, é necessário recorrer ao enfraquecimento de campo (Seção 22).
     """)
 
     st.divider()
@@ -3245,13 +3130,12 @@ def run():
     show_fig(fig_motor_campo_familia_combinado(), 0.86)
 
     st.markdown(r"""
-    O enfraquecimento de campo é exatamente o complemento que falta ao controle por
-    tensão terminal: como ele eleva a velocidade **além** da nominal (à custa de reduzir o
-    torque máximo disponível, já que $T = K_a\Phi I_a$ também cai com $\Phi$), os dois
-    métodos são tipicamente combinados — tensão terminal do repouso até $\omega_{base}$
-    (região de **torque constante**), e enfraquecimento de campo de $\omega_{base}$ até
-    $\omega_{max}$ (região de **potência constante**, painel à direita acima). Essa
-    estratégia combinada é a base do controle de velocidade na maioria dos acionamentos
+    O enfraquecimento de campo complementa o controle por tensão terminal: eleva a
+    velocidade **além** da nominal, à custa de reduzir o torque máximo disponível (já que
+    $T = K_a\Phi I_a$ também cai com $\Phi$). Por isso os dois métodos são tipicamente
+    combinados — tensão terminal até $\omega_{base}$ (**torque constante**), enfraquecimento
+    de campo de $\omega_{base}$ até $\omega_{max}$ (**potência constante**, painel à direita
+    acima) — formando a base do controle de velocidade na maioria dos acionamentos
     industriais de motores CC.
     """)
 
@@ -3324,12 +3208,11 @@ def run():
     st.header("24. Partida de Motores CC")
 
     st.markdown(r"""
-    No instante da partida, o motor está parado: $\omega_m = 0$ e, portanto, $E_a = 0$ —
-    não há força contraeletromotriz para limitar a corrente. Nesse instante a malha de
-    armadura se reduz a $V_t = R_a\cdot I_a$, e como $R_a$ é tipicamente muito pequena
-    (poucos ohms ou menos), a corrente de partida pode atingir **dezenas de vezes** a
-    corrente nominal — o suficiente para danificar o comutador, queimar o isolamento da
-    armadura ou disparar a proteção de sobrecorrente da alimentação.
+    No instante da partida, $\omega_m=0$ e, portanto, $E_a=0$ — não há força
+    contraeletromotriz para limitar a corrente, e a malha de armadura se reduz a
+    $V_t = R_a\cdot I_a$. Como $R_a$ é tipicamente pequena, a corrente de partida pode
+    atingir **dezenas de vezes** a corrente nominal — o suficiente para danificar o
+    comutador, queimar o isolamento ou disparar a proteção de sobrecorrente.
 
     A solução clássica é inserir uma resistência de partida $R_{partida}$ em série com a
     armadura apenas durante a aceleração, retirando-a (curto-circuitando-a) gradualmente
@@ -3342,13 +3225,11 @@ def run():
     st.markdown(r"""
     $$I_{a,partida} = \dfrac{V_t}{R_a + R_{partida}}$$
 
-    Na prática, $R_{partida}$ costuma ser retirada em **degraus** discretos (um reostato
-    com contatos progressivos, historicamente acionado por uma alavanca manual com retenção
-    eletromagnética), de modo que a corrente de armadura oscile dentro de uma faixa seguro
-    a cada degrau, sem nunca atingir o valor de rotor bloqueado. Alternativas modernas
-    dispensam o reostato e usam uma **fonte de tensão variável**, elevando $V_t$ suavemente
-    — em rampa ou em perfil exponencial — desde zero até o valor nominal, o que equivale a
-    aplicar o próprio controle por tensão terminal (Seção 21) já durante a partida.
+    Na prática, $R_{partida}$ é retirada em **degraus** discretos (reostato de contatos
+    progressivos, historicamente com retenção eletromagnética), mantendo a corrente de
+    armadura dentro de uma faixa segura a cada passo. Alternativas modernas dispensam o
+    reostato e elevam $V_t$ suavemente — em rampa ou perfil exponencial — desde zero até o
+    nominal, aplicando o próprio controle por tensão terminal (Seção 21) já na partida.
     """)
 
     st.divider()
@@ -3359,31 +3240,28 @@ def run():
     st.header("25. Controle em Malha Fechada")
 
     st.markdown(r"""
-    Os métodos das seções anteriores especificam **como** atuar sobre $V_t$, $\Phi$ ou
-    $R_a$ para alcançar uma velocidade desejada — mas, em malha aberta, qualquer variação
-    de carga desloca o ponto de operação ao longo da reta $\omega_m \times T$, afastando a
-    velocidade real do valor pretendido. Acionamentos industriais corrigem isso com
-    controle em **malha fechada**, tipicamente em cascata: um laço externo de velocidade
-    define a corrente de armadura necessária, e um laço interno, mais rápido, de corrente
-    garante que essa corrente seja de fato entregue à máquina:
+    Os métodos anteriores especificam **como** atuar sobre $V_t$, $\Phi$ ou $R_a$ — mas em
+    malha aberta, qualquer variação de carga desloca o ponto de operação ao longo da reta
+    $\omega_m \times T$, afastando a velocidade real da pretendida. Acionamentos industriais
+    corrigem isso com controle em **malha fechada**, tipicamente em cascata: um laço externo
+    de velocidade define a corrente de armadura necessária, e um laço interno, mais rápido,
+    garante que ela seja entregue à máquina:
     """)
 
     show_fig(fig_motor_malha_fechada_diagrama(), 0.92)
 
     st.markdown(r"""
-    A velocidade medida $N$ é realimentada e comparada à referência $N^{*}$; o erro
-    alimenta o controlador de velocidade, que produz uma corrente de armadura de
-    referência $I_a^{*}$. Esse sinal, por sua vez, é comparado à corrente medida $I_a$
-    (via o bloco $K$) em um segundo somador, cujo erro alimenta o controlador de corrente
-    — este produz o sinal de comando $V_c$ que governa o conversor eletrônico de potência,
-    responsável por sintetizar a tensão terminal $V_t$ efetivamente aplicada ao motor.
+    A velocidade medida $N$ é comparada à referência $N^{*}$; o erro alimenta o
+    controlador de velocidade, que define a corrente de armadura de referência $I_a^{*}$.
+    Esse sinal é comparado à corrente medida $I_a$ em um segundo somador, cujo erro
+    alimenta o controlador de corrente — que produz o comando $V_c$ para o conversor,
+    responsável por sintetizar a tensão terminal $V_t$ aplicada ao motor.
 
-    Essa estrutura em **cascata** é deliberada: o laço de corrente, por ser muito mais
-    rápido que a dinâmica mecânica, mantém $I_a$ — e, portanto, o torque — sob controle
-    quase instantâneo, inclusive limitando-o a valores seguros durante transitórios (como
-    a própria partida, substituindo o resistor de partida da Seção 24). O laço de
-    velocidade, mais lento, ajusta esse limite de torque conforme necessário para que a
-    velocidade real convirja à referência, mesmo sob variações de carga.
+    A cascata é deliberada: o laço de corrente, muito mais rápido que a dinâmica mecânica,
+    mantém o torque sob controle quase instantâneo — inclusive limitando-o com segurança
+    durante transitórios, como a própria partida (substituindo o resistor da Seção 24). O
+    laço de velocidade, mais lento, ajusta esse limite para que a velocidade real convirja
+    à referência mesmo sob variações de carga.
     """)
 
     st.divider()
@@ -3402,14 +3280,12 @@ def run():
     show_fig(fig_eficiencia_circuito(), 0.62)
 
     st.markdown(r"""
-    Em qualquer um dos dois sentidos, a potência que entra na máquina não é integralmente
-    convertida: parte é dissipada como perdas ao longo do caminho, em cada elemento
-    resistivo do circuito **e** no próprio atrito/ventilação do rotor (perdas
-    rotacionais — atrito nos mancais, ventilação e perdas no núcleo por
-    histerese/correntes parasitas). A eficiência é definida simplesmente como a razão
-    entre o que sai e o que entra:
+    Em qualquer um dos dois sentidos, a potência de entrada não é integralmente convertida:
+    parte se dissipa em cada elemento resistivo do circuito **e** no atrito/ventilação do
+    rotor (perdas rotacionais — mancais, ventilação e perdas no núcleo por
+    histerese/correntes parasitas). A eficiência é a razão entre o que sai e o que entra:
 
-    $$Eff = \dfrac{P_{out}}{P_{in}}$$
+    $$\eta = \dfrac{P_{out}}{P_{in}}$$
 
     O diagrama abaixo mostra, passo a passo, como a potência de entrada é reduzida por
     cada parcela de perda até restar a potência de saída — para o gerador (entrada
@@ -3421,14 +3297,12 @@ def run():
 
     st.markdown(r"""
     As perdas **rotacionais** (3–15%) tendem a ser a maior parcela isolada, seguidas pelas
-    perdas ôhmicas na **armadura** ($I_a^2R_a$, 2–4%) — o produto da própria corrente de
-    carga atravessando a resistência do enrolamento mais sujeito a aquecimento. As perdas
-    nos enrolamentos de campo, shunt ($I_f^2R_f$, 1–5%) e série ($I_t^2R_{sr}$, 1–2%), são
-    tipicamente menores, já que $I_f \ll I_a$ e $R_{sr}$ é deliberadamente pequena. Note
-    que a ordem em que as perdas são subtraídas reflete o sentido físico do fluxo de
-    potência: no motor, as perdas elétricas ($I^2R$) ocorrem primeiro — na conversão de
-    energia elétrica em energia no entreferro — e a perda rotacional por último, já na
-    etapa mecânica de transmissão ao eixo; no gerador, a ordem se inverte.
+    perdas na **armadura** ($I_a^2R_a$, 2–4%). As perdas nos enrolamentos de campo — shunt
+    ($I_f^2R_f$, 1–5%) e série ($I_t^2R_{sr}$, 1–2%) — são menores, já que $I_f \ll I_a$ e
+    $R_{sr}$ é deliberadamente pequena. A ordem em que aparecem reflete o fluxo físico de
+    potência: no motor, as perdas elétricas ocorrem primeiro (conversão elétrica →
+    entreferro) e a rotacional por último (etapa mecânica até o eixo); no gerador, a ordem
+    se inverte.
     """)
 
     st.divider()
