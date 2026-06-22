@@ -865,151 +865,151 @@ def run():
         plt.close("all")
         return fig
 
-    def _fluxo_base(titulo, etapas, perdas, sentido="→"):
-        """
-        Desenha um diagrama de fluxo de potência genérico.
-        etapas: lista de (x, label, cor) para os nós do fluxo principal
-        perdas: lista de (x, label, cor, descr) para perdas (setas para baixo)
-        sentido: "→" motor/frenagem, "←" gerador
-        """
-        fig, ax = plt.subplots(figsize=(10, 3.8))
-        fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
-        ax.set_xlim(0, 11); ax.set_ylim(-2.8, 2.6)
-
-        y0 = 0.6  # linha do fluxo principal
-
-        # Setas do fluxo principal
-        xs_nos = [e[0] for e in etapas]
-        for i in range(len(xs_nos) - 1):
-            ax.annotate("",
-                        xy   =(xs_nos[i+1] - 0.12, y0),
-                        xytext=(xs_nos[i]  + 0.12, y0),
-                        arrowprops=dict(arrowstyle="-|>", color=TX, lw=2.2))
-
-        # Labels dos nós
-        for x, lbl, cor in etapas:
-            ax.text(x, y0 + 0.42, lbl, ha="center", fontsize=10.5,
-                    color=cor, fontweight="bold")
-
-        # Perdas (setas para baixo)
-        for xp, lbl, cor, descr in perdas:
-            ax.annotate("",
-                        xy   =(xp, -0.80),
-                        xytext=(xp, y0 - 0.10),
-                        arrowprops=dict(arrowstyle="-|>", color=cor, lw=1.8))
-            ax.text(xp, -1.00, lbl,   ha="center", fontsize=9.5,
-                    color=cor, fontweight="bold", va="top")
-            ax.text(xp, -1.60, descr, ha="center", fontsize=8.0,
-                    color=CZ, style="italic", va="top")
-
-        ax.set_title(titulo, fontsize=12, fontweight="bold", color=TX, pad=6)
-        fig.tight_layout()
+    def _fluxo_png(cells_fn, fname):
+        """Executa a função schemdraw, salva PNG e retorna figura matplotlib."""
+        cells_fn(fname)
+        fig, ax2 = plt.subplots(figsize=(7.5, 3.2))
+        fig.patch.set_alpha(0); ax2.set_facecolor("none"); ax2.axis("off")
+        ax2.imshow(plt.imread(fname))
+        plt.close("all")
         return fig
 
     def fig_fluxo_potencia_motor():
-        """Diagrama de fluxo de potência — motor de indução."""
-        etapas = [
-            (0.7,  "$P_{in}$\n(elétrica)",  AZ),
-            (3.2,  "$P_{ag}$\n(entreferro)", CI),
-            (7.2,  "$P_{mec}$\n(mecânica\ndesenv.)", VD),
-            (10.3, "$P_{out}$\n(eixo)", VD),
-        ]
-        perdas = [
-            (1.95, "$P_{cu,1}$", VM, "Cobre / Estator"),
-            (3.20, "$P_{fe}$",   LR, "Ferro / Núcleo"),   # coincide com P_ag mas abaixo
-            (5.20, "$P_{cu,2}$", VM, "Cobre / Rotor"),
-            (8.75, "$P_{rot}$",  LR, "Atrito e\nVentilação"),
-        ]
-        # posição das perdas ajustada para não coincidir com nós
-        perdas = [
-            (1.95, "$P_{cu,1}$", VM, "Cobre / Estator"),
-            (3.95, "$P_{fe}$",   LR, "Ferro / Núcleo"),
-            (5.20, "$P_{cu,2}$", VM, "Cobre / Rotor"),
-            (8.75, "$P_{rot}$",  LR, "Atrito /\nVentilação"),
-        ]
-        fig = _fluxo_base("Fluxo de Potência — Motor de Indução",
-                           etapas, perdas)
-        # Linha divisória elétrico/mecânico
-        ax = fig.axes[0]
-        ax.axvline(6.2, color=CZ, lw=0.9, ls=":", alpha=0.6)
-        ax.text(6.2, 2.2, "← Elétrico  |  Mecânico →",
-                ha="center", fontsize=8, color=CZ, style="italic")
-        return fig
+        """Fluxo de potência — motor de indução (reprodução fiel do MEI-DESENHOS.ipynb)."""
+        def _build(fname):
+            with schemdraw.Drawing() as d:
+                d.config(unit=2)
+                d.push()
+                elm.Arrow().right(d.unit * 4.0)
+                elm.Label().label("$P_{out}$", ofst=(.4, -.125))
+                d.pop()
+                d.push()
+                d.move(dx=0, dy=-0.125 * d.unit)
+                elm.Line().right(d.unit * 3.25)
+                elm.Arrow().down(d.unit * 0.5)
+                elm.Label().label("$P_{rot}$", ofst=(.125, -.125))
+                d.pop()
+                d.push()
+                d.move(dx=2.5 * d.unit, dy=0.5 * d.unit)
+                elm.Line().down(d.unit * 1.5).linestyle(":").color("lightgrey")
+                elm.Label().label("$P_{mec}$", ofst=(-3.0, .5))
+                elm.Label().label("$P_{ele}$", ofst=(-3.0, -.6))
+                d.pop()
+                d.push()
+                d.move(dx=0, dy=-0.25 * d.unit)
+                elm.Line().right(d.unit * 2.0)
+                elm.Arrow().down(d.unit * 0.5)
+                elm.Label().label("$P_{cu,2}$", ofst=(.125, -.125))
+                d.pop()
+                d.push()
+                d.move(dx=1.25 * d.unit, dy=0.25 * d.unit)
+                elm.Line().down(d.unit * 1.0).linestyle(":").color("lightgrey")
+                elm.Label().label("$P_{ag}$", ofst=(.25, .0))
+                d.pop()
+                d.push()
+                d.move(dx=0, dy=-0.375 * d.unit)
+                elm.Line().right(d.unit * 0.5)
+                elm.Arrow().down(d.unit * 0.5)
+                elm.Label().label("$P_{cu,1}$", ofst=(.125, -.125))
+                d.pop()
+                d.push()
+                d.move(dx=-0.4 * d.unit, dy=-0.125 * d.unit)
+                elm.Label().label("$P_{in}$", ofst=(.125, -.125))
+                d.pop()
+                d.save(fname)
+        return _fluxo_png(_build, "/tmp/_mei_fluxo_motor.png")
 
     def fig_fluxo_potencia_gerador():
-        """Diagrama de fluxo de potência — gerador de indução."""
-        etapas = [
-            (0.7,  "$P_{in}$\n(mecânica\nno eixo)", VD),
-            (3.8,  "$P_{ag}$\n(entreferro)", CI),
-            (7.2,  "$P_{ele}$\n(elétrica\nconvert.)", AZ),
-            (10.3, "$P_{out}$\n(terminal)", AZ),
-        ]
-        perdas = [
-            (2.25, "$P_{rot}$",  LR, "Atrito /\nVentilação"),
-            (3.80, "$P_{fe}$",   LR, "Ferro / Núcleo"),
-            (5.50, "$P_{cu,2}$", VM, "Cobre / Rotor"),
-            (8.75, "$P_{cu,1}$", VM, "Cobre / Estator"),
-        ]
-        fig = _fluxo_base("Fluxo de Potência — Gerador de Indução",
-                           etapas, perdas)
-        ax = fig.axes[0]
-        ax.axvline(6.4, color=CZ, lw=0.9, ls=":", alpha=0.6)
-        ax.text(6.4, 2.2, "← Mecânico  |  Elétrico →",
-                ha="center", fontsize=8, color=CZ, style="italic")
-        return fig
+        """Fluxo de potência — gerador de indução (reprodução fiel do MEI-DESENHOS.ipynb)."""
+        def _build(fname):
+            with schemdraw.Drawing() as d:
+                d.config(unit=2)
+                d.push()
+                elm.Arrow().right(d.unit * 4.0).reverse()
+                elm.Label().label("$P_{in}$", ofst=(.4, -.4))
+                d.pop()
+                d.push()
+                d.move(dx=4.0 * d.unit, dy=-0.125 * d.unit)
+                elm.Line().left(d.unit * 3.25)
+                elm.Arrow().down(d.unit * 0.5)
+                elm.Label().label("$P_{cu,1}$", ofst=(.125, -.125))
+                d.pop()
+                d.push()
+                d.move(dx=2.5 * d.unit, dy=0.5 * d.unit)
+                elm.Line().down(d.unit * 1.5).linestyle(":").color("lightgrey")
+                elm.Label().label("$P_{mec}$", ofst=(-3.0, .5))
+                elm.Label().label("$P_{ele}$", ofst=(-3.0, -.6))
+                d.pop()
+                d.push()
+                d.move(dx=4.0 * d.unit, dy=-0.25 * d.unit)
+                elm.Line().left(d.unit * 2.0)
+                elm.Arrow().down(d.unit * 0.5)
+                elm.Label().label("$P_{cu,2}$", ofst=(.125, -.125))
+                d.pop()
+                d.push()
+                d.move(dx=1.25 * d.unit, dy=0.25 * d.unit)
+                elm.Line().down(d.unit * 1.0).linestyle(":").color("lightgrey")
+                elm.Label().label("$P_{ag}$", ofst=(.25, .0))
+                d.pop()
+                d.push()
+                d.move(dx=4.0 * d.unit, dy=-0.375 * d.unit)
+                elm.Line().left(d.unit * 0.5)
+                elm.Arrow().down(d.unit * 0.5)
+                elm.Label().label("$P_{rot}$", ofst=(.125, -.125))
+                d.pop()
+                d.push()
+                d.move(dx=-0.4 * d.unit, dy=0)
+                elm.Label().label("$P_{out}$", ofst=(.125, -.125))
+                d.pop()
+                d.save(fname)
+        return _fluxo_png(_build, "/tmp/_mei_fluxo_gerador.png")
 
     def fig_fluxo_potencia_frenagem():
-        """Diagrama de fluxo de potência — frenagem por inversão de fase."""
-        # Na frenagem: Pin (elétrica) entra + P_eixo (mecânica) entra → tudo dissipado no rotor
-        fig, ax = plt.subplots(figsize=(10, 3.8))
-        fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
-        ax.set_xlim(0, 11); ax.set_ylim(-2.8, 2.6)
-
-        y0 = 0.6
-
-        # Fluxo elétrico (esquerda → centro)
-        ax.annotate("", xy=(4.8, y0), xytext=(0.6, y0),
-                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=2.2))
-        ax.text(0.6, y0+0.42, "$P_{terminal}$\n(elétrica)", ha="center",
-                fontsize=10, color=AZ, fontweight="bold")
-
-        # Fluxo mecânico (direita → centro)
-        ax.annotate("", xy=(5.2, y0), xytext=(10.4, y0),
-                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=2.2))
-        ax.text(10.4, y0+0.42, "$P_{eixo}$\n(mecânica)", ha="center",
-                fontsize=10, color=VD, fontweight="bold")
-
-        # Nó central (potência de entreferro — soma das duas entradas)
-        ax.add_patch(mpatches.FancyBboxPatch(
-            (4.55, y0-0.30), 0.90, 0.60,
-            boxstyle="round,pad=0.05",
-            fc="#fff5e0", ec=LR, lw=1.5, zorder=4))
-        ax.text(5.0, y0, "$P_{ag}$", ha="center", fontsize=10.5,
-                color=LR, fontweight="bold", zorder=5)
-
-        # Perdas para baixo (todas dissipadas)
-        perdas_f = [
-            (1.8,  "$P_{cu,1}$", VM, "Cobre / Estator"),
-            (5.00, "$P_{cu,2}$", VM, "Cobre / Rotor\n(dominante)"),
-            (8.6,  "$P_{rot}$",  LR, "Atrito /\nVentilação"),
-        ]
-        for xp, lbl, cor, descr in perdas_f:
-            ax.annotate("", xy=(xp, -0.80), xytext=(xp, y0-0.10),
-                        arrowprops=dict(arrowstyle="-|>", color=cor, lw=1.8))
-            ax.text(xp, -1.00, lbl,   ha="center", fontsize=9.5,
-                    color=cor, fontweight="bold", va="top")
-            ax.text(xp, -1.60, descr, ha="center", fontsize=8.0,
-                    color=CZ, style="italic", va="top")
-
-        # Nota
-        ax.text(5.0, 2.1,
-                "Frenagem: $s > 1$  — toda a energia (elétrica + mecânica) é dissipada no rotor",
-                ha="center", fontsize=8.5, color=TX, style="italic")
-
-        ax.set_title("Fluxo de Potência — Frenagem (Inversão de Fase)",
-                     fontsize=12, fontweight="bold", color=TX, pad=6)
-        fig.tight_layout()
-        return fig
+        """Fluxo de potência — frenagem (reprodução fiel do MEI-DESENHOS.ipynb)."""
+        def _build(fname):
+            with schemdraw.Drawing() as d:
+                d.config(unit=2)
+                d.push()
+                elm.Arrow().right(d.unit * 1.0)
+                elm.Line().right(d.unit * 1.0).dot()
+                elm.Line().right(d.unit * 1.0)
+                elm.Arrow().right(d.unit * 1.0).reverse()
+                elm.Label().label("$P_{eixo}$", ofst=(.5, -.125))
+                d.pop()
+                d.push()
+                d.move(dx=0, dy=-0.125 * d.unit)
+                elm.Line().right(d.unit * 0.5)
+                elm.Arrow().down(d.unit * 0.5)
+                elm.Label().label("$P_{cu,1}$", ofst=(.125, -.25))
+                d.pop()
+                d.push()
+                d.move(dx=2.5 * d.unit, dy=0.5 * d.unit)
+                elm.Line().down(d.unit * 1.5).linestyle(":").color("lightgrey")
+                elm.Label().label("$P_{mec}$", ofst=(-3.0, .5))
+                elm.Label().label("$P_{ele}$", ofst=(-3.0, -.6))
+                d.pop()
+                d.push()
+                d.move(dx=2.0 * d.unit, dy=0)
+                elm.Arrow().down(d.unit * 0.5)
+                elm.Label().label("$P_{cu,2}$", ofst=(.125, -.125))
+                d.pop()
+                d.push()
+                d.move(dx=1.25 * d.unit, dy=0.25 * d.unit)
+                elm.Line().down(d.unit * 1.0).linestyle(":").color("lightgrey")
+                elm.Label().label("$P_{ag}$", ofst=(.25, .0))
+                d.pop()
+                d.push()
+                d.move(dx=4.0 * d.unit, dy=-0.125 * d.unit)
+                elm.Line().left(d.unit * 0.5)
+                elm.Arrow().down(d.unit * 0.5)
+                elm.Label().label("$P_{rot}$", ofst=(.125, -.125))
+                d.pop()
+                d.push()
+                d.move(dx=-0.4 * d.unit, dy=0)
+                elm.Label().label("$P_{terminal}$", ofst=(-.25, -.125))
+                d.pop()
+                d.save(fname)
+        return _fluxo_png(_build, "/tmp/_mei_fluxo_frenagem.png")
 
     # ════════════════════════════════════════════════════════════════════════
     # EXPLORADORES PLOTLY
