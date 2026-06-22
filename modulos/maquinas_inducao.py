@@ -865,96 +865,149 @@ def run():
         plt.close("all")
         return fig
 
-    def fig_fluxo_potencia_motor():
-        """Diagrama de fluxo de potência do motor de indução (cadeia Pin→Pout)."""
-        fig, ax = plt.subplots(figsize=(9.0, 3.5))
+    def _fluxo_base(titulo, etapas, perdas, sentido="→"):
+        """
+        Desenha um diagrama de fluxo de potência genérico.
+        etapas: lista de (x, label, cor) para os nós do fluxo principal
+        perdas: lista de (x, label, cor, descr) para perdas (setas para baixo)
+        sentido: "→" motor/frenagem, "←" gerador
+        """
+        fig, ax = plt.subplots(figsize=(10, 3.8))
         fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
-        ax.set_xlim(0, 12); ax.set_ylim(-2.5, 2.8)
+        ax.set_xlim(0, 11); ax.set_ylim(-2.8, 2.6)
 
-        # Pontos da cadeia principal (y = 0.5)
-        xs = [0.6, 2.6, 4.6, 7.0, 9.2, 11.2]
-        y0 = 0.5
-        # Setas horizontais
-        for i in range(len(xs) - 1):
-            ax.annotate("", xy=(xs[i+1] - 0.10, y0),
-                        xytext=(xs[i] + 0.10, y0),
-                        arrowprops=dict(arrowstyle="-|>", color=TX, lw=2.0))
+        y0 = 0.6  # linha do fluxo principal
 
-        # Labels sobre o fluxo principal
-        labels_main = ["$P_{in}$", None, "$P_{ag}$", None, "$P_{mec}$", "$P_{out}$"]
-        cores_main  = [AZ, None, CI, None, VD, VD]
-        for x, lbl, cor in zip(xs, labels_main, cores_main):
-            if lbl:
-                ax.text(x, y0 + 0.35, lbl, ha="center", fontsize=10,
-                        color=cor, fontweight="bold")
+        # Setas do fluxo principal
+        xs_nos = [e[0] for e in etapas]
+        for i in range(len(xs_nos) - 1):
+            ax.annotate("",
+                        xy   =(xs_nos[i+1] - 0.12, y0),
+                        xytext=(xs_nos[i]  + 0.12, y0),
+                        arrowprops=dict(arrowstyle="-|>", color=TX, lw=2.2))
 
-        # Setas de perdas (para baixo)
-        perdas = [
-            (1.6,  "$P_{cu,1}$", VM, "Cobre\nEstator"),
-            (3.6,  "$P_{fe}$",   LR, "Ferro /\nNúcleo"),
-            (8.1,  "$P_{cu,2}$", VM, "Cobre\nRotor"),
-            (10.2, "$P_{rot}$",  LR, "Atrito /\nVentilação"),
-        ]
+        # Labels dos nós
+        for x, lbl, cor in etapas:
+            ax.text(x, y0 + 0.42, lbl, ha="center", fontsize=10.5,
+                    color=cor, fontweight="bold")
+
+        # Perdas (setas para baixo)
         for xp, lbl, cor, descr in perdas:
-            ax.annotate("", xy=(xp, -0.95), xytext=(xp, y0 - 0.08),
+            ax.annotate("",
+                        xy   =(xp, -0.80),
+                        xytext=(xp, y0 - 0.10),
                         arrowprops=dict(arrowstyle="-|>", color=cor, lw=1.8))
-            ax.text(xp, -1.15, lbl, ha="center", fontsize=9,
+            ax.text(xp, -1.00, lbl,   ha="center", fontsize=9.5,
                     color=cor, fontweight="bold", va="top")
-            ax.text(xp, -1.80, descr, ha="center", fontsize=7.5,
+            ax.text(xp, -1.60, descr, ha="center", fontsize=8.0,
                     color=CZ, style="italic", va="top")
 
-        # Linha divisória mec/ele
-        ax.axvline(5.8, color=CZ, lw=0.8, ls=":", alpha=0.5)
-        ax.text(5.8, 2.5,
-                "← Elétrico    |    Mecânico →",
-                ha="center", fontsize=8, color=CZ, style="italic")
-
-        ax.set_title("Fluxo de Potência — Motor de Indução",
-                     fontsize=11.5, fontweight="bold", color=TX, pad=8)
+        ax.set_title(titulo, fontsize=12, fontweight="bold", color=TX, pad=6)
         fig.tight_layout()
         return fig
 
-    def fig_fluxo_potencia_gerador():
-        """Diagrama de fluxo de potência do gerador de indução."""
-        fig, ax = plt.subplots(figsize=(9.0, 3.5))
-        fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
-        ax.set_xlim(0, 12); ax.set_ylim(-2.5, 2.8)
-
-        xs = [0.6, 2.6, 4.6, 7.0, 9.2, 11.2]
-        y0 = 0.5
-        for i in range(len(xs) - 1):
-            ax.annotate("", xy=(xs[i+1] - 0.10, y0),
-                        xytext=(xs[i] + 0.10, y0),
-                        arrowprops=dict(arrowstyle="-|>", color=TX, lw=2.0))
-
-        labels_main = ["$P_{in}$", None, "$P_{ag}$", None, None, "$P_{out}$"]
-        cores_main  = [VD, None, CI, None, None, AZ]
-        for x, lbl, cor in zip(xs, labels_main, cores_main):
-            if lbl:
-                ax.text(x, y0 + 0.35, lbl, ha="center", fontsize=10,
-                        color=cor, fontweight="bold")
-
-        perdas = [
-            (1.6,  "$P_{rot}$",  LR, "Atrito /\nVentilação"),
-            (3.6,  "$P_{fe}$",   LR, "Ferro /\nNúcleo"),
-            (8.1,  "$P_{cu,2}$", VM, "Cobre\nRotor"),
-            (10.2, "$P_{cu,1}$", VM, "Cobre\nEstator"),
+    def fig_fluxo_potencia_motor():
+        """Diagrama de fluxo de potência — motor de indução."""
+        etapas = [
+            (0.7,  "$P_{in}$\n(elétrica)",  AZ),
+            (3.2,  "$P_{ag}$\n(entreferro)", CI),
+            (7.2,  "$P_{mec}$\n(mecânica\ndesenv.)", VD),
+            (10.3, "$P_{out}$\n(eixo)", VD),
         ]
-        for xp, lbl, cor, descr in perdas:
-            ax.annotate("", xy=(xp, -0.95), xytext=(xp, y0 - 0.08),
+        perdas = [
+            (1.95, "$P_{cu,1}$", VM, "Cobre / Estator"),
+            (3.20, "$P_{fe}$",   LR, "Ferro / Núcleo"),   # coincide com P_ag mas abaixo
+            (5.20, "$P_{cu,2}$", VM, "Cobre / Rotor"),
+            (8.75, "$P_{rot}$",  LR, "Atrito e\nVentilação"),
+        ]
+        # posição das perdas ajustada para não coincidir com nós
+        perdas = [
+            (1.95, "$P_{cu,1}$", VM, "Cobre / Estator"),
+            (3.95, "$P_{fe}$",   LR, "Ferro / Núcleo"),
+            (5.20, "$P_{cu,2}$", VM, "Cobre / Rotor"),
+            (8.75, "$P_{rot}$",  LR, "Atrito /\nVentilação"),
+        ]
+        fig = _fluxo_base("Fluxo de Potência — Motor de Indução",
+                           etapas, perdas)
+        # Linha divisória elétrico/mecânico
+        ax = fig.axes[0]
+        ax.axvline(6.2, color=CZ, lw=0.9, ls=":", alpha=0.6)
+        ax.text(6.2, 2.2, "← Elétrico  |  Mecânico →",
+                ha="center", fontsize=8, color=CZ, style="italic")
+        return fig
+
+    def fig_fluxo_potencia_gerador():
+        """Diagrama de fluxo de potência — gerador de indução."""
+        etapas = [
+            (0.7,  "$P_{in}$\n(mecânica\nno eixo)", VD),
+            (3.8,  "$P_{ag}$\n(entreferro)", CI),
+            (7.2,  "$P_{ele}$\n(elétrica\nconvert.)", AZ),
+            (10.3, "$P_{out}$\n(terminal)", AZ),
+        ]
+        perdas = [
+            (2.25, "$P_{rot}$",  LR, "Atrito /\nVentilação"),
+            (3.80, "$P_{fe}$",   LR, "Ferro / Núcleo"),
+            (5.50, "$P_{cu,2}$", VM, "Cobre / Rotor"),
+            (8.75, "$P_{cu,1}$", VM, "Cobre / Estator"),
+        ]
+        fig = _fluxo_base("Fluxo de Potência — Gerador de Indução",
+                           etapas, perdas)
+        ax = fig.axes[0]
+        ax.axvline(6.4, color=CZ, lw=0.9, ls=":", alpha=0.6)
+        ax.text(6.4, 2.2, "← Mecânico  |  Elétrico →",
+                ha="center", fontsize=8, color=CZ, style="italic")
+        return fig
+
+    def fig_fluxo_potencia_frenagem():
+        """Diagrama de fluxo de potência — frenagem por inversão de fase."""
+        # Na frenagem: Pin (elétrica) entra + P_eixo (mecânica) entra → tudo dissipado no rotor
+        fig, ax = plt.subplots(figsize=(10, 3.8))
+        fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
+        ax.set_xlim(0, 11); ax.set_ylim(-2.8, 2.6)
+
+        y0 = 0.6
+
+        # Fluxo elétrico (esquerda → centro)
+        ax.annotate("", xy=(4.8, y0), xytext=(0.6, y0),
+                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=2.2))
+        ax.text(0.6, y0+0.42, "$P_{terminal}$\n(elétrica)", ha="center",
+                fontsize=10, color=AZ, fontweight="bold")
+
+        # Fluxo mecânico (direita → centro)
+        ax.annotate("", xy=(5.2, y0), xytext=(10.4, y0),
+                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=2.2))
+        ax.text(10.4, y0+0.42, "$P_{eixo}$\n(mecânica)", ha="center",
+                fontsize=10, color=VD, fontweight="bold")
+
+        # Nó central (potência de entreferro — soma das duas entradas)
+        ax.add_patch(mpatches.FancyBboxPatch(
+            (4.55, y0-0.30), 0.90, 0.60,
+            boxstyle="round,pad=0.05",
+            fc="#fff5e0", ec=LR, lw=1.5, zorder=4))
+        ax.text(5.0, y0, "$P_{ag}$", ha="center", fontsize=10.5,
+                color=LR, fontweight="bold", zorder=5)
+
+        # Perdas para baixo (todas dissipadas)
+        perdas_f = [
+            (1.8,  "$P_{cu,1}$", VM, "Cobre / Estator"),
+            (5.00, "$P_{cu,2}$", VM, "Cobre / Rotor\n(dominante)"),
+            (8.6,  "$P_{rot}$",  LR, "Atrito /\nVentilação"),
+        ]
+        for xp, lbl, cor, descr in perdas_f:
+            ax.annotate("", xy=(xp, -0.80), xytext=(xp, y0-0.10),
                         arrowprops=dict(arrowstyle="-|>", color=cor, lw=1.8))
-            ax.text(xp, -1.15, lbl, ha="center", fontsize=9,
+            ax.text(xp, -1.00, lbl,   ha="center", fontsize=9.5,
                     color=cor, fontweight="bold", va="top")
-            ax.text(xp, -1.80, descr, ha="center", fontsize=7.5,
+            ax.text(xp, -1.60, descr, ha="center", fontsize=8.0,
                     color=CZ, style="italic", va="top")
 
-        ax.axvline(5.8, color=CZ, lw=0.8, ls=":", alpha=0.5)
-        ax.text(5.8, 2.5,
-                "← Mecânico    |    Elétrico →",
-                ha="center", fontsize=8, color=CZ, style="italic")
+        # Nota
+        ax.text(5.0, 2.1,
+                "Frenagem: $s > 1$  — toda a energia (elétrica + mecânica) é dissipada no rotor",
+                ha="center", fontsize=8.5, color=TX, style="italic")
 
-        ax.set_title("Fluxo de Potência — Gerador de Indução",
-                     fontsize=11.5, fontweight="bold", color=TX, pad=8)
+        ax.set_title("Fluxo de Potência — Frenagem (Inversão de Fase)",
+                     fontsize=12, fontweight="bold", color=TX, pad=6)
         fig.tight_layout()
         return fig
 
@@ -1195,11 +1248,7 @@ def run():
 
     # ── Cabeçalho ─────────────────────────────────────────────────────────
     st.title("🌀 Máquinas de Indução Polifásica")
-    st.markdown(
-        "_Campo magnético girante · Escorregamento · Circuito equivalente · "
-        "Fluxo de potência · Curva de torque · Modos de operação_"
-    )
-
+    st.caption("⚡ SINTONIA · Máquinas Elétricas · 👤 Marcus V A Fernandes · ✉️ marcus.fernandes@ifrn.edu.br")
     st.markdown("---")
 
     # ── Índice ─────────────────────────────────────────────────────────────
@@ -1448,15 +1497,18 @@ Quando $R_c$ é omitido, o modelo IEEE move $X_m$ para os terminais de entrada:
     show_fig(fig_circuito_ieee(), width_frac=0.78)
     st.caption("**Figura 6.2** — Circuito equivalente IEEE simplificado (sem $R_c$).")
 
-    st.markdown(r"""
-### Equivalente de Thévenin
-
-Para facilitar o cálculo analítico do torque, o circuito à esquerda do ramo do rotor é
-substituído pelo seu equivalente de Thévenin:
-
-$$V_{th} \approx V_1 \frac{X_m}{X_1 + X_m} \qquad
-R_{th} \approx R_1 \!\left(\frac{X_m}{X_1 + X_m}\right)^{\!2} \qquad
-X_{th} \approx X_1$$
+    st.markdown("### Equivalente de Thévenin")
+    st.markdown(
+        "Para facilitar o cálculo analítico do torque, o circuito à esquerda do ramo "
+        "do rotor é substituído pelo seu equivalente de Thévenin. "
+        "As fórmulas simplificadas (válidas quando $R_1 \\ll X_1 + X_m$) são:"
+    )
+    st.latex(r"""
+V_{th} \approx V_1 \frac{X_m}{X_1 + X_m}
+\qquad
+R_{th} \approx R_1 \left(\frac{X_m}{X_1 + X_m}\right)^{2}
+\qquad
+X_{th} \approx X_1
 """)
 
     show_fig(fig_circuito_thevenin(), width_frac=0.72)
@@ -1469,32 +1521,36 @@ X_{th} \approx X_1$$
     # SEÇÃO 7
     # ═══════════════════════════════════════════════════════════════════════
     st.header("7. Fluxo de Potência e Balanço de Energia")
+    st.markdown("A conversão de energia segue uma cadeia de perdas sucessivas:")
+    st.latex(r"P_{in} \xrightarrow{-P_{cu,1}} \xrightarrow{-P_{fe}} P_{ag} \xrightarrow{-P_{cu,2}} P_{mec} \xrightarrow{-P_{rot}} P_{out}")
     st.markdown(r"""
-A conversão de energia segue uma cadeia de perdas sucessivas:
-
-$$P_{in} \xrightarrow{-P_{cu,1}} \xrightarrow{-P_{fe}}
-  P_{ag} \xrightarrow{-P_{cu,2}} P_{mec} \xrightarrow{-P_{rot}} P_{out}$$
-
 | Grandeza | Expressão | Significado |
 |---|---|---|
 | $P_{in}$ | $3\,V_1 I_1 \cos\varphi$ | Potência elétrica de entrada |
 | $P_{cu,1}$ | $3\,R_1 I_1^2$ | Perdas Joule no estator |
 | $P_{fe}$ | $3\,V_1^2/R_c$ | Perdas no ferro |
-| $P_{ag}$ | $3\,(R'_2/s)\,I_2^{\prime 2}$ | Potência de entreferro |
+| $P_{ag}$ | $3\,(R_2'/s)\,I_2'^{\,2}$ | Potência de entreferro |
 | $P_{cu,2}$ | $s\,P_{ag}$ | Perdas Joule no rotor |
-| $P_{mec}$ | $(1{-}s)\,P_{ag}$ | Potência mecânica desenvolvida |
+| $P_{mec}$ | $(1-s)\,P_{ag}$ | Potência mecânica desenvolvida |
 | $P_{rot}$ | constante | Atrito, ventilação e suplementares |
 | $P_{out}$ | $P_{mec} - P_{rot}$ | Potência útil no eixo |
 
-A relação $P_{cu,2} = s\,P_{ag}$ é fundamental: a $s = 5\%$, apenas $5\%$ da potência do
-entreferro é dissipada no rotor — $95\%$ é convertida em potência mecânica.
+A relação $P_{cu,2} = s\,P_{ag}$ é fundamental: operando a $s = 5\%$, apenas $5\%$
+da potência do entreferro é dissipada como calor no rotor — os outros $95\%$ são
+convertidos em potência mecânica.
 """)
 
-    show_fig(fig_fluxo_potencia_motor(), width_frac=0.92)
-    st.caption("**Figura 7.1** — Fluxo de potência no motor de indução.")
+    show_fig(fig_fluxo_potencia_motor(), width_frac=0.95)
+    st.caption("**Figura 7.1** — Fluxo de potência no **motor** de indução: "
+               "$P_{in}$ (elétrica) → perdas → $P_{out}$ (mecânica no eixo).")
 
-    show_fig(fig_fluxo_potencia_gerador(), width_frac=0.92)
-    st.caption("**Figura 7.2** — Fluxo de potência no gerador de indução.")
+    show_fig(fig_fluxo_potencia_gerador(), width_frac=0.95)
+    st.caption("**Figura 7.2** — Fluxo de potência no **gerador** de indução: "
+               "$P_{in}$ (mecânica) → perdas → $P_{out}$ (elétrica no terminal).")
+
+    show_fig(fig_fluxo_potencia_frenagem(), width_frac=0.95)
+    st.caption("**Figura 7.3** — Fluxo de potência na **frenagem** ($s > 1$): "
+               "potências elétrica e mecânica convergem para o rotor e são dissipadas como calor.")
 
     st.divider()
 
@@ -1502,27 +1558,28 @@ entreferro é dissipada no rotor — $95\%$ é convertida em potência mecânica
     # SEÇÃO 8
     # ═══════════════════════════════════════════════════════════════════════
     st.header("8. Torque Eletromagnético")
+    st.markdown(
+        "O torque eletromagnético é obtido da potência de entreferro "
+        "dividida pela velocidade síncrona angular:"
+    )
+    st.latex(r"T_{em} = \frac{P_{ag}}{\omega_s} = \frac{3\,I_2'^{\,2}\,(R_2'/s)}{\omega_s}")
+    st.markdown(
+        "Usando o equivalente de Thévenin, a expressão analítica completa em função de $s$ é:"
+    )
+    st.latex(r"""
+T_{em}(s) = \frac{3\,V_{th}^2\,(R_2'/s)}
+            {\omega_s \left[(R_{th} + R_2'/s)^2 + (X_{th}+X_2')^2\right]}
+""")
+    st.markdown("### Torque Máximo (Pull-out)")
+    st.markdown(
+        "O torque máximo $T_{max}$ (torque de pull-out) ocorre no escorregamento crítico $s_{max}$:"
+    )
+    st.latex(r"s_{max} = \frac{R_2'}{\sqrt{R_{th}^2 + (X_{th}+X_2')^2}}")
+    st.latex(r"T_{max} = \frac{3\,V_{th}^2}{2\,\omega_s \left[R_{th} + \sqrt{R_{th}^2+(X_{th}+X_2')^2}\right]}")
     st.markdown(r"""
-O torque eletromagnético é obtido da potência de entreferro e da velocidade síncrona:
-
-$$\boxed{T_{em} = \frac{P_{ag}}{\omega_s} = \frac{3\,I_2^{\prime 2}\,(R'_2/s)}{\omega_s}}$$
-
-Usando o equivalente de Thévenin, a expressão analítica em função de $s$ é:
-
-$$T_{em}(s) = \frac{3\,V_{th}^2\,(R'_2/s)}
-              {\omega_s \left[(R_{th} + R'_2/s)^2 + (X_{th}+X'_2)^2\right]}$$
-
-### Torque Máximo (Pull-out)
-
-O torque máximo $T_{max}$ ocorre no escorregamento crítico $s_{max}$:
-
-$$s_{max} = \frac{R'_2}{\sqrt{R_{th}^2 + (X_{th}+X'_2)^2}}$$
-
-$$T_{max} = \frac{3\,V_{th}^2}{2\,\omega_s \!\left[R_{th} + \sqrt{R_{th}^2+(X_{th}+X'_2)^2}\right]}$$
-
-Observe que $T_{max}$ **independe de $R'_2$**, enquanto $s_{max}$ é diretamente proporcional
-a $R'_2$. Inserindo resistência no rotor bobinado, desloca-se $s_{max}$ para 1 (torque máximo
-na partida) sem alterar $T_{max}$.
+Note que $T_{max}$ **independe de $R_2'$**, enquanto o escorregamento crítico $s_{max}$ é
+diretamente proporcional a $R_2'$. Ao inserir resistência externa no rotor bobinado,
+desloca-se $s_{max}$ para 1 (torque máximo na partida) sem alterar o valor de $T_{max}$.
 """)
 
     st.divider()
