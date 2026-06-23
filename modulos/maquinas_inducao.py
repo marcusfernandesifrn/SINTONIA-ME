@@ -2147,24 +2147,22 @@ $$P_{cu,2} = I_2^2 R_2 = s \cdot P_{ag}$$
     st.caption("**Figura 6.1a** — Circuito equivalente do rotor com tensão $sE_2$ "
                "e impedância $R_2 + jsX_2$.")
 
+    st.markdown(
+        "Dividindo numerador e denominador da corrente de rotor por $s$, "
+        "obtém-se o circuito referido ao estator com frequência do estator:"
+    )
+    st.latex(r"I_2 = \frac{s E_2}{R_2 + j s X_2} = \frac{E_2}{R_2/s + j X_2}")
+    st.markdown("A resistência $R_2/s$ é decomposta como:")
+    st.latex(r"\frac{R_2}{s} = R_2 + \underbrace{R_2 \frac{1-s}{s}}_{\text{carga mec.}}")
     st.markdown(r"""
-Dividindo numerador e denominador da corrente por $s$, obtém-se o circuito referido ao
-estator com **frequência do estator** — eliminando a dependência de frequência:
-
-$$I_2 = rac{s E_2}{R_2 + j s X_2} = rac{E_2}{R_2/s + j X_2}$$
-
-A resistência $R_2/s$ é decomposta em:
-
-$$rac{R_2}{s} = R_2 + R_2rac{1-s}{s}$$
-
-onde $R_2$ representa as perdas Joule e $R_2(1-s)/s$ é a **resistência de carga mecânica**.
+$R_2$ representa as perdas Joule no rotor; $R_2(1-s)/s$ é a **resistência de carga mecânica**,
+proporcional à potência convertida.
 
 ### 6.3 Circuito Completo
 
-Inclui: ramo série do estator ($R_1 + jX_1$), ramo de excitação em paralelo
-($R_c \parallel jX_m$) e ramo do rotor referido ($jX'_2 + R'_2/s$).
+Inclui: ramo série do estator ($R_1 + jX_1$), ramo de excitação ($R_c \parallel jX_m$)
+e ramo do rotor referido ($jX'_2 + R'_2/s$).
 """)
-
     show_fig(fig_circuito_completo(), width_frac=0.82)
     st.caption("**Figura 6.1** — Circuito equivalente completo com $R_c$, $X_m$, "
                "$R_1$, $X_1$, $R'_2/s$ e $X'_2$.")
@@ -2209,8 +2207,10 @@ X_{th} \approx X_1
     # SEÇÃO 7
     # ═══════════════════════════════════════════════════════════════════════
     st.header("7. Fluxo de Potência e Balanço de Energia")
-    st.markdown("A conversão de energia segue uma cadeia de perdas sucessivas:")
-    st.latex(r"P_{in} \xrightarrow{-P_{cu,1}} \xrightarrow{-P_{fe}} P_{ag} \xrightarrow{-P_{cu,2}} P_{mec} \xrightarrow{-P_{rot}} P_{out}")
+    st.markdown(
+        "As figuras abaixo ilustram o fluxo de potência nos três modos de operação. "
+        "A tabela resume as grandezas envolvidas:"
+    )
     st.markdown(r"""
 | Grandeza | Expressão | Significado |
 |---|---|---|
@@ -2278,18 +2278,17 @@ desloca-se $s_{max}$ para 1 (torque máximo na partida) sem alterar o valor de $
     st.header("8b. Torque — Aproximação Linear para Baixo Escorregamento")
     st.markdown(
         "Para valores **pequenos** de escorregamento (região de operação nominal), "
-        "a reatância $X'_2$ é muito menor que $R'_2/s$, e o denominador simplifica:"
+        "a reatância $X\'_2$ é muito menor que $R\'_2/s$, e o denominador simplifica. "
+        "O torque torna-se diretamente proporcional ao escorregamento:"
     )
-    st.latex(r"T_{em}(s) pprox rac{3\,V_{th}^2}{\omega_s\,(R_{th}^2+(X_{th}+X_2')^2)} \cdot rac{R_2'}{1} \cdot s \quad (s 	ext{ pequeno})")
+    st.latex(r"T_{em}(s) \approx \frac{3\,V_{th}^2}{\omega_s\,(R_{th}^2+(X_{th}+X_2')^2)} \cdot \frac{R_2'}{1} \cdot s \qquad (s \ll s_{max})")
     st.markdown(r"""
-O torque torna-se **diretamente proporcional ao escorregamento** — comportamento análogo
-ao de um motor CC de excitação independente com relação linear torque-velocidade.
-
-Esta aproximação é válida para $s \ll s_{max}$ e permite análise linear do ponto de operação.
+Comportamento análogo ao de um motor CC de excitação independente com relação linear
+torque-velocidade. Esta aproximação permite análise simplificada do ponto de operação nominal.
 """)
     show_plot(fig_torque_linear_s(), key="fig_tlin")
     st.caption("**Figura 8b.1** — Comparação entre a curva exata $T(s)$ (azul) e a "
-               "aproximação linear $T \approx K \cdot s$ (vermelho tracejado) para baixo $s$.")
+               "aproximação linear T ≈ K·s (vermelho tracejado) para baixo s.")
 
     st.divider()
 
@@ -2306,25 +2305,25 @@ análogos aos ensaios do transformador. Antes dos ensaios, a **resistência do e
     show_fig(fig_ensaios_parametros(), width_frac=0.90)
     st.caption("**Figura 8c.1** — Comparação dos ensaios em vazio e com rotor bloqueado.")
 
+    st.markdown("### Ensaio em Vazio")
+    st.markdown(
+        "Com o motor operando sem carga ($s \\approx 0$, $n \\approx n_s$), "
+        "na tensão e frequência nominais. Grandezas medidas: $V_0$, $I_0$, $P_0$."
+    )
+    st.latex(r"R_c = \frac{3 V_1^2}{P_0 - P_{R_1}} \qquad X_m = \frac{V_1}{I_\phi}")
     st.markdown(r"""
-### Ensaio em Vazio
-
-Com o motor operando sem carga ($s pprox 0$, $n pprox n_s$), na tensão e frequência nominais:
-
-$$R_c = rac{3 V_1^2}{P_0 - P_{R_1}} \qquad X_m = rac{V_1}{I_\phi}$$
-
 onde $P_0$ é a potência total medida, $P_{R_1} = 3 R_1 I_0^2$ é a perda no cobre do estator
-e $I_\phi = \sqrt{I_0^2 - (P_0/3V_1)^2}$ é a componente reativa.
+e $I_\phi = \sqrt{I_0^2 - (P_0/3V_1)^2}$ é a corrente de magnetização.
 As **perdas rotacionais** $P_{rot}$ são obtidas subtraindo as perdas no cobre e no ferro.
 
 ### Ensaio com Rotor Bloqueado
 
-Com $n = 0$ ($s = 1$), aplicando tensão reduzida até a corrente nominal:
-
-$$R_{eq} = R_1 + R_2' = rac{P_{cc}}{3 I_{cc}^2} \qquad X_{eq} = X_1 + X_2' = rac{\sqrt{(V_{cc}/I_{cc})^2 - R_{eq}^2}}{1}$$
-
-A repartição $X_1$ e $X_2'$ segue convenções de norma (tipicamente $X_1 = X_2'$ para motores
-de gaiola, ou determinada por medições adicionais no rotor bobinado).
+Com $n = 0$ ($s = 1$), aplicando tensão reduzida até a corrente nominal. Grandezas: $V_{cc}$, $I_{cc}$, $P_{cc}$.
+""")
+    st.latex(r"R_{eq} = R_1 + R_2' = \frac{P_{cc}}{3 I_{cc}^2} \qquad X_{eq} = X_1 + X_2' = \sqrt{\left(\frac{V_{cc}}{I_{cc}}\right)^2 - R_{eq}^2}")
+    st.markdown(r"""
+A repartição $X_1$ e $X'_2$ segue convenções de norma: tipicamente $X_1 = X'_2$ para motores
+de gaiola, ou determinada por medições adicionais no rotor bobinado.
 """)
 
     st.divider()
@@ -2428,23 +2427,19 @@ e torque de partida elevado com corrente controlada. Método mais moderno e flex
 A corrente de linha do estator $I_1$ varia significativamente com o escorregamento.
 Dois casos extremos são importantes:
 
-**Em velocidade síncrona ($s = 0$):**
-$$I_1 = I_\phi = rac{V_1}{\sqrt{R_c^2}} \cdot \left(rac{R_c \parallel jX_m}{|Z_{total}|}
-ight)$$
+**Em velocidade síncrona ($s = 0$):** o ramo do rotor está em aberto ($R'_2/s 	o \infty$).
+A corrente é apenas a de excitação $I_\phi$, tipicamente 20–40% da corrente nominal.
 
-Como $R'_2/s 	o \infty$, o ramo do rotor está em aberto — a corrente é apenas a de
-excitação $I_\phi$, tipicamente $20	ext{–}40\%$ da corrente nominal.
-
-**Na partida ($s = 1$):**
-$$I_1 pprox rac{V_1}{\sqrt{(R_1+R_2')^2 + (X_1+X_2')^2}}$$
-
-O ramo de excitação é desprezível (corrente muito maior); a corrente de partida pode
+**Na partida ($s = 1$):** o ramo de excitação é desprezível. A corrente de partida pode
 atingir **5 a 8 vezes** a corrente nominal — principal motivação dos métodos de partida suave.
 """)
+    st.latex(r"I_{1,partida} \approx \frac{V_1}{\sqrt{(R_1+R_2')^2 + (X_1+X_2')^2}}")
 
     show_plot(fig_corrente_estator_s(), key="fig_I1s")
     st.caption("**Figura 13.1** — Correntes $|I_1|$, $|I_2'|$ e $|I_m|$ × velocidade. "
-               "Observar o alto valor de $I_1$ na partida ($n=0$) e a queda para $I_\phi$ em $n=n_s$.")
+               "Alto valor de $I_1$ na partida ($n=0$) e queda para $I_\\phi$ em $n=n_s$.")
+
+    st.divider()
 
     st.divider()
 
@@ -2452,28 +2447,25 @@ atingir **5 a 8 vezes** a corrente nominal — principal motivação dos método
     # SEÇÃO 14 — FATOR DE POTÊNCIA
     # ═══════════════════════════════════════════════════════════════════════
     st.header("14. Fator de Potência")
+    st.markdown(
+        "O fator de potência $\\cos\\varphi$ é o cosseno do ângulo de defasagem "
+        "entre $V_1$ e $I_1$:"
+    )
+    st.latex(r"\cos\varphi = \cos\left(\angle \frac{V_1}{I_1}\right)")
     st.markdown(r"""
-O fator de potência $\cosarphi$ da MIT é determinado pelo ângulo de fase da corrente $I_1$
-em relação à tensão $V_1$:
+As perdas totais são $P_{perdas} = P_{cu,1} + P_{fe} + P_{cu,2} + P_{rot}$.
 
-$$\cosarphi = \cos\left(ngle rac{V_1}{I_1}
-ight)$$
-
-**Comportamento típico:**
-- Em **carga leve** ou **vazio**: fp baixo (0,1–0,3), pois $I_1 pprox I_\phi$ (corrente reativa dominante);
-- Na **carga nominal**: fp elevado (0,80–0,92), com boa relação entre componentes ativa e reativa;
-- Na **partida** ($s = 1$): fp moderado (0,35–0,55), determinado pela impedância total.
-
-O fp máximo ocorre em uma carga ligeiramente abaixo da nominal — ponto em que a componente
-ativa de $I_1$ iguala-se ao valor da componente reativa de magnetização.
-
-**Implicação prática:** motores operando cronicamente em carga leve causam baixo fp na instalação,
-exigindo **correção do fator de potência** por banco de capacitores.
+**Eficiência máxima** ocorre quando perdas variáveis (cobre, proporcionais a $I^2$) igualam
+as perdas fixas (ferro e rotacionais, aproximadamente constantes).
 """)
+    st.latex(r"P_{cu,1} + P_{cu,2} \approx P_{fe} + P_{rot} \quad \Rightarrow \quad \eta_{max}")
+    st.markdown("Motores de alto rendimento (classes IE2–IE4) atingem $\\eta > 95\\%$ na faixa 50–100% da carga.")
 
     show_plot(fig_fator_potencia_s(), key="fig_fp")
-    st.caption("**Figura 14.1** — Fator de potência $\cos\varphi$ × velocidade. "
-               "O fp é baixo em vazio, atinge o máximo próximo da carga nominal e cai na partida.")
+    st.caption("**Figura 14.1** — Fator de potência × velocidade. "
+               "O fp é baixo em vazio, atinge o máximo próximo da carga nominal.")
+
+    st.divider()
 
     st.divider()
 
@@ -2481,43 +2473,52 @@ exigindo **correção do fator de potência** por banco de capacitores.
     # SEÇÃO 15 — EFICIÊNCIA
     # ═══════════════════════════════════════════════════════════════════════
     st.header("15. Eficiência")
+    st.markdown("A eficiência do motor de indução é:")
+    st.latex(r"\eta = \frac{P_{out}}{P_{in}} = \frac{P_{mec} - P_{rot}}{P_{in}} = 1 - \frac{P_{perdas}}{P_{in}}")
     st.markdown(r"""
-A eficiência do motor de indução é definida como:
+As perdas totais são $P_{perdas} = P_{cu,1} + P_{fe} + P_{cu,2} + P_{rot}$.
 
-$$\eta = rac{P_{out}}{P_{in}} = rac{P_{mec} - P_{rot}}{P_{in}} = 1 - rac{P_{perdas}}{P_{in}}$$
-
-As perdas totais são:
-
-$$P_{perdas} = P_{cu,1} + P_{fe} + P_{cu,2} + P_{rot}$$
-
-**Eficiência máxima** ocorre quando as perdas variáveis (cobre, que crescem com $I^2$) igualam
-as perdas fixas (ferro + rotacionais, aproximadamente constantes):
-
-$$P_{cu,1} + P_{cu,2} pprox P_{fe} + P_{rot} \quad \Rightarrow \quad \eta_{max}$$
-
-Motores de indução modernos de alto rendimento (classes IE2–IE4) atingem $\eta > 95\%$ na
-faixa de $50	ext{–}100\%$ da carga nominal.
+**Eficiência máxima** ocorre quando perdas variáveis (cobre $\propto I^2$) igualam
+as perdas fixas (ferro + rotacionais, aproximadamente constante):
+""")
+    st.latex(r"P_{cu,1} + P_{cu,2} \approx P_{fe} + P_{rot} \quad \Rightarrow \quad \eta_{max}")
+    st.markdown(r"""
+Motores de alto rendimento (classes IE2–IE4) atingem $\eta > 95\%$ na faixa 50–100% da carga.
 
 **Nos três modos de operação:**
 """)
 
     col_eff1, col_eff2, col_eff3 = st.columns(3)
     with col_eff1:
-        st.markdown("""**Motor** ($0 < s < 1$)
-$$\eta = \frac{P_{out}}{P_{in}} < 1$$
-Potência elétrica → mecânica.""")
+        st.markdown("**Motor** ($0 < s < 1$)
+
+"
+                    r"$\eta = P_{out}/P_{in} < 1$" "
+
+"
+                    "Potência elétrica → mecânica.")
     with col_eff2:
-        st.markdown("""**Gerador** ($s < 0$)
-$$\eta = \frac{P_{out}}{P_{in}} < 1$$
-Potência mecânica → elétrica.""")
+        st.markdown("**Gerador** ($s < 0$)
+
+"
+                    r"$\eta = P_{out}/P_{in} < 1$" "
+
+"
+                    "Potência mecânica → elétrica.")
     with col_eff3:
-        st.markdown("""**Frenagem** ($s > 1$)
-$$\eta = 0$$
-Toda energia dissipada no rotor.""")
+        st.markdown("**Frenagem** ($s > 1$)
+
+"
+                    r"$\eta = 0$" "
+
+"
+                    "Toda energia dissipada no rotor.")
 
     show_plot(fig_eficiencia_curva(), key="fig_eta")
     st.caption("**Figura 15.1** — Curva de eficiência η × carga (%). "
-               "A eficiência máxima ocorre tipicamente entre 50–80% da carga nominal.")
+               "Eficiência máxima tipicamente entre 50–80% da carga nominal.")
+
+    st.divider()
 
     st.divider()
 
