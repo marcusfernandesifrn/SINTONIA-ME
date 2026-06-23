@@ -852,6 +852,402 @@ def run():
         return fig
 
 
+
+    def fig_circuito_estator():
+        """Circuito equivalente do estator isolado (slide 2 PPTX-02)."""
+        with schemdraw.Drawing() as d:
+            d.config(unit=2)
+            d.push()
+            elm.Line().right(d.unit * 0.25)
+            elm.Line().right(d.unit * 0.5)
+            elm.Line().down(d.unit * 0.375)
+            Xm_e = elm.Inductor().down().label("$jX_m$", loc="bottom")
+            elm.Line().down(d.unit * 0.375)
+            d.pop()
+            d.push()
+            d.move(dx=0, dy=-0.5 * d.unit)
+            elm.Line().left(d.unit * 0.25)
+            Rc_e = elm.Resistor().down().label("$R_c$")
+            elm.Line().right(d.unit * 0.25)
+            d.pop()
+            elm.Line().right(d.unit * 0.5)
+            elm.Line().right(d.unit * 0.5).dot(open=True)
+            elm.Gap().down(d.unit * 1.75).label(("-", "$E_1$", "+")).dot(open=True)
+            elm.Line().left(d.unit * 0.5)
+            elm.Line().left(d.unit * 0.5)
+            elm.Line().left(d.unit * 0.5)
+            elm.Line().left(d.unit * 0.5).dot(open=True)
+            elm.Gap().up(d.unit * 1.75).label(("-", "$V_1$", "+")).dot(open=True)
+            V1p = elm.Line().right(d.unit * 0.5)
+            elm.Resistor().right().label("$R_1$")
+            elm.Inductor().right().label("$jX_1$")
+            elm.Line().right(d.unit * 0.25)
+            elm.CurrentLabel(top=True, length=1, ofst=.3).at(V1p).label("$I_1$")
+            d.save("/tmp/_mei_est.png", dpi=130)
+        fig, ax2 = plt.subplots(figsize=(7, 3.0))
+        fig.patch.set_alpha(0); ax2.set_facecolor("none"); ax2.axis("off")
+        ax2.imshow(plt.imread("/tmp/_mei_est.png"))
+        plt.close("all")
+        return fig
+
+    def fig_circuito_rotor():
+        """Circuito equivalente do rotor (slide 3 PPTX-02): E2, R2, sX2."""
+        with schemdraw.Drawing() as d:
+            d.config(unit=2)
+            E2 = elm.SourceV().up(d.unit * 1.75).label("$s E_2$", loc="left").reverse()
+            elm.Line().right(d.unit * 0.5)
+            elm.Resistor().right().label("$R_2$")
+            elm.Inductor().right().label("$j s X_2$")
+            elm.Line().right(d.unit * 0.5)
+            elm.Line().down(d.unit * 1.75)
+            elm.Line().left().tox(E2.start)
+            elm.CurrentLabel(top=True, length=0.9, ofst=.3).at(E2).label("$I_2$")
+            d.save("/tmp/_mei_rot.png", dpi=130)
+        fig, ax2 = plt.subplots(figsize=(6, 2.8))
+        fig.patch.set_alpha(0); ax2.set_facecolor("none"); ax2.axis("off")
+        ax2.imshow(plt.imread("/tmp/_mei_rot.png"))
+        plt.close("all")
+        return fig
+
+    def fig_ensaios_parametros():
+        """Diagrama comparativo: ensaio em vazio e rotor bloqueado (slide 7)."""
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4.2))
+        fig.patch.set_alpha(0)
+
+        for ax in axes:
+            ax.set_facecolor("none"); ax.axis("off")
+            ax.set_xlim(0, 10); ax.set_ylim(0, 9)
+
+        # Ensaio em vazio (esquerda)
+        ax0 = axes[0]
+        ax0.text(5, 8.5, "Ensaio em Vazio", ha="center", fontsize=11.5,
+                 fontweight="bold", color=AZ)
+        ax0.text(5, 7.8, "(equiv. CA do transformador)",
+                 ha="center", fontsize=8, color=CZ, style="italic")
+
+        items_vazio = [
+            ("Condicao",      "$s \\approx 0$,  $n \\approx n_s$"),
+            ("Alimentacao",   "Tensao e freq. nominais"),
+            ("Medicoes",      "$V_0$, $I_0$, $P_0$"),
+            ("Parametros",    "$R_c$, $X_m$, $P_{rot}$"),
+            ("Obs.",          "$I_0$ = corrente de excitacao $I_\\phi$"),
+        ]
+        y0 = 7.0
+        for titulo, valor in items_vazio:
+            ax0.text(0.5, y0, titulo + ":", ha="left",
+                     fontsize=9.5, color=AZ, fontweight="bold")
+            ax0.text(0.5, y0 - 0.48, valor, ha="left", fontsize=9, color=TX)
+            y0 -= 1.28
+
+        # Ensaio com rotor bloqueado (direita)
+        ax1 = axes[1]
+        ax1.text(5, 8.5, "Ensaio — Rotor Bloqueado", ha="center", fontsize=11.5,
+                 fontweight="bold", color=VM)
+        ax1.text(5, 7.8, "(equiv. CC do transformador)",
+                 ha="center", fontsize=8, color=CZ, style="italic")
+
+        items_bloq = [
+            ("Condicao",      "$s = 1$,  $n = 0$ (travado)"),
+            ("Alimentacao",   "Tensao reduzida, freq. nominal"),
+            ("Medicoes",      "$V_{cc}$, $I_{cc}$, $P_{cc}$"),
+            ("Parametros",    "$R_1 + R_2'$,  $X_1 + X_2'$"),
+            ("Obs.",          "$R_c$, $X_m$ desprezados"),
+        ]
+        y0 = 7.0
+        for titulo, valor in items_bloq:
+            ax1.text(0.5, y0, titulo + ":", ha="left",
+                     fontsize=9.5, color=VM, fontweight="bold")
+            ax1.text(0.5, y0 - 0.48, valor, ha="left", fontsize=9, color=TX)
+            y0 -= 1.28
+
+        # Linha divisória central
+        fig.add_artist(plt.Line2D([0.5, 0.5], [0.05, 0.92],
+                                   transform=fig.transFigure,
+                                   color=CZ, lw=0.8, linestyle="--", alpha=0.5))
+
+        fig.suptitle("Ensaios para Determinacao dos Parametros da MIT",
+                     fontsize=11.5, fontweight="bold", color=TX, y=1.0)
+        fig.tight_layout(pad=0.5)
+        return fig
+
+    def fig_corrente_estator_s():
+        """I1 × s (ou n): corrente de estator em função do escorregamento — Plotly."""
+        V1, R1, X1, R2, X2, Xm = 127.0, 0.5, 1.0, 0.4, 1.0, 50.0
+        ns = 1800.0
+        s_range = np.linspace(1e-3, 1.0, 600)
+        n_range = ns * (1 - s_range)
+
+        I1_vals, Im_vals, I2_vals = [], [], []
+        for s in s_range:
+            Z2  = R2/s + 1j*X2
+            Zeq = (1j*Xm * Z2) / (1j*Xm + Z2)
+            I1  = V1 / (R1 + 1j*X1 + Zeq)
+            I2  = (I1 * Zeq) / Z2
+            Im  = (I1 * Zeq) / (1j*Xm)
+            I1_vals.append(abs(I1))
+            I2_vals.append(abs(I2))
+            Im_vals.append(abs(Im))
+
+        I1_vals = np.array(I1_vals)
+        I2_vals = np.array(I2_vals)
+        Im_vals = np.array(Im_vals)
+
+        fig = go.Figure()
+        for y_arr, cor, dash, nm in [
+            (I1_vals, AZ, "solid", "|I₁| — Estator"),
+            (I2_vals, VD, "dash",  "|I₂'| — Rotor (ref.)"),
+            (Im_vals, LR, "dot",   "|Iₘ| — Magnetização"),
+        ]:
+            hover = [f"n = {ni:.0f} rpm  s = {si:.3f}<br>{nm} = {vi:.3f} A"
+                     for ni, si, vi in zip(n_range, s_range, y_arr)]
+            fig.add_trace(go.Scatter(
+                x=n_range, y=y_arr, mode="lines",
+                line=dict(color=cor, width=2.8, dash=dash),
+                name=nm, hovertext=hover, hoverinfo="text",
+            ))
+
+        # Anotações em s=0 e s=1
+        for s_pt, label, xr in [(0.0, "s=0<br>(n=nₛ)", 0.0), (1.0, "s=1<br>(partida)", 0.0)]:
+            n_pt = ns * (1 - s_pt)
+            if s_pt < 0.01:
+                s_p = 1e-3
+            else:
+                s_p = s_pt
+            Z2  = R2/s_p + 1j*X2
+            Zeq = (1j*Xm * Z2) / (1j*Xm + Z2)
+            I1_pt = abs(V1 / (R1 + 1j*X1 + Zeq))
+            fig.add_annotation(x=n_pt, y=I1_pt,
+                               text=f"<b>{label}</b><br>I₁={I1_pt:.2f} A",
+                               showarrow=True, ay=-40, ax=30,
+                               font=dict(size=11, color=AZ),
+                               arrowcolor=AZ, arrowwidth=1.5)
+
+        fig.add_vline(x=ns, line=dict(color=AZ, width=1.5, dash="dash"))
+        fig.add_hline(y=0,  line=dict(color=CZ, width=0.8))
+        fig.update_layout(
+            title=dict(text="Correntes I₁, I₂' e Iₘ × Velocidade",
+                       font=dict(size=16, color=TX)),
+            xaxis=dict(title=dict(text="Velocidade n (rpm)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX), range=[-60, ns + 120],
+                       gridcolor="rgba(128,128,128,.18)"),
+            yaxis=dict(title=dict(text="Corrente (A)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX),
+                       gridcolor="rgba(128,128,128,.18)"),
+            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)"),
+            height=430, margin=dict(l=75, r=30, t=60, b=70),
+        )
+        return fig
+
+    def fig_fator_potencia_s():
+        """Fator de potência fp × velocidade — Plotly."""
+        V1, R1, X1, R2, X2, Xm = 127.0, 0.5, 1.0, 0.4, 1.0, 50.0
+        ns = 1800.0
+        s_range = np.linspace(1e-3, 1.0, 600)
+        n_range = ns * (1 - s_range)
+
+        fp_vals = []
+        for s in s_range:
+            Z2  = R2/s + 1j*X2
+            Zeq = (1j*Xm * Z2) / (1j*Xm + Z2)
+            I1  = V1 / (R1 + 1j*X1 + Zeq)
+            fp_vals.append(np.cos(np.angle(I1)))
+        fp_vals = np.array(fp_vals)
+
+        hover = [f"n = {ni:.0f} rpm  s = {si:.3f}<br>fp = {fi:.4f}"
+                 for ni, si, fi in zip(n_range, s_range, fp_vals)]
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=n_range, y=fp_vals, mode="lines",
+            line=dict(color=RX, width=3),
+            name="fp = cos φ",
+            hovertext=hover, hoverinfo="text",
+        ))
+
+        # Ponto de fp máximo
+        idx_max = int(np.argmax(fp_vals))
+        fig.add_trace(go.Scatter(
+            x=[n_range[idx_max]], y=[fp_vals[idx_max]],
+            mode="markers+text",
+            marker=dict(size=12, color=RX, symbol="star"),
+            text=[f"fp_max = {fp_vals[idx_max]:.3f}"],
+            textposition="top left",
+            textfont=dict(size=12, color=RX),
+            name="fp máximo", showlegend=True,
+        ))
+
+        # Ponto na partida (s=1)
+        fig.add_annotation(
+            x=0, y=fp_vals[-1],
+            text=f"Partida<br>fp = {fp_vals[-1]:.3f}",
+            showarrow=True, ay=40, ax=30,
+            font=dict(size=11, color=CZ), arrowcolor=CZ, arrowwidth=1.2,
+        )
+
+        fig.add_vline(x=ns, line=dict(color=AZ, width=1.5, dash="dash"))
+        fig.add_annotation(x=ns, y=fp_vals[0] * 0.8,
+                           text="<b>nₛ</b>", showarrow=False,
+                           font=dict(size=14, color=AZ))
+        fig.update_layout(
+            title=dict(text="Fator de Potência × Velocidade",
+                       font=dict(size=16, color=TX)),
+            xaxis=dict(title=dict(text="Velocidade n (rpm)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX), range=[-60, ns + 120],
+                       gridcolor="rgba(128,128,128,.18)"),
+            yaxis=dict(title=dict(text="Fator de potência cos φ", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX), range=[0, 1.05],
+                       gridcolor="rgba(128,128,128,.18)"),
+            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)"),
+            height=420, margin=dict(l=75, r=30, t=60, b=70),
+        )
+        return fig
+
+    def fig_eficiencia_curva():
+        """Curva de eficiência η × carga (%) para motor de indução — Plotly."""
+        V1, R1, X1, R2, X2, Xm = 127.0, 0.5, 1.0, 0.4, 1.0, 50.0
+        ns = 1800.0; ws = ns * 2 * np.pi / 60
+        Prot = 350.0; Pfe = 280.0  # W
+
+        s_range = np.linspace(2e-3, 0.40, 400)
+        n_range = ns * (1 - s_range)
+        eta_vals, Pout_vals, Pin_vals = [], [], []
+
+        for s in s_range:
+            Z2  = R2/s + 1j*X2
+            Zeq = (1j*Xm * Z2) / (1j*Xm + Z2)
+            I1  = V1 / (R1 + 1j*X1 + Zeq)
+            I2  = (I1 * Zeq) / Z2
+            Pag = 3 * abs(I2)**2 * (R2/s)
+            Pin = 3 * V1 * abs(I1) * np.cos(np.angle(I1)) + Pfe
+            Pout = max(0.0, Pag * (1 - s) - Prot)
+            eta  = Pout / Pin * 100 if Pin > 0 else 0
+            eta_vals.append(max(0.0, eta))
+            Pout_vals.append(Pout)
+            Pin_vals.append(Pin)
+
+        eta_vals  = np.array(eta_vals)
+        Pout_vals = np.array(Pout_vals)
+        # Normaliza Pout pela potência nominal (máximo)
+        Pnom = float(np.max(Pout_vals))
+        carga_pct = Pout_vals / Pnom * 100 if Pnom > 0 else Pout_vals
+
+        hover = [f"Carga = {cp:.1f}%<br>η = {ei:.2f}%<br>Pout = {po:.0f} W"
+                 for cp, ei, po in zip(carga_pct, eta_vals, Pout_vals)]
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=carga_pct, y=eta_vals, mode="lines",
+            line=dict(color=VD, width=3),
+            name="η (%) — Motor",
+            hovertext=hover, hoverinfo="text",
+        ))
+
+        # Ponto de η máxima
+        idx_max = int(np.argmax(eta_vals))
+        fig.add_trace(go.Scatter(
+            x=[carga_pct[idx_max]], y=[eta_vals[idx_max]],
+            mode="markers+text",
+            marker=dict(size=13, color=VD, symbol="star",
+                        line=dict(width=1.5, color="white")),
+            text=[f"η_max = {eta_vals[idx_max]:.1f}%"],
+            textposition="top left",
+            textfont=dict(size=12, color=VD),
+            showlegend=False,
+        ))
+
+        # Linha de carga nominal (100%)
+        fig.add_vline(x=100, line=dict(color=CZ, width=1.5, dash="dot"))
+        fig.add_annotation(x=100, y=eta_vals[np.argmin(np.abs(carga_pct - 100))],
+                           text="Carga<br>nominal",
+                           showarrow=True, ax=30, ay=-30,
+                           font=dict(size=11, color=CZ),
+                           arrowcolor=CZ, arrowwidth=1.2)
+
+        fig.update_layout(
+            title=dict(text="Eficiência η × Carga (%)",
+                       font=dict(size=16, color=TX)),
+            xaxis=dict(title=dict(text="Carga (% da pot. nominal)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX), range=[0, 115],
+                       gridcolor="rgba(128,128,128,.18)"),
+            yaxis=dict(title=dict(text="Eficiência η (%)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX),
+                       gridcolor="rgba(128,128,128,.18)"),
+            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)"),
+            height=420, margin=dict(l=75, r=30, t=60, b=70),
+        )
+        return fig
+
+    def fig_torque_linear_s():
+        """Aproximação linear T × s para baixo escorregamento — Plotly."""
+        V1, R1, X1, R2, X2, Xm = 127.0, 0.5, 1.0, 0.4, 1.0, 50.0
+        ns = 1800.0; ws = ns * 2 * np.pi / 60
+
+        # Curva completa
+        s_full = np.linspace(1e-3, 1.0, 600)
+        def T_s(s):
+            Z2  = R2/s + 1j*X2
+            Zeq = (1j*Xm * Z2) / (1j*Xm + Z2)
+            I2  = (V1 / (R1 + 1j*X1 + Zeq)) * Zeq / Z2
+            return 3 * abs(I2)**2 * (R2/s) / ws
+        T_full = np.array([T_s(s) for s in s_full])
+
+        # Aproximação linear: T ≈ (3 Vth²/ ωs (Rth² + (Xth+X2')²)) · (R2'/ωs) · s
+        Xm_val = Xm; X1v = X1; R1v = R1
+        Vth = V1 * Xm_val / np.sqrt((X1v + Xm_val)**2 + R1v**2)
+        Rth = R1v * (Xm_val / (X1v + Xm_val))**2
+        Xth = X1v
+        K_lin = 3 * Vth**2 / (ws * (Rth**2 + (Xth + X2)**2))
+
+        s_lin = np.linspace(0, 0.15, 100)
+        T_lin = K_lin * (R2 / ws) * s_lin * ws  # = K_lin * R2 * s
+
+        # Em termos de n
+        n_full = ns * (1 - s_full)
+        n_lin  = ns * (1 - s_lin)
+
+        hover_f = [f"n = {ni:.0f} rpm  s = {si:.4f}<br>T = {ti:.2f} N·m"
+                   for ni, si, ti in zip(n_full, s_full, T_full)]
+        hover_l = [f"n = {ni:.0f} rpm  s = {si:.4f}<br>T_lin = {ti:.2f} N·m"
+                   for ni, si, ti in zip(n_lin, s_lin, T_lin)]
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=n_full, y=T_full, mode="lines",
+            line=dict(color=AZ, width=3), name="T(s) — completo",
+            hovertext=hover_f, hoverinfo="text",
+        ))
+        fig.add_trace(go.Scatter(
+            x=n_lin, y=T_lin, mode="lines",
+            line=dict(color=VM, width=2.5, dash="dash"),
+            name="T ≈ K · s (aprox. linear, s pequeno)",
+            hovertext=hover_l, hoverinfo="text",
+        ))
+
+        # Anotação da fórmula linear
+        fig.add_annotation(
+            x=0.50, y=0.92, xref="paper", yref="paper",
+            text="<b>Para s pequeno:</b>  T ≈ (3V<sub>th</sub>²R₂') / (ω<sub>s</sub>(R<sub>th</sub>²+(X<sub>th</sub>+X₂')²)) · s",
+            showarrow=False, font=dict(size=12, color=VM),
+            bgcolor="rgba(255,255,255,0.80)", borderpad=6,
+        )
+
+        fig.add_vline(x=ns, line=dict(color=AZ, width=1.5, dash="dash"))
+        fig.add_hline(y=0,  line=dict(color=CZ, width=0.8))
+        fig.update_layout(
+            title=dict(text="Torque × Velocidade — Região Linear (baixo s)",
+                       font=dict(size=16, color=TX)),
+            xaxis=dict(title=dict(text="Velocidade n (rpm)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX), range=[-60, ns + 120],
+                       gridcolor="rgba(128,128,128,.18)"),
+            yaxis=dict(title=dict(text="Torque T (N·m)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX),
+                       gridcolor="rgba(128,128,128,.18)"),
+            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)",
+                        orientation="h", y=-0.18),
+            height=440, margin=dict(l=75, r=30, t=60, b=90),
+        )
+        return fig
+
     # ════════════════════════════════════════════════════════════════════════
     # CIRCUITOS EQUIVALENTES — schemdraw → PNG → matplotlib
     # ════════════════════════════════════════════════════════════════════════
@@ -1131,6 +1527,128 @@ def run():
             out.append(3 * abs(I2)**2 * (R2/s_) / ws)
         return np.array(out)
 
+
+    def exp_corrente_fator_potencia():
+        """Explorador: corrente de estator e fator de potência vs escorregamento."""
+        st.markdown("#### 🎛️ Explorador 6 — Corrente de Estator e Fator de Potência")
+        col1, col2 = st.columns(2)
+        with col1:
+            V_line = st.slider("$V_L$ (V)", 100, 600, 220, 10, key="e6_V")
+            R1 = st.slider("$R_1$ (Ω)", 0.05, 2.0, 0.5, 0.05, key="e6_R1")
+            X1 = st.slider("$X_1$ (Ω)", 0.10, 3.0, 1.0, 0.05, key="e6_X1")
+        with col2:
+            R2 = st.slider("$R'_2$ (Ω)", 0.05, 3.0, 0.4, 0.05, key="e6_R2")
+            X2 = st.slider("$X'_2$ (Ω)", 0.10, 3.0, 1.0, 0.05, key="e6_X2")
+            Xm = st.slider("$X_m$ (Ω)", 5.0, 100.0, 50.0, 1.0,  key="e6_Xm")
+
+        col3, col4 = st.columns(2)
+        with col3:
+            f  = st.selectbox("$f$ (Hz)", [50, 60], index=1, key="e6_f")
+        with col4:
+            p  = st.selectbox("Polos", [2, 4, 6, 8], index=1, key="e6_p")
+
+        V1 = V_line / np.sqrt(3); ns = 120 * f / p
+        s_range = np.linspace(1e-3, 1.0, 500)
+        n_range = ns * (1 - s_range)
+
+        I1v, I2v, Imv, fpv = [], [], [], []
+        for s in s_range:
+            Z2  = R2/s + 1j*X2
+            Zeq = (1j*Xm * Z2) / (1j*Xm + Z2)
+            I1  = V1 / (R1 + 1j*X1 + Zeq)
+            I2  = (I1 * Zeq) / Z2
+            Im  = (I1 * Zeq) / (1j*Xm)
+            I1v.append(abs(I1)); I2v.append(abs(I2)); Imv.append(abs(Im))
+            fpv.append(np.cos(np.angle(I1)))
+
+        from plotly.subplots import make_subplots as _msp
+        fig = _msp(rows=1, cols=2,
+                   subplot_titles=["Correntes (A)", "Fator de Potência"])
+
+        for y_arr, cor, dash, nm in [
+            (I1v, AZ, "solid", "|I₁|"), (I2v, VD, "dash", "|I₂'|"), (Imv, LR, "dot", "|Iₘ|")
+        ]:
+            fig.add_trace(go.Scatter(x=n_range, y=y_arr, mode="lines",
+                                     line=dict(color=cor, width=2.4, dash=dash),
+                                     name=nm), row=1, col=1)
+        fig.add_trace(go.Scatter(x=n_range, y=fpv, mode="lines",
+                                  line=dict(color=RX, width=2.8),
+                                  name="cos φ"), row=1, col=2)
+        for col in [1, 2]:
+            fig.add_vline(x=ns, line=dict(color=AZ, width=1.2, dash="dash"), row=1, col=col)
+        fig.update_xaxes(title_text="n (rpm)", tickfont=dict(size=12))
+        fig.update_yaxes(title_text="A", row=1, col=1, tickfont=dict(size=12))
+        fig.update_yaxes(title_text="cos φ", range=[0, 1.05], row=1, col=2,
+                         tickfont=dict(size=12))
+        fig.update_layout(height=400, legend=dict(orientation="h", y=-0.22,
+                                                   font=dict(size=12)),
+                           margin=dict(l=65, r=20, t=55, b=80))
+        show_plot(fig, key="exp6_ifp", height=400)
+
+    def exp_eficiencia_carga():
+        """Explorador: eficiência × % de carga com parâmetros ajustáveis."""
+        st.markdown("#### 🎛️ Explorador 7 — Eficiência × Carga")
+        col1, col2 = st.columns(2)
+        with col1:
+            V_line = st.number_input("$V_L$ (V)", 100.0, 15000.0, 460.0, key="e7_V")
+            f      = st.selectbox("$f$ (Hz)", [50, 60], index=1, key="e7_f")
+            p      = st.selectbox("Polos", [2, 4, 6, 8], index=1, key="e7_p")
+        with col2:
+            R1 = st.number_input("$R_1$ (Ω)",  0.001, 5.0, 0.07,  0.001, format="%.4f", key="e7_R1")
+            R2 = st.number_input("$R'_2$ (Ω)", 0.001, 5.0, 0.152, 0.001, format="%.4f", key="e7_R2")
+            X1 = st.number_input("$X_1$ (Ω)",  0.01, 20.0, 0.743, 0.001, format="%.3f", key="e7_X1")
+            X2 = st.number_input("$X'_2$ (Ω)", 0.01, 20.0, 0.764, 0.001, format="%.3f", key="e7_X2")
+            Xm = st.number_input("$X_m$ (Ω)",  1.0, 500.0, 40.1,  0.1,   format="%.1f", key="e7_Xm")
+
+        Prot = st.slider("$P_{rot}$ (W)", 0, 5000, 390, 10, key="e7_Prot")
+        Pfe  = st.slider("$P_{fe}$ (W)",  0, 5000, 325, 10, key="e7_Pfe")
+
+        V1 = V_line / np.sqrt(3); ns = 120*f/p
+        s_arr = np.linspace(2e-3, 0.45, 400)
+        n_arr = ns * (1 - s_arr)
+        eta_arr = []; Pout_arr = []; T_arr = []
+
+        for s in s_arr:
+            Z2  = R2/s + 1j*X2
+            Zeq = (1j*Xm * Z2) / (1j*Xm + Z2)
+            I1  = V1 / (R1 + 1j*X1 + Zeq)
+            I2  = (I1 * Zeq) / Z2
+            Pag = 3 * abs(I2)**2 * (R2/s)
+            Pin = 3 * V1 * abs(I1) * np.cos(np.angle(I1)) + Pfe
+            po  = max(0.0, Pag*(1-s) - Prot)
+            eta_arr.append(max(0.0, po/Pin*100) if Pin > 0 else 0)
+            Pout_arr.append(po)
+            T_arr.append(po / (ns*(1-s)*2*np.pi/60) if ns*(1-s) > 1 else 0)
+
+        Pnom = max(Pout_arr) if max(Pout_arr) > 0 else 1
+        carga = [po / Pnom * 100 for po in Pout_arr]
+
+        from plotly.subplots import make_subplots as _msp
+        fig = _msp(rows=1, cols=2,
+                   subplot_titles=["η (%) × Carga (%)", "Conjugado e Potência × n"])
+        fig.add_trace(go.Scatter(x=carga, y=eta_arr, mode="lines",
+                                  line=dict(color=VD, width=2.8), name="η (%)"),
+                      row=1, col=1)
+        idx_mx = int(np.argmax(eta_arr))
+        fig.add_trace(go.Scatter(x=[carga[idx_mx]], y=[eta_arr[idx_mx]],
+                                  mode="markers",
+                                  marker=dict(size=12, color=VD, symbol="star",
+                                              line=dict(width=1.5, color="white")),
+                                  showlegend=False), row=1, col=1)
+        fig.add_trace(go.Scatter(x=n_arr, y=Pout_arr, mode="lines",
+                                  line=dict(color=AZ, width=2.2), name="P_out (W)"),
+                      row=1, col=2)
+        fig.add_trace(go.Scatter(x=n_arr, y=T_arr, mode="lines",
+                                  line=dict(color=LR, width=2.0, dash="dash"),
+                                  name="T_eixo (N·m)"),
+                      row=1, col=2)
+        fig.update_xaxes(tickfont=dict(size=12))
+        fig.update_yaxes(tickfont=dict(size=12))
+        fig.update_layout(height=400, legend=dict(orientation="h", y=-0.25,
+                                                   font=dict(size=12)),
+                           margin=dict(l=65, r=20, t=55, b=90))
+        show_plot(fig, key="exp7_ef", height=400)
+
     def exp_torque_velocidade():
         st.markdown("#### 🎛️ Explorador 1 — Curva Torque × Velocidade")
         col1, col2, col3 = st.columns(3)
@@ -1373,13 +1891,19 @@ def run():
 - Equação do estator · Er = s·Er0 · fr = s·f
 
 **[6. Circuito Equivalente (por fase)](#6-circuito-equivalente-por-fase)**
-- Circuito completo · Modelo IEEE · Equivalente de Thévenin
+- 6.1 Circuito do Estator · 6.2 Circuito do Rotor · 6.3 Circuito Completo · Modelo IEEE · Thévenin
 
 **[7. Fluxo de Potência e Balanço de Energia](#7-fluxo-de-potencia-e-balanco-de-energia)**
-- Tabela de grandezas · Diagramas motor e gerador
+- Tabela de grandezas · Diagramas motor, gerador e frenagem
 
 **[8. Torque Eletromagnético](#8-torque-eletromagnetico)**
 - Expressão analítica · Torque máximo · Escorregamento crítico
+
+**[8b. Torque — Aproximação Linear](#8b-torque-aproximacao-linear-para-baixo-escorregamento)**
+- Região linear · Comparação curva exata × aproximação
+
+**[8c. Ensaios para Parâmetros](#8c-ensaios-para-determinacao-dos-parametros)**
+- Ensaio em vazio · Ensaio com rotor bloqueado · Equações de parâmetros
 
 **[9. Modos de Operação](#9-modos-de-operacao)**
 - Motor · Gerador · Frenagem · Modo invertido
@@ -1393,8 +1917,17 @@ def run():
 **[12. Gaiola de Esquilo Dupla](#12-gaiola-de-esquilo-dupla)**
 - Efeito pelicular · Curvas de torque
 
+**[13. Corrente no Estator](#13-corrente-no-estator)**
+- I₁, I₂', Iₘ × velocidade · Corrente de partida
+
+**[14. Fator de Potência](#14-fator-de-potencia)**
+- cos φ × carga · fp máximo · Carga leve vs nominal
+
+**[15. Eficiência](#15-eficiencia)**
+- η × carga (%) · Perdas fixas vs variáveis · Classes IE · Três modos
+
 **[🎛️ Exploradores Interativos](#exploradores-interativos)**
-- T × n · Circuito equivalente · Efeito da tensão · Métodos de partida · Eficiência
+- T×n · Circ. equiv. · Tensão→T×n · Partida · Eficiência · Corrente e fp · Efic.×Carga
 
 **Referências** (ao final da página)
 """)
@@ -1573,10 +2106,60 @@ onde $X_{r0} = 2\pi f L_r$.
     # ═══════════════════════════════════════════════════════════════════════
     st.header("6. Circuito Equivalente (por fase)")
     st.markdown(r"""
-A MIT é modelada por um **circuito monofásico equivalente** semelhante ao do transformador,
-porém com uma resistência variável no ramo do rotor que captura a conversão eletromecânica.
+A MIT pode ser modelada por um **circuito monofásico equivalente** por fase, construído a
+partir dos circuitos individuais do estator e do rotor ligados através das grandezas de
+entreferro — exatamente como o transformador, porém com o secundário girante.
+""")
 
-### Circuito Completo
+    st.markdown("### 6.1 Circuito do Estator")
+    st.markdown(r"""
+O circuito do estator é idêntico ao do primário de um transformador, com a diferença de que:
+- A corrente de excitação $I_\phi$ é **maior** devido ao entreferro;
+- A reatância $X_1$ é **maior** pela distribuição dos enrolamentos ao longo da periferia.
+
+| Símbolo | Significado |
+|---|---|
+| $V_1$ | Tensão terminal por fase |
+| $R_1$ | Resistência do enrolamento do estator |
+| $X_1 = \omega L_1$ | Reatância de dispersão do estator |
+| $R_c$ | Resistência de perda no núcleo |
+| $X_m = \omega L_m$ | Reatância de magnetização |
+| $E_1$ | Tensão induzida no estator |
+""")
+
+    show_fig(fig_circuito_estator(), width_frac=0.78)
+    st.caption("**Figura 6.0** — Circuito equivalente do estator: ramo série $R_1 + jX_1$ "
+               "e ramo de excitação $R_c \parallel jX_m$.")
+
+    st.markdown("### 6.2 Circuito do Rotor")
+    st.markdown(r"""
+O rotor girando com escorregamento $s$ gera tensão $E_r = s E_2$ à frequência $f_r = s f$.
+A corrente de rotor $I_2$ é determinada pela impedância:
+
+$$Z_2 = R_2 + j s X_2$$
+
+A potência dissipada no cobre do rotor por fase é:
+
+$$P_{cu,2} = I_2^2 R_2 = s \cdot P_{ag}$$
+""")
+
+    show_fig(fig_circuito_rotor(), width_frac=0.62)
+    st.caption("**Figura 6.1a** — Circuito equivalente do rotor com tensão $sE_2$ "
+               "e impedância $R_2 + jsX_2$.")
+
+    st.markdown(r"""
+Dividindo numerador e denominador da corrente por $s$, obtém-se o circuito referido ao
+estator com **frequência do estator** — eliminando a dependência de frequência:
+
+$$I_2 = rac{s E_2}{R_2 + j s X_2} = rac{E_2}{R_2/s + j X_2}$$
+
+A resistência $R_2/s$ é decomposta em:
+
+$$rac{R_2}{s} = R_2 + R_2rac{1-s}{s}$$
+
+onde $R_2$ representa as perdas Joule e $R_2(1-s)/s$ é a **resistência de carga mecânica**.
+
+### 6.3 Circuito Completo
 
 Inclui: ramo série do estator ($R_1 + jX_1$), ramo de excitação em paralelo
 ($R_c \parallel jX_m$) e ramo do rotor referido ($jX'_2 + R'_2/s$).
@@ -1690,6 +2273,63 @@ desloca-se $s_{max}$ para 1 (torque máximo na partida) sem alterar o valor de $
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════
+    # SEÇÃO 8b — TORQUE LINEAR
+    # ═══════════════════════════════════════════════════════════════════════
+    st.header("8b. Torque — Aproximação Linear para Baixo Escorregamento")
+    st.markdown(
+        "Para valores **pequenos** de escorregamento (região de operação nominal), "
+        "a reatância $X'_2$ é muito menor que $R'_2/s$, e o denominador simplifica:"
+    )
+    st.latex(r"T_{em}(s) pprox rac{3\,V_{th}^2}{\omega_s\,(R_{th}^2+(X_{th}+X_2')^2)} \cdot rac{R_2'}{1} \cdot s \quad (s 	ext{ pequeno})")
+    st.markdown(r"""
+O torque torna-se **diretamente proporcional ao escorregamento** — comportamento análogo
+ao de um motor CC de excitação independente com relação linear torque-velocidade.
+
+Esta aproximação é válida para $s \ll s_{max}$ e permite análise linear do ponto de operação.
+""")
+    show_plot(fig_torque_linear_s(), key="fig_tlin")
+    st.caption("**Figura 8b.1** — Comparação entre a curva exata $T(s)$ (azul) e a "
+               "aproximação linear $T \approx K \cdot s$ (vermelho tracejado) para baixo $s$.")
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # SEÇÃO 8c — ENSAIOS
+    # ═══════════════════════════════════════════════════════════════════════
+    st.header("8c. Ensaios para Determinação dos Parâmetros")
+    st.markdown(r"""
+Os parâmetros do circuito equivalente são obtidos experimentalmente por dois ensaios clássicos,
+análogos aos ensaios do transformador. Antes dos ensaios, a **resistência do estator** $R_1$
+é medida diretamente com a máquina desligada (método CC por fase).
+""")
+
+    show_fig(fig_ensaios_parametros(), width_frac=0.90)
+    st.caption("**Figura 8c.1** — Comparação dos ensaios em vazio e com rotor bloqueado.")
+
+    st.markdown(r"""
+### Ensaio em Vazio
+
+Com o motor operando sem carga ($s pprox 0$, $n pprox n_s$), na tensão e frequência nominais:
+
+$$R_c = rac{3 V_1^2}{P_0 - P_{R_1}} \qquad X_m = rac{V_1}{I_\phi}$$
+
+onde $P_0$ é a potência total medida, $P_{R_1} = 3 R_1 I_0^2$ é a perda no cobre do estator
+e $I_\phi = \sqrt{I_0^2 - (P_0/3V_1)^2}$ é a componente reativa.
+As **perdas rotacionais** $P_{rot}$ são obtidas subtraindo as perdas no cobre e no ferro.
+
+### Ensaio com Rotor Bloqueado
+
+Com $n = 0$ ($s = 1$), aplicando tensão reduzida até a corrente nominal:
+
+$$R_{eq} = R_1 + R_2' = rac{P_{cc}}{3 I_{cc}^2} \qquad X_{eq} = X_1 + X_2' = rac{\sqrt{(V_{cc}/I_{cc})^2 - R_{eq}^2}}{1}$$
+
+A repartição $X_1$ e $X_2'$ segue convenções de norma (tipicamente $X_1 = X_2'$ para motores
+de gaiola, ou determinada por medições adicionais no rotor bobinado).
+""")
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════
     # SEÇÃO 9
     # ═══════════════════════════════════════════════════════════════════════
     st.header("9. Modos de Operação")
@@ -1781,6 +2421,107 @@ e torque de partida elevado com corrente controlada. Método mais moderno e flex
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════
+    # SEÇÃO 13 — CORRENTE NO ESTATOR
+    # ═══════════════════════════════════════════════════════════════════════
+    st.header("13. Corrente no Estator")
+    st.markdown(r"""
+A corrente de linha do estator $I_1$ varia significativamente com o escorregamento.
+Dois casos extremos são importantes:
+
+**Em velocidade síncrona ($s = 0$):**
+$$I_1 = I_\phi = rac{V_1}{\sqrt{R_c^2}} \cdot \left(rac{R_c \parallel jX_m}{|Z_{total}|}
+ight)$$
+
+Como $R'_2/s 	o \infty$, o ramo do rotor está em aberto — a corrente é apenas a de
+excitação $I_\phi$, tipicamente $20	ext{–}40\%$ da corrente nominal.
+
+**Na partida ($s = 1$):**
+$$I_1 pprox rac{V_1}{\sqrt{(R_1+R_2')^2 + (X_1+X_2')^2}}$$
+
+O ramo de excitação é desprezível (corrente muito maior); a corrente de partida pode
+atingir **5 a 8 vezes** a corrente nominal — principal motivação dos métodos de partida suave.
+""")
+
+    show_plot(fig_corrente_estator_s(), key="fig_I1s")
+    st.caption("**Figura 13.1** — Correntes $|I_1|$, $|I_2'|$ e $|I_m|$ × velocidade. "
+               "Observar o alto valor de $I_1$ na partida ($n=0$) e a queda para $I_\phi$ em $n=n_s$.")
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # SEÇÃO 14 — FATOR DE POTÊNCIA
+    # ═══════════════════════════════════════════════════════════════════════
+    st.header("14. Fator de Potência")
+    st.markdown(r"""
+O fator de potência $\cosarphi$ da MIT é determinado pelo ângulo de fase da corrente $I_1$
+em relação à tensão $V_1$:
+
+$$\cosarphi = \cos\left(ngle rac{V_1}{I_1}
+ight)$$
+
+**Comportamento típico:**
+- Em **carga leve** ou **vazio**: fp baixo (0,1–0,3), pois $I_1 pprox I_\phi$ (corrente reativa dominante);
+- Na **carga nominal**: fp elevado (0,80–0,92), com boa relação entre componentes ativa e reativa;
+- Na **partida** ($s = 1$): fp moderado (0,35–0,55), determinado pela impedância total.
+
+O fp máximo ocorre em uma carga ligeiramente abaixo da nominal — ponto em que a componente
+ativa de $I_1$ iguala-se ao valor da componente reativa de magnetização.
+
+**Implicação prática:** motores operando cronicamente em carga leve causam baixo fp na instalação,
+exigindo **correção do fator de potência** por banco de capacitores.
+""")
+
+    show_plot(fig_fator_potencia_s(), key="fig_fp")
+    st.caption("**Figura 14.1** — Fator de potência $\cos\varphi$ × velocidade. "
+               "O fp é baixo em vazio, atinge o máximo próximo da carga nominal e cai na partida.")
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # SEÇÃO 15 — EFICIÊNCIA
+    # ═══════════════════════════════════════════════════════════════════════
+    st.header("15. Eficiência")
+    st.markdown(r"""
+A eficiência do motor de indução é definida como:
+
+$$\eta = rac{P_{out}}{P_{in}} = rac{P_{mec} - P_{rot}}{P_{in}} = 1 - rac{P_{perdas}}{P_{in}}$$
+
+As perdas totais são:
+
+$$P_{perdas} = P_{cu,1} + P_{fe} + P_{cu,2} + P_{rot}$$
+
+**Eficiência máxima** ocorre quando as perdas variáveis (cobre, que crescem com $I^2$) igualam
+as perdas fixas (ferro + rotacionais, aproximadamente constantes):
+
+$$P_{cu,1} + P_{cu,2} pprox P_{fe} + P_{rot} \quad \Rightarrow \quad \eta_{max}$$
+
+Motores de indução modernos de alto rendimento (classes IE2–IE4) atingem $\eta > 95\%$ na
+faixa de $50	ext{–}100\%$ da carga nominal.
+
+**Nos três modos de operação:**
+""")
+
+    col_eff1, col_eff2, col_eff3 = st.columns(3)
+    with col_eff1:
+        st.markdown("""**Motor** ($0 < s < 1$)
+$$\eta = \frac{P_{out}}{P_{in}} < 1$$
+Potência elétrica → mecânica.""")
+    with col_eff2:
+        st.markdown("""**Gerador** ($s < 0$)
+$$\eta = \frac{P_{out}}{P_{in}} < 1$$
+Potência mecânica → elétrica.""")
+    with col_eff3:
+        st.markdown("""**Frenagem** ($s > 1$)
+$$\eta = 0$$
+Toda energia dissipada no rotor.""")
+
+    show_plot(fig_eficiencia_curva(), key="fig_eta")
+    st.caption("**Figura 15.1** — Curva de eficiência η × carga (%). "
+               "A eficiência máxima ocorre tipicamente entre 50–80% da carga nominal.")
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════
     # SEÇÃO 12
     # ═══════════════════════════════════════════════════════════════════════
     st.header("12. Gaiola de Esquilo Dupla")
@@ -1820,12 +2561,16 @@ a corrente concentra-se na superfície das barras, equivalente à gaiola externa
         "3 — Tensão → T × n",
         "4 — Partida",
         "5 — Eficiência",
+        "6 — Corrente e fp",
+        "7 — Efic. × Carga",
     ])
     with tabs[0]: exp_torque_velocidade()
     with tabs[1]: exp_circuito_equivalente()
     with tabs[2]: exp_efeito_tensao()
     with tabs[3]: exp_partida()
     with tabs[4]: exp_eficiencia()
+    with tabs[5]: exp_corrente_fator_potencia()
+    with tabs[6]: exp_eficiencia_carga()
 
     st.divider()
 
