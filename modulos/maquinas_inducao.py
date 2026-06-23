@@ -1877,64 +1877,57 @@ def run():
     # ── Índice ─────────────────────────────────────────────────────────────
     with st.expander("📋 Índice — clique para expandir", expanded=False):
         st.markdown("""
-**[1. Conceitos Elementares e Aplicações](#1-conceitos-elementares-e-aplicacoes)**
+**1. Conceitos Elementares e Aplicações**
 
-**[2. Estrutura Construtiva — Estator e Rotor](#2-estrutura-construtiva-estator-e-rotor)**
+**2. Estrutura Construtiva — Estator e Rotor**
 
-**[3. Campo Magnético Girante](#3-campo-magnetico-girante)**
-- Composição vetorial das FMM · Velocidade síncrona
+**3. Campo Magnético Girante**
+· Composição das FMM · Velocidade síncrona
 
-**[4. Escorregamento](#4-escorregamento)**
-- Definição · Faixas de operação
+**4. Escorregamento**
+· Definição · Faixas de operação
 
-**[5. Tensão Induzida — Estator e Rotor](#5-tensao-induzida-estator-e-rotor)**
-- Equação do estator · Er = s·Er0 · fr = s·f
+**5. Tensão Induzida — Estator e Rotor**
+· Equação $E_A$ · $E_r = s E_{r0}$ · $f_r = sf$
 
-**[6. Circuito Equivalente (por fase)](#6-circuito-equivalente-por-fase)**
-- 6.1 Circuito do Estator · 6.2 Circuito do Rotor · 6.3 Circuito Completo · Modelo IEEE · Thévenin
+**6. Circuito Equivalente (por fase)**
+· 6.1 Estator · 6.2 Rotor · 6.3 Completo · IEEE · Thévenin
 
-**[7. Fluxo de Potência e Balanço de Energia](#7-fluxo-de-potencia-e-balanco-de-energia)**
-- Tabela de grandezas · Diagramas motor, gerador e frenagem
+**7. Ensaios para Determinação dos Parâmetros**
+· Ensaio em vazio · Ensaio com rotor bloqueado
 
-**[8. Torque Eletromagnético](#8-torque-eletromagnetico)**
-- Expressão analítica · Torque máximo · Escorregamento crítico
+**8. Fluxo de Potência e Balanço de Energia**
+· Tabela de grandezas · Diagramas motor · gerador · frenagem
 
-**[8b. Torque — Aproximação Linear](#8b-torque-aproximacao-linear-para-baixo-escorregamento)**
-- Região linear · Comparação curva exata × aproximação
+**9. Torque Eletromagnético**
+· Expressão analítica · $T_{max}$ · $s_{max}$ · Aproximação linear
 
-**[8c. Ensaios para Parâmetros](#8c-ensaios-para-determinacao-dos-parametros)**
-- Ensaio em vazio · Ensaio com rotor bloqueado · Equações de parâmetros
+**10. Modos de Operação**
+· Motor · Gerador · Frenagem
 
-**[9. Modos de Operação](#9-modos-de-operacao)**
-- Motor · Gerador · Frenagem · Modo invertido
+**10b. Curva Característica T × n**
+· Pontos notáveis · Região estável · Região instável
 
-**[10. Curva Característica T × n](#10-curva-caracteristica-t-n)**
-- Pontos notáveis · Região estável
+**11. Corrente no Estator e Fator de Potência**
+· $I_1$, $I_2'$, $I_m$ × velocidade · cos φ × carga
 
-**[11. Métodos de Partida](#11-metodos-de-partida)**
-- DOL · Y/Δ · Autotransformador · Resistência no rotor · Inversor (VFD)
+**12. Eficiência**
+· Perdas · η_max · Classes IE
 
-**[12. Gaiola de Esquilo Dupla](#12-gaiola-de-esquilo-dupla)**
-- Efeito pelicular · Curvas de torque
+**13. Métodos de Partida**
+· DOL · Y/Δ · Autotransformador · Resistência no rotor · VFD
 
-**[13. Corrente no Estator](#13-corrente-no-estator)**
-- I₁, I₂', Iₘ × velocidade · Corrente de partida
+**14. Gaiola de Esquilo Dupla**
+· Efeito pelicular · Curvas de torque
 
-**[14. Fator de Potência](#14-fator-de-potencia)**
-- cos φ × carga · fp máximo · Carga leve vs nominal
-
-**[15. Eficiência](#15-eficiencia)**
-- η × carga (%) · Perdas fixas vs variáveis · Classes IE · Três modos
-
-**[🎛️ Exploradores Interativos](#exploradores-interativos)**
-- T×n · Circ. equiv. · Tensão→T×n · Partida · Eficiência · Corrente e fp · Efic.×Carga
+**🎛️ Exploradores Interativos**
+· T×n · Circ. equiv. · Tensão→T×n · Partida · Eficiência · Corrente e fp · Efic.×Carga
 
 **Referências** (ao final da página)
 """)
 
     st.divider()
 
-    # ═══════════════════════════════════════════════════════════════════════
     # SEÇÃO 1
     # ═══════════════════════════════════════════════════════════════════════
     st.header("1. Conceitos Elementares e Aplicações")
@@ -2167,18 +2160,10 @@ e ramo do rotor referido ($jX'_2 + R'_2/s$).
     st.caption("**Figura 6.1** — Circuito equivalente completo com $R_c$, $X_m$, "
                "$R_1$, $X_1$, $R'_2/s$ e $X'_2$.")
 
-    st.markdown(r"""
-A resistência $R'_2/s$ é decomposta como:
 
-$$\frac{R'_2}{s} = R'_2 + R'_2\frac{1-s}{s}$$
+    st.markdown("### Circuito IEEE Simplificado")
+    st.markdown("Quando $R_c$ é omitido, o modelo IEEE move $X_m$ para os terminais de entrada:")
 
-onde $R'_2$ representa as perdas Joule no rotor e $R'_2(1-s)/s$ é a **resistência de carga**
-equivalente à potência mecânica convertida.
-
-### Circuito IEEE Simplificado
-
-Quando $R_c$ é omitido, o modelo IEEE move $X_m$ para os terminais de entrada:
-""")
 
     show_fig(fig_circuito_ieee(), width_frac=0.78)
     st.caption("**Figura 6.2** — Circuito equivalente IEEE simplificado (sem $R_c$).")
@@ -2200,6 +2185,42 @@ X_{th} \approx X_1
     show_fig(fig_circuito_thevenin(), width_frac=0.72)
     st.caption("**Figura 6.3** — Circuito de Thévenin: $V_{th}$, $R_{th}$, $X_{th}$ "
                "em série com $R'_2/s + jX'_2$.")
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # SEÇÃO 8c — ENSAIOS
+    # ═══════════════════════════════════════════════════════════════════════
+    st.header("8c. Ensaios para Determinação dos Parâmetros")
+    st.markdown(r"""
+Os parâmetros do circuito equivalente são obtidos experimentalmente por dois ensaios clássicos,
+análogos aos ensaios do transformador. Antes dos ensaios, a **resistência do estator** $R_1$
+é medida diretamente com a máquina desligada (método CC por fase).
+""")
+
+    show_fig(fig_ensaios_parametros(), width_frac=0.90)
+    st.caption("**Figura 7.1** — Comparação dos ensaios em vazio e com rotor bloqueado.")
+
+    st.markdown("### Ensaio em Vazio")
+    st.markdown(
+        "Com o motor operando sem carga ($s \\approx 0$, $n \\approx n_s$), "
+        "na tensão e frequência nominais. Grandezas medidas: $V_0$, $I_0$, $P_0$."
+    )
+    st.latex(r"R_c = \frac{3 V_1^2}{P_0 - P_{R_1}} \qquad X_m = \frac{V_1}{I_\phi}")
+    st.markdown(r"""
+onde $P_0$ é a potência total medida, $P_{R_1} = 3 R_1 I_0^2$ é a perda no cobre do estator
+e $I_\phi = \sqrt{I_0^2 - (P_0/3V_1)^2}$ é a corrente de magnetização.
+As **perdas rotacionais** $P_{rot}$ são obtidas subtraindo as perdas no cobre e no ferro.
+
+### Ensaio com Rotor Bloqueado
+
+Com $n = 0$ ($s = 1$), aplicando tensão reduzida até a corrente nominal. Grandezas: $V_{cc}$, $I_{cc}$, $P_{cc}$.
+""")
+    st.latex(r"R_{eq} = R_1 + R_2' = \frac{P_{cc}}{3 I_{cc}^2} \qquad X_{eq} = X_1 + X_2' = \sqrt{\left(\frac{V_{cc}}{I_{cc}}\right)^2 - R_{eq}^2}")
+    st.markdown(r"""
+A repartição $X_1$ e $X'_2$ segue convenções de norma: tipicamente $X_1 = X'_2$ para motores
+de gaiola, ou determinada por medições adicionais no rotor bobinado.
+""")
 
     st.divider()
 
@@ -2287,48 +2308,14 @@ Comportamento análogo ao de um motor CC de excitação independente com relaç�
 torque-velocidade. Esta aproximação permite análise simplificada do ponto de operação nominal.
 """)
     show_plot(fig_torque_linear_s(), key="fig_tlin")
-    st.caption("**Figura 8b.1** — Comparação entre a curva exata $T(s)$ (azul) e a "
+    st.caption("**Figura 9b.1** — Comparação entre a curva exata $T(s)$ (azul) e a "
                "aproximação linear T ≈ K·s (vermelho tracejado) para baixo s.")
 
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════
-    # SEÇÃO 8c — ENSAIOS
-    # ═══════════════════════════════════════════════════════════════════════
-    st.header("8c. Ensaios para Determinação dos Parâmetros")
-    st.markdown(r"""
-Os parâmetros do circuito equivalente são obtidos experimentalmente por dois ensaios clássicos,
-análogos aos ensaios do transformador. Antes dos ensaios, a **resistência do estator** $R_1$
-é medida diretamente com a máquina desligada (método CC por fase).
-""")
-
-    show_fig(fig_ensaios_parametros(), width_frac=0.90)
-    st.caption("**Figura 8c.1** — Comparação dos ensaios em vazio e com rotor bloqueado.")
-
-    st.markdown("### Ensaio em Vazio")
-    st.markdown(
-        "Com o motor operando sem carga ($s \\approx 0$, $n \\approx n_s$), "
-        "na tensão e frequência nominais. Grandezas medidas: $V_0$, $I_0$, $P_0$."
-    )
-    st.latex(r"R_c = \frac{3 V_1^2}{P_0 - P_{R_1}} \qquad X_m = \frac{V_1}{I_\phi}")
-    st.markdown(r"""
-onde $P_0$ é a potência total medida, $P_{R_1} = 3 R_1 I_0^2$ é a perda no cobre do estator
-e $I_\phi = \sqrt{I_0^2 - (P_0/3V_1)^2}$ é a corrente de magnetização.
-As **perdas rotacionais** $P_{rot}$ são obtidas subtraindo as perdas no cobre e no ferro.
-
-### Ensaio com Rotor Bloqueado
-
-Com $n = 0$ ($s = 1$), aplicando tensão reduzida até a corrente nominal. Grandezas: $V_{cc}$, $I_{cc}$, $P_{cc}$.
-""")
-    st.latex(r"R_{eq} = R_1 + R_2' = \frac{P_{cc}}{3 I_{cc}^2} \qquad X_{eq} = X_1 + X_2' = \sqrt{\left(\frac{V_{cc}}{I_{cc}}\right)^2 - R_{eq}^2}")
-    st.markdown(r"""
-A repartição $X_1$ e $X'_2$ segue convenções de norma: tipicamente $X_1 = X'_2$ para motores
-de gaiola, ou determinada por medições adicionais no rotor bobinado.
-""")
-
     st.divider()
 
-    # ═══════════════════════════════════════════════════════════════════════
     # SEÇÃO 9
     # ═══════════════════════════════════════════════════════════════════════
     st.header("9. Modos de Operação")
@@ -2349,9 +2336,6 @@ O rotor gira no sentido oposto ao campo ($n < 0$, obtido pela inversão de fase)
 Tanto a potência elétrica quanto a mecânica são dissipadas como calor no rotor.
 Utilizado em frenagem rápida de cargas de alta inércia.
 
-### Modo Invertido
-Em rotores bobinados, alimentando o rotor pelos anéis coletores com o estator em curto,
-o motor gira no sentido **oposto** ao campo do estator.
 """)
 
     show_plot(fig_modos_operacao(), key="fig_modos")
@@ -2386,40 +2370,6 @@ a operação é instável — aumento de carga reduz $T_{em}$.
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════
-    # SEÇÃO 11
-    # ═══════════════════════════════════════════════════════════════════════
-    st.header("11. Métodos de Partida")
-    st.markdown(r"""
-Na partida direta (DOL), a corrente pode atingir 5 a 8 vezes a corrente nominal, causando
-queda de tensão na rede e solicitação mecânica excessiva. Métodos para limitar a corrente:
-
-### 1. Partida estrela-triângulo (Y/Δ)
-Conexão em Y na partida reduz a tensão de fase por $1/\sqrt{3}$.
-Corrente e torque de partida são reduzidos por um fator **3** em relação à ligação Δ direta.
-
-### 2. Autotransformador
-Aplica tensão $\alpha V_1$ ao motor ($\alpha < 1$). Corrente e torque caem por $\alpha^2$.
-Mais flexível que Y/Δ.
-
-### 3. Resistência em série no estator
-Resistores inseridos em série e curto-circuitados após a aceleração. Dissipam calor.
-
-### 4. Resistência no rotor (rotor bobinado)
-Desloca $s_{max}$ para 1, maximizando o torque de partida com corrente controlada.
-Resistência reduzida gradualmente até zero em plena carga.
-
-### 5. Inversor de frequência (VFD)
-Partida com frequência e tensão crescentes (relação $V/f$ constante). Mantém fluxo constante
-e torque de partida elevado com corrente controlada. Método mais moderno e flexível.
-""")
-
-    show_plot(fig_curva_torque_R2(), key="fig_r2")
-    st.caption("**Figura 11.1** — Efeito de $R'_2$ crescente (rotor bobinado): "
-               "$s_{max}$ se desloca para a partida sem alterar $T_{max}$.")
-
-    st.divider()
-
-    # ═══════════════════════════════════════════════════════════════════════
     # SEÇÃO 13 — CORRENTE NO ESTATOR
     # ═══════════════════════════════════════════════════════════════════════
     st.header("13. Corrente no Estator")
@@ -2436,14 +2386,14 @@ atingir **5 a 8 vezes** a corrente nominal — principal motivação dos método
     st.latex(r"I_{1,partida} \approx \frac{V_1}{\sqrt{(R_1+R_2')^2 + (X_1+X_2')^2}}")
 
     show_plot(fig_corrente_estator_s(), key="fig_I1s")
-    st.caption("**Figura 13.1** — Correntes $|I_1|$, $|I_2'|$ e $|I_m|$ × velocidade. "
+    st.caption("**Figura 11.1** — Correntes $|I_1|$, $|I_2'|$ e $|I_m|$ × velocidade. "
                "Alto valor de $I_1$ na partida ($n=0$) e queda para $I_\\phi$ em $n=n_s$.")
 
     st.divider()
 
-    st.divider()
-
     # ═══════════════════════════════════════════════════════════════════════
+
+
     # SEÇÃO 14 — FATOR DE POTÊNCIA
     # ═══════════════════════════════════════════════════════════════════════
     st.header("14. Fator de Potência")
@@ -2462,14 +2412,16 @@ as perdas fixas (ferro e rotacionais, aproximadamente constantes).
     st.markdown("Motores de alto rendimento (classes IE2–IE4) atingem $\\eta > 95\\%$ na faixa 50–100% da carga.")
 
     show_plot(fig_fator_potencia_s(), key="fig_fp")
-    st.caption("**Figura 14.1** — Fator de potência × velocidade. "
+    st.caption("**Figura 11.2** — Fator de potência × velocidade. "
                "O fp é baixo em vazio, atinge o máximo próximo da carga nominal.")
 
     st.divider()
 
+    # ═══════════════════════════════════════════════════════════════════════
+
+
     st.divider()
 
-    # ═══════════════════════════════════════════════════════════════════════
     # SEÇÃO 15 — EFICIÊNCIA
     # ═══════════════════════════════════════════════════════════════════════
     st.header("15. Eficiência")
@@ -2503,10 +2455,45 @@ Motores de alto rendimento (classes IE2–IE4) atingem $\eta > 95\%$ na faixa 50
                     "Toda energia dissipada no rotor.")
 
     show_plot(fig_eficiencia_curva(), key="fig_eta")
-    st.caption("**Figura 15.1** — Curva de eficiência η × carga (%). "
+    st.caption("**Figura 12.1** — Curva de eficiência η × carga (%). "
                "Eficiência máxima tipicamente entre 50–80% da carga nominal.")
 
     st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════
+
+    st.divider()
+
+    # SEÇÃO 11
+    # ═══════════════════════════════════════════════════════════════════════
+    st.header("11. Métodos de Partida")
+    st.markdown(r"""
+Na partida direta (DOL), a corrente pode atingir 5 a 8 vezes a corrente nominal, causando
+queda de tensão na rede e solicitação mecânica excessiva. Métodos para limitar a corrente:
+
+### 1. Partida estrela-triângulo (Y/Δ)
+Conexão em Y na partida reduz a tensão de fase por $1/\sqrt{3}$.
+Corrente e torque de partida são reduzidos por um fator **3** em relação à ligação Δ direta.
+
+### 2. Autotransformador
+Aplica tensão $\alpha V_1$ ao motor ($\alpha < 1$). Corrente e torque caem por $\alpha^2$.
+Mais flexível que Y/Δ.
+
+### 3. Resistência em série no estator
+Resistores inseridos em série e curto-circuitados após a aceleração. Dissipam calor.
+
+### 4. Resistência no rotor (rotor bobinado)
+Desloca $s_{max}$ para 1, maximizando o torque de partida com corrente controlada.
+Resistência reduzida gradualmente até zero em plena carga.
+
+### 5. Inversor de frequência (VFD)
+Partida com frequência e tensão crescentes (relação $V/f$ constante). Mantém fluxo constante
+e torque de partida elevado com corrente controlada. Método mais moderno e flexível.
+""")
+
+    show_plot(fig_curva_torque_R2(), key="fig_r2")
+    st.caption("**Figura 13.1** — Efeito de $R'_2$ crescente (rotor bobinado): "
+               "$s_{max}$ se desloca para a partida sem alterar $T_{max}$.")
 
     st.divider()
 
@@ -2534,7 +2521,7 @@ a corrente concentra-se na superfície das barras, equivalente à gaiola externa
 """)
 
     show_plot(fig_gaiola_dupla(), key="fig_dupla")
-    st.caption("**Figura 12.1** — Curvas $T \\times n$: gaiola dupla (verde), "
+    st.caption("**Figura 14.1** — Curvas $T \\times n$: gaiola dupla (verde), "
                "gaiola externa (vermelho), gaiola interna (azul) e simples de referência (cinza).")
 
     st.divider()
