@@ -882,9 +882,9 @@ def run():
             d.pop()
 
             # ── Terminais E1 abertos à direita do nó A ────────────────────
-            elm.Line().right(0.5 * d.unit).dot(open=True)
+            elm.Line().right(0.8 * d.unit).dot(open=True)
             elm.Gap().down(d.unit * 1.75).label(("+", "$E_1$", "−")).dot(open=True)
-            elm.Line().left(0.5 * d.unit)           # fio inferior, sob E1
+            elm.Line().left(0.8 * d.unit)           # fio inferior, sob E1
 
             # ── Fio inferior: fecha pela coordenada do Xm_bot → V1− ───────
             elm.Line().toy(Xm_bot.end.y)
