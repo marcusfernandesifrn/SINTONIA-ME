@@ -4,10 +4,6 @@ Disciplina: Máquinas Elétricas
 Curso: Engenharia de Energia
 Instituição: IFRN — Campus Natal-Central (CNAT)
 Autor: Marcus V A Fernandes · marcus.fernandes@ifrn.edu.br · v1.0
-
-Fonte: PPTX-fonte do Módulo 4 — "CEEI - MEI - 01 - Conceitos" (conceitos elementares,
-estrutura construtiva, campo magnético rotórico, tensão induzida e modos de operação).
-Exercícios resolvidos adaptados dos notebooks SEN5.ipynb, UMANS6.ipynb e MEI-DESENHOS.ipynb.
 """
 
 import streamlit as st
@@ -1275,6 +1271,630 @@ def run():
         )
         return fig
 
+    def fig_rotor_bobinado_R2():
+        """T×n para diferentes R'2 no rotor bobinado — slide 3 PPTX-03."""
+        V1, R1, X1, X2, Xm = 127.0, 0.5, 1.0, 1.0, 50.0
+        ns = 1800.0; ws = ns * 2 * np.pi / 60
+        s_range = np.linspace(1e-3, 1.0, 500)
+        n_range = ns * (1 - s_range)
+
+        R2_cases = [
+            (0.1,  AZ, "solid",   "R'₂ pequena — nominal"),
+            (0.6,  VD, "dash",    "R'₂ média"),
+            (1.4,  LR, "dashdot", "R'₂ = X'₂  (T_max na partida)"),
+        ]
+        fig = go.Figure()
+        for R2, cor, dash, nm in R2_cases:
+            def T_fn(s, R2=R2):
+                Z2 = R2/s + 1j*X2
+                Zeq = (1j*Xm*Z2)/(1j*Xm+Z2)
+                I2 = (V1/(R1+1j*X1+Zeq))*Zeq/Z2
+                return 3*abs(I2)**2*(R2/s)/ws
+            T_v = np.array([T_fn(s) for s in s_range])
+            hover = [f"n={ni:.0f} rpm  s={si:.3f}<br>T={ti:.2f} N·m  R'₂={R2} Ω"
+                     for ni,si,ti in zip(n_range,s_range,T_v)]
+            fig.add_trace(go.Scatter(x=n_range, y=T_v, mode="lines",
+                line=dict(color=cor, width=2.8, dash=dash), name=nm,
+                hovertext=hover, hoverinfo="text"))
+
+        # Partida máxima annotation
+        R2_opt = float(np.sqrt(R1**2 + (X1+X2)**2)) * 0.95
+        def T_opt(s):
+            Z2 = R2_opt/s + 1j*X2
+            Zeq = (1j*Xm*Z2)/(1j*Xm+Z2)
+            I2 = (V1/(R1+1j*X1+Zeq))*Zeq/Z2
+            return 3*abs(I2)**2*(R2_opt/s)/ws
+        T_part_opt = T_opt(1.0)
+        fig.add_annotation(x=0, y=T_part_opt,
+            text=f"<b>T_max na partida<br>R'₂ ≈ |Z_cc|</b>",
+            showarrow=True, ax=80, ay=-40,
+            font=dict(size=11, color=LR), arrowcolor=LR, arrowwidth=1.5)
+
+        fig.add_vline(x=ns, line=dict(color=AZ, width=1.5, dash="dash"))
+        fig.add_hline(y=0,  line=dict(color=CZ, width=0.8))
+        fig.update_layout(
+            title=dict(text="Efeito de R'₂ na Curva T×n — Rotor Bobinado",
+                       font=dict(size=16, color=TX)),
+            xaxis=dict(title=dict(text="Velocidade n (rpm)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13), range=[-60, ns+120],
+                       gridcolor="rgba(128,128,128,.18)"),
+            yaxis=dict(title=dict(text="Torque T (N·m)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13),
+                       gridcolor="rgba(128,128,128,.18)"),
+            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)",
+                        orientation="h", y=-0.22),
+            height=440, margin=dict(l=75, r=30, t=60, b=100),
+        )
+        return fig
+
+    def fig_barra_profunda():
+        """Seção transversal de barra profunda e curvas de distribuição de corrente."""
+        fig, axes = plt.subplots(1, 2, figsize=(9.5, 4.2))
+        fig.patch.set_alpha(0)
+
+        # ── Painel esquerdo: seção da barra profunda ──────────────────────
+        ax0 = axes[0]; ax0.set_facecolor("none"); ax0.axis("off")
+        ax0.set_xlim(-3, 3); ax0.set_ylim(-5, 3)
+
+        # Barra retangular alta (representação)
+        bar = mpatches.FancyBboxPatch((-0.55, -4.5), 1.1, 5.0,
+            boxstyle="round,pad=0.05", fc=LR, ec=TX, lw=1.5, zorder=3)
+        ax0.add_patch(bar)
+
+        # Ranhura ao redor
+        slot = mpatches.FancyBboxPatch((-0.75, -4.8), 1.5, 5.5,
+            boxstyle="round,pad=0.0", fc="none", ec=CZ, lw=1.0, ls="--",
+            zorder=2, alpha=0.6)
+        ax0.add_patch(slot)
+
+        # Distribuição de corrente por altura (skin effect)
+        y_bar = np.linspace(-4.5, 0.5, 200)
+        # Alta frequência (partida): concentração no topo
+        J_alta = np.exp(-3.0 * (-y_bar / 4.5))
+        J_alta /= J_alta.max()
+        # Baixa frequência (regime): uniforme
+        J_baixa = np.ones_like(y_bar)
+
+        ax0.barh(y_bar, J_alta * 0.5, height=0.04, left=0.55,
+                  color=VM, alpha=0.85, zorder=4)
+        ax0.barh(y_bar, J_baixa * 0.5, height=0.04, left=-1.05,
+                  color=AZ, alpha=0.70, zorder=4)
+
+        ax0.text(0, 1.5, "Barra profunda",
+                 ha="center", fontsize=10, fontweight="bold", color=TX)
+        ax0.text(-1.5, -2.5, "Baixa freq.\n(regime)\nJ uniforme",
+                 ha="center", fontsize=8, color=AZ, style="italic")
+        ax0.text(1.5, -2.5, "Alta freq.\n(partida)\nJ concentrada\nno topo",
+                 ha="center", fontsize=8, color=VM, style="italic")
+
+        # ── Painel direito: curvas T×n comparativas ───────────────────────
+        ax1 = axes[1]; ax1.set_facecolor("none")
+        ax1.spines[["top","right"]].set_visible(False)
+        ax1.spines[["bottom","left"]].set_color(CZ)
+        ax1.tick_params(colors=CZ)
+
+        V1, R1, X1, X2, Xm = 127.0, 0.5, 1.0, 1.0, 50.0
+        ns = 1800.0; ws = ns * 2 * np.pi / 60
+        s_r = np.linspace(1e-3, 1.0, 400)
+        n_r = ns*(1-s_r)
+
+        def T_s(s, R2):
+            Z2 = R2/s + 1j*X2
+            Zeq = (1j*Xm*Z2)/(1j*Xm+Z2)
+            I2 = (V1/(R1+1j*X1+Zeq))*Zeq/Z2
+            return 3*abs(I2)**2*(R2/s)/ws
+
+        # R2 efetivo varia com s (skin effect simplificado)
+        T_deep = np.array([T_s(s, 0.3 + 1.2*s) for s in s_r])
+        T_simple = np.array([T_s(s, 0.35) for s in s_r])
+
+        ax1.plot(n_r, T_simple, color=AZ, lw=2.0, ls="--", label="Gaiola simples")
+        ax1.plot(n_r, T_deep,   color=VM, lw=2.5, ls="-",  label="Barra profunda")
+        ax1.axvline(ns, color=AZ, lw=1.0, ls="--", alpha=0.5)
+        ax1.axhline(0,  color=CZ, lw=0.7)
+        ax1.set_xlabel("Velocidade n (rpm)", fontsize=10, color=TX)
+        ax1.set_ylabel("Torque T (N·m)", fontsize=10, color=TX)
+        ax1.set_title("Curvas T×n", fontsize=10, fontweight="bold", color=TX)
+        ax1.legend(fontsize=9, framealpha=0.0)
+        ax1.grid(True, alpha=0.18, ls="--", color=CZ)
+        ax1.set_xlim(-60, ns+80)
+
+        fig.suptitle("Gaiola com Barra Profunda — Efeito Pelicular",
+                     fontsize=11.5, fontweight="bold", color=TX, y=1.01)
+        fig.tight_layout(pad=0.5)
+        return fig
+
+    def fig_nema_classes():
+        """Curvas T×n para as classes NEMA A, B, C, D — slide 7 PPTX-03."""
+        V1, R1_b, X1, X2, Xm = 127.0, 0.5, 1.0, 1.0, 50.0
+        ns = 1800.0; ws = ns * 2*np.pi/60
+        s_r = np.linspace(1e-3, 1.0, 600)
+        n_r = ns*(1-s_r)
+
+        def T_s(s, R2, X2_=None):
+            X2_ = X2_ or X2
+            Z2 = R2/s + 1j*X2_
+            Zeq = (1j*Xm*Z2)/(1j*Xm+Z2)
+            I2 = (V1/(R1_b+1j*X1+Zeq))*Zeq/Z2
+            return 3*abs(I2)**2*(R2/s)/ws
+
+        # NEMA characteristics (approximate)
+        classes = {
+            "A": dict(R2=0.20, X2_=1.0,  cor=AZ, dash="solid",
+                      desc="Alta corrente de partida, alta eficiência"),
+            "B": dict(R2=0.35, X2_=1.5,  cor=VD, dash="dash",
+                      desc="Partida normal, alta eficiência (mais comum)"),
+            "C": dict(R2=0.90, X2_=1.8,  cor=LR, dash="dashdot",
+                      desc="Alto torque de partida, corrente moderada"),
+            "D": dict(R2=1.80, X2_=0.8,  cor=VM, dash="dot",
+                      desc="Torque de partida muito alto, alto escorregamento"),
+        }
+
+        fig = go.Figure()
+        for cls, p in classes.items():
+            T_v = np.array([T_s(s, p["R2"], p["X2_"]) for s in s_r])
+            hover = [f"NEMA {cls}<br>n={ni:.0f} rpm  s={si:.3f}<br>T={ti:.2f} N·m"
+                     for ni,si,ti in zip(n_r,s_r,T_v)]
+            fig.add_trace(go.Scatter(
+                x=n_r, y=T_v, mode="lines",
+                line=dict(color=p["cor"], width=2.8, dash=p["dash"]),
+                name=f"Classe {cls} — {p['desc']}",
+                hovertext=hover, hoverinfo="text",
+            ))
+
+        fig.add_vline(x=ns, line=dict(color=AZ, width=1.5, dash="dash"))
+        fig.add_hline(y=0,  line=dict(color=CZ, width=0.8))
+        fig.update_layout(
+            title=dict(text="Curvas T×n — Classes NEMA de Motores em Gaiola",
+                       font=dict(size=16, color=TX)),
+            xaxis=dict(title=dict(text="Velocidade n (rpm)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13), range=[-60, ns+120],
+                       gridcolor="rgba(128,128,128,.18)"),
+            yaxis=dict(title=dict(text="Torque T (N·m)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13),
+                       gridcolor="rgba(128,128,128,.18)"),
+            legend=dict(font=dict(size=12), bgcolor="rgba(0,0,0,0)",
+                        orientation="h", y=-0.28),
+            height=450, margin=dict(l=75, r=30, t=60, b=120),
+        )
+        return fig
+
+    def fig_partida_direta():
+        """Diagrama de partida direta (DOL): corrente e velocidade × tempo."""
+        t = np.linspace(0, 5.0, 500)
+        # Corrente: pico na partida, decai exponencialmente ao nominal
+        I_nom = 1.0; I_part_pu = 6.5
+        tau_I = 0.3
+        I_t = I_nom + (I_part_pu - I_nom) * np.exp(-t / tau_I)
+
+        # Velocidade: curva de aceleração sigmoidal
+        tau_n = 1.2
+        n_t = 1.0 * (1 - np.exp(-t / tau_n))
+
+        fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
+                             subplot_titles=["Corrente de linha I/I<sub>nom</sub>",
+                                             "Velocidade n/n<sub>s</sub>"],
+                             vertical_spacing=0.12)
+
+        fig.add_trace(go.Scatter(x=t, y=I_t, mode="lines",
+            line=dict(color=VM, width=2.8), name="I(t)/Inom",
+            hovertemplate="t=%{x:.2f} s<br>I=%{y:.2f} Inom"), row=1, col=1)
+        fig.add_hline(y=I_nom, line=dict(color=CZ, width=1.2, dash="dot"),
+                      annotation_text="I_nom", annotation_position="right", row=1, col=1)
+        fig.add_hline(y=I_part_pu, line=dict(color=VM, width=0.8, dash="dash"),
+                      annotation_text=f"{I_part_pu}×Inom", row=1, col=1)
+
+        fig.add_trace(go.Scatter(x=t, y=n_t, mode="lines",
+            line=dict(color=AZ, width=2.8), name="n(t)/ns",
+            hovertemplate="t=%{x:.2f} s<br>n=%{y:.3f} ns"), row=2, col=1)
+        fig.add_hline(y=1.0, line=dict(color=AZ, width=1.2, dash="dot"),
+                      annotation_text="nₛ", annotation_position="right", row=2, col=1)
+
+        fig.update_xaxes(title_text="Tempo (s)", tickfont=dict(size=12), row=2, col=1)
+        fig.update_yaxes(tickfont=dict(size=12))
+        fig.update_layout(
+            title=dict(text="Partida Direta (DOL) — Transitório de Corrente e Velocidade",
+                       font=dict(size=15, color=TX)),
+            showlegend=False,
+            height=430, margin=dict(l=70, r=60, t=70, b=60),
+        )
+        return fig
+
+    def fig_partida_estrela_triangulo():
+        """Diagrama de ligação Y/Δ e transitório de corrente."""
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4.2))
+        fig.patch.set_alpha(0)
+
+        # ── Painel esquerdo: diagrama de ligação ────────────────────────────
+        ax0 = axes[0]; ax0.set_facecolor("none"); ax0.axis("off")
+        ax0.set_xlim(-0.5, 5.5); ax0.set_ylim(-0.5, 5.5)
+
+        # Ligação estrela (Y)
+        ax0.text(0.5, 5.2, "Ligação Y (partida)", fontsize=10,
+                 fontweight="bold", color=VD)
+        # Triângulo representativo
+        pts_Y = [(1.0, 2.0), (1.0, 4.5), (1.0, 3.25)]  # pontas das bobinas
+        for i, (bx, by) in enumerate([(1.0, 3.5), (1.0, 3.0), (1.0, 2.5)]):
+            ax0.add_patch(mpatches.FancyBboxPatch(
+                (0.4, by - 0.18), 1.2, 0.36,
+                boxstyle="round,pad=0.05", fc=VD, ec=TX, lw=1.0, alpha=0.7))
+            ax0.text(1.0, by, f"B{i+1}", ha="center", fontsize=8,
+                     color="white", fontweight="bold")
+        # Neutro (estrela)
+        ax0.plot([1.0, 1.0], [2.32, 1.5], color=TX, lw=1.8)
+        ax0.plot(1.0, 1.5, "o", color=TX, ms=6)
+        ax0.text(1.0, 1.2, "N (estrela)", ha="center", fontsize=8, color=TX)
+        ax0.annotate("", xy=(1.6, 3.5), xytext=(2.8, 3.5),
+                     arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.5))
+        ax0.text(2.0, 3.8, "após\nts", ha="center", fontsize=8, color=CZ)
+
+        # Ligação triângulo (Δ)
+        ax0.text(3.3, 5.2, "Ligação Δ (regime)", fontsize=10,
+                 fontweight="bold", color=LR)
+        tri_x = [3.5, 5.0, 4.25]; tri_y = [2.0, 2.0, 4.5]
+        for i in range(3):
+            j = (i+1) % 3
+            mx = (tri_x[i]+tri_x[j])/2; my = (tri_y[i]+tri_y[j])/2
+            ax0.add_patch(mpatches.FancyBboxPatch(
+                (mx-0.5, my-0.18), 1.0, 0.36,
+                boxstyle="round,pad=0.05", fc=LR, ec=TX, lw=1.0, alpha=0.7))
+        for xi, yi, lbl in zip(tri_x, tri_y, ["L1","L2","L3"]):
+            ax0.plot(xi, yi, "o", color=TX, ms=6, zorder=5)
+            ax0.text(xi, yi-0.3, lbl, ha="center", fontsize=8, color=TX)
+        ax0.plot(tri_x + [tri_x[0]], tri_y + [tri_y[0]],
+                 color=LR, lw=1.5, alpha=0.7)
+
+        # ── Painel direito: comparação de corrente ──────────────────────────
+        ax1 = axes[1]; ax1.set_facecolor("none")
+        ax1.spines[["top","right"]].set_visible(False)
+        ax1.spines[["bottom","left"]].set_color(CZ)
+        ax1.tick_params(colors=CZ)
+
+        t = np.linspace(0, 6, 500); ts = 2.5  # tempo de comutação
+
+        # DOL
+        I_DOL = np.where(t < 0.01, 6.0, 1.0 + (6.0-1.0)*np.exp(-t/0.35))
+
+        # Y/Δ: fase Y (1/3 da corrente DOL), comuta para Δ em ts
+        I_Y = np.where(t < ts,
+                       1.0/3 + (6.0/3 - 1.0/3)*np.exp(-t/0.35),
+                       1.0 + 2.5*np.exp(-(t-ts)/0.5))
+
+        ax1.plot(t, I_DOL, color=VM, lw=2.0, ls="--", label="Direta (DOL)")
+        ax1.plot(t, I_Y,   color=VD, lw=2.5, ls="-",  label="Estrela-Triângulo")
+        ax1.axvline(ts, color=CZ, lw=0.8, ls=":", alpha=0.6)
+        ax1.text(ts+0.1, 5.5, "Y → Δ", fontsize=8, color=CZ)
+        ax1.axhline(1.0, color=CZ, lw=0.8, ls="--", alpha=0.5)
+        ax1.text(5.5, 1.1, "Inom", fontsize=8, color=CZ)
+        ax1.set_xlabel("Tempo (s)", fontsize=10, color=TX)
+        ax1.set_ylabel("Corrente (× Inom)", fontsize=10, color=TX)
+        ax1.set_title("Corrente de Linha", fontsize=10, fontweight="bold", color=TX)
+        ax1.legend(fontsize=9, framealpha=0.0)
+        ax1.grid(True, alpha=0.18, ls="--", color=CZ)
+        ax1.set_ylim(0, 7)
+
+        fig.suptitle("Partida Estrela-Triângulo (Y/Δ)",
+                     fontsize=12, fontweight="bold", color=TX, y=1.01)
+        fig.tight_layout(pad=0.5)
+        return fig
+
+    def fig_partida_compensadora():
+        """Diagrama de partida por autotransformador (compensadora)."""
+        fig, axes = plt.subplots(1, 2, figsize=(10, 4.2))
+        fig.patch.set_alpha(0)
+
+        # ── Painel esquerdo: esquema do autotransformador ───────────────────
+        ax0 = axes[0]; ax0.set_facecolor("none"); ax0.axis("off")
+        ax0.set_xlim(-0.5, 6.5); ax0.set_ylim(-1.0, 6.0)
+
+        # Rede
+        ax0.text(0.3, 5.5, "Rede  $V_1$", ha="center", fontsize=9,
+                 fontweight="bold", color=TX)
+        ax0.plot([0.3, 0.3], [5.0, 4.0], color=TX, lw=2.0)
+
+        # Autotransformador
+        at_box = mpatches.FancyBboxPatch(
+            (-0.2, 1.8), 1.0, 2.0,
+            boxstyle="round,pad=0.1", fc="#e8edf5", ec=TX, lw=1.5)
+        ax0.add_patch(at_box)
+        ax0.text(0.3, 3.6, "Auto-\ntransf.", ha="center", fontsize=8, color=TX)
+
+        # Taps
+        for tap, y, lbl in [(0.50, 3.0, "50%"), (0.65, 2.6, "65%"), (0.80, 2.2, "80%")]:
+            ax0.plot([0.8, 2.0], [y, y], color=CZ, lw=1.0, ls="--", alpha=0.7)
+            ax0.text(2.1, y, lbl, fontsize=8, color=CZ, va="center")
+
+        # Motor
+        motor = mpatches.Circle((5.0, 2.8), 0.9, fc="#dce4f0", ec=TX, lw=1.5)
+        ax0.add_patch(motor)
+        ax0.text(5.0, 2.8, "MIT", ha="center", va="center",
+                 fontsize=10, fontweight="bold", color=TX)
+        ax0.plot([2.2, 4.1], [2.8, 2.8], color=TX, lw=1.8)
+
+        # Tensão reduzida label
+        ax0.annotate("α·V₁", xy=(3.2, 2.8), xytext=(3.2, 4.2),
+                     ha="center", fontsize=10, color=VM,
+                     arrowprops=dict(arrowstyle="-|>", color=VM, lw=1.2))
+
+        ax0.text(0.3, -0.5, "Corrente: α²×DOL  |  Torque: α²×DOL",
+                 ha="center", fontsize=8, color=CZ, style="italic")
+
+        # ── Painel direito: comparação corrente/torque por tap ─────────────
+        ax1 = axes[1]; ax1.set_facecolor("none")
+        ax1.spines[["top","right"]].set_visible(False)
+        ax1.spines[["bottom","left"]].set_color(CZ)
+        ax1.tick_params(colors=CZ)
+
+        alphas = [0.50, 0.65, 0.80, 1.0]
+        I_dol = 6.0; T_dol = 1.5
+        cores = [AZ, VD, LR, VM]
+        I_vals = [a**2 * I_dol for a in alphas]
+        T_vals = [a**2 * T_dol for a in alphas]
+        labels = [f"α={a:.2f}" for a in alphas[:-1]] + ["DOL (α=1)"]
+
+        x = np.arange(len(alphas))
+        bars_I = ax1.bar(x - 0.2, I_vals, 0.35, color=cores,
+                          alpha=0.75, label="Corrente (×Inom)", edgecolor=TX, lw=0.8)
+        bars_T = ax1.bar(x + 0.2, T_vals, 0.35, color=cores,
+                          alpha=0.45, label="Torque (×Tnom)", edgecolor=TX,
+                          lw=0.8, hatch="//")
+
+        ax1.set_xticks(x)
+        ax1.set_xticklabels(labels, fontsize=9, color=TX)
+        ax1.set_ylabel("Valor relativo (p.u.)", fontsize=10, color=TX)
+        ax1.set_title("Corrente e Torque por Tap do AT",
+                      fontsize=10, fontweight="bold", color=TX)
+        ax1.legend(fontsize=8.5, framealpha=0.0)
+        ax1.grid(True, alpha=0.18, ls="--", color=CZ, axis="y")
+        ax1.axhline(1.0, color=CZ, lw=0.8, ls=":", alpha=0.6)
+
+        fig.suptitle("Partida com Autotransformador (Compensadora)",
+                     fontsize=12, fontweight="bold", color=TX, y=1.01)
+        fig.tight_layout(pad=0.5)
+        return fig
+
+    def fig_controle_tensao_terminal():
+        """Família T×n para diferentes tensões terminais — slide 16 PPTX-03."""
+        V1_nom, R1, X1, R2, X2, Xm = 127.0, 0.5, 1.0, 0.4, 1.0, 50.0
+        ns = 1800.0; ws = ns * 2*np.pi/60
+        s_r = np.linspace(1e-3, 1.0, 500)
+        n_r = ns*(1-s_r)
+
+        def T_fn(s, V1):
+            Z2 = R2/s + 1j*X2
+            Zeq = (1j*Xm*Z2)/(1j*Xm+Z2)
+            I2 = (V1/(R1+1j*X1+Zeq))*Zeq/Z2
+            return 3*abs(I2)**2*(R2/s)/ws
+
+        fracs = [1.0, 0.85, 0.70, 0.55]
+        cores = [AZ, VD, LR, VM]
+        fig = go.Figure()
+        for frac, cor in zip(fracs, cores):
+            V1 = frac * V1_nom
+            T_v = np.array([T_fn(s, V1) for s in s_r])
+            hover = [f"V={frac*100:.0f}%V_nom<br>n={ni:.0f} rpm<br>T={ti:.2f} N·m"
+                     for ni,ti in zip(n_r, T_v)]
+            fig.add_trace(go.Scatter(x=n_r, y=T_v, mode="lines",
+                line=dict(color=cor, width=2.8),
+                name=f"V₁ = {frac*100:.0f}% V_nom",
+                hovertext=hover, hoverinfo="text"))
+
+        # Carga hiperbólica constante
+        T_carga = 15.0 / (n_r + 10) * ns * 0.55
+        fig.add_trace(go.Scatter(x=n_r, y=T_carga, mode="lines",
+            line=dict(color=CZ, width=1.8, dash="dot"),
+            name="Conjugado da carga"))
+        fig.add_annotation(x=0.50, y=1.06, xref="paper", yref="paper",
+            text="<i>T ∝ V² — redução de tensão desloca o ponto de operação</i>",
+            showarrow=False, font=dict(size=12, color=CZ),
+            bgcolor="rgba(255,255,255,0.80)", borderpad=5)
+        fig.add_vline(x=ns, line=dict(color=AZ, width=1.5, dash="dash"))
+        fig.add_hline(y=0,  line=dict(color=CZ, width=0.8))
+        fig.update_layout(
+            title=dict(text="Controle por Tensão Terminal — T×n para Diferentes V₁",
+                       font=dict(size=16, color=TX)),
+            xaxis=dict(title=dict(text="Velocidade n (rpm)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13), range=[-60, ns+120],
+                       gridcolor="rgba(128,128,128,.18)"),
+            yaxis=dict(title=dict(text="Torque T (N·m)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13),
+                       gridcolor="rgba(128,128,128,.18)"),
+            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)",
+                        orientation="h", y=-0.22),
+            height=440, margin=dict(l=75, r=30, t=60, b=100),
+        )
+        return fig
+
+    def fig_controle_frequencia():
+        """T×n para controle por frequência (V/f constante) — slide 17 PPTX-03."""
+        R1, X1_base, R2, X2_base, Xm_base = 0.5, 1.0, 0.4, 1.0, 50.0
+        ns_base = 1800.0; f_base = 60.0
+        V1_base = 127.0
+
+        fig = go.Figure()
+        freqs = [60, 45, 30, 15]
+        cores = [AZ, VD, LR, VM]
+
+        for f, cor in zip(freqs, cores):
+            ratio = f / f_base
+            V1  = V1_base * ratio          # V/f constante
+            X1  = X1_base * ratio
+            X2  = X2_base * ratio
+            Xm  = Xm_base * ratio
+            ns  = ns_base * ratio
+            ws  = ns * 2*np.pi/60
+
+            s_r = np.linspace(1e-3, 1.0, 400)
+            n_r = ns*(1-s_r)
+
+            def T_fn(s, V1=V1, X1=X1, X2=X2, Xm=Xm, ws=ws):
+                Z2 = R2/s + 1j*X2
+                Zeq = (1j*Xm*Z2)/(1j*Xm+Z2)
+                I2 = (V1/(R1+1j*X1+Zeq))*Zeq/Z2
+                return 3*abs(I2)**2*(R2/s)/ws
+
+            T_v = np.array([T_fn(s) for s in s_r])
+            hover = [f"f={f} Hz  V₁={V1:.0f} V<br>n={ni:.0f} rpm  T={ti:.2f} N·m"
+                     for ni,ti in zip(n_r,T_v)]
+            fig.add_trace(go.Scatter(x=n_r, y=T_v, mode="lines",
+                line=dict(color=cor, width=2.8),
+                name=f"f = {f} Hz  (V₁ = {V1:.0f} V)",
+                hovertext=hover, hoverinfo="text"))
+
+            # Mark ns
+            fig.add_vline(x=ns, line=dict(color=cor, width=0.8, dash="dot"),
+                          annotation_text=f"nₛ@{f}Hz",
+                          annotation_font=dict(size=9, color=cor),
+                          annotation_position="top")
+
+        fig.add_hline(y=0, line=dict(color=CZ, width=0.8))
+        fig.add_annotation(x=0.50, y=1.06, xref="paper", yref="paper",
+            text="<i>Controle V/f constante — fluxo e T_max mantidos · nₛ proporcional a f</i>",
+            showarrow=False, font=dict(size=12, color=CZ),
+            bgcolor="rgba(255,255,255,0.80)", borderpad=5)
+        fig.update_layout(
+            title=dict(text="Controle por Frequência (V/f constante) — Família T×n",
+                       font=dict(size=16, color=TX)),
+            xaxis=dict(title=dict(text="Velocidade n (rpm)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13),
+                       gridcolor="rgba(128,128,128,.18)"),
+            yaxis=dict(title=dict(text="Torque T (N·m)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13),
+                       gridcolor="rgba(128,128,128,.18)"),
+            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)",
+                        orientation="h", y=-0.22),
+            height=450, margin=dict(l=75, r=30, t=60, b=100),
+        )
+        return fig
+
+    def fig_malha_fechada_velocidade():
+        """Diagrama de blocos do controle em malha fechada de velocidade — slide 18."""
+        fig, ax = plt.subplots(figsize=(10, 3.5))
+        fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
+        ax.set_xlim(0, 12); ax.set_ylim(-1.5, 3.5)
+
+        # ── Blocos ──────────────────────────────────────────────────────────
+        blocos = [
+            (0.4,  1.0, 1.2, 1.6, "$n^*$ Referência",  CZ),
+            (2.2,  0.8, 1.6, 1.8, "Controlador PI/PID",   AZ),
+            (4.6,  0.8, 1.6, 1.8, "Inversor (VFD)",          VD),
+            (7.2,  0.8, 1.6, 1.8, "MIT",                      LR),
+            (9.6,  0.8, 1.4, 1.8, "Carga mecânica",          CZ),
+        ]
+        for (x, y, w, h, lbl, cor) in blocos:
+            ax.add_patch(mpatches.FancyBboxPatch(
+                (x, y), w, h, boxstyle="round,pad=0.08",
+                fc="#f0f4ff" if cor==CZ else "white", ec=cor, lw=1.8))
+            ax.text(x+w/2, y+h/2, lbl, ha="center", va="center",
+                    fontsize=8.5, color=TX)
+
+        # ── Setas ───────────────────────────────────────────────────────────
+        conexoes = [
+            (1.6, 1.7, 2.2, 1.7),   # ref → somador
+            (3.8, 1.7, 4.6, 1.7),   # control → inv
+            (6.2, 1.7, 7.2, 1.7),   # inv → MIT
+            (8.8, 1.7, 9.6, 1.7),   # MIT → carga
+        ]
+        for x1,y1,x2,y2 in conexoes:
+            ax.annotate("", xy=(x2,y2), xytext=(x1,y1),
+                arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.5))
+
+        # Sinais de controle
+        ax.text(4.2, 1.95, "$f$, $V$", fontsize=8, color=VD, ha="center")
+        ax.text(6.7, 1.95, "$i_{abc}$", fontsize=8, color=VD, ha="center")
+
+        # Realimentação (sensor de velocidade)
+        ax.plot([8.0, 8.0, 1.9, 1.9], [1.7, 0.4, 0.4, 0.82],
+                color=VM, lw=1.5)
+        ax.annotate("", xy=(1.9, 0.82), xytext=(1.9, 0.4),
+                    arrowprops=dict(arrowstyle="-|>", color=VM, lw=1.5))
+        ax.text(5.0, 0.15, "Realimentação de velocidade  $n$ (encoder/taco)",
+                ha="center", fontsize=8, color=VM, style="italic")
+
+        # Nó somador
+        ax.add_patch(mpatches.Circle((2.05, 1.7), 0.18, fc="white", ec=TX, lw=1.5, zorder=5))
+        ax.text(2.05, 1.7, "Σ", ha="center", va="center", fontsize=10, color=TX, zorder=6)
+        ax.text(2.05, 2.05, "+", fontsize=9, color=TX, ha="center")
+        ax.text(1.82, 1.50, "−", fontsize=9, color=VM, ha="center")
+
+        # Erro
+        ax.text(3.0, 2.1, "$e = n^* - n$", fontsize=8.5, color=AZ, ha="center")
+
+        ax.set_title("Controle em Malha Fechada de Velocidade",
+                     fontsize=12, fontweight="bold", color=TX, pad=8)
+        fig.tight_layout()
+        return fig
+
+    def fig_escorregamento_constante():
+        """T×n ilustrando controle por escorregamento constante — slide 19."""
+        V1_nom, R1, X1, R2, X2, Xm = 127.0, 0.5, 1.0, 0.4, 1.0, 50.0
+        ns_base = 1800.0; f_base = 60.0
+
+        fig = go.Figure()
+        freqs = [60, 45, 30, 15]
+        cores = [AZ, VD, LR, VM]
+        s_op = 0.04   # escorregamento constante de operação
+
+        n_op_pts = []  # pontos de operação (velocidade, torque)
+
+        for f, cor in zip(freqs, cores):
+            ratio = f / f_base
+            V1 = V1_nom * ratio
+            X1_ = X1 * ratio; X2_ = X2 * ratio; Xm_ = Xm * ratio
+            ns = ns_base * ratio; ws = ns * 2*np.pi/60
+
+            s_r = np.linspace(1e-3, 1.0, 400)
+            n_r = ns*(1-s_r)
+
+            def T_fn(s, V1=V1, X1_=X1_, X2_=X2_, Xm_=Xm_, ws=ws):
+                Z2 = R2/s + 1j*X2_
+                Zeq = (1j*Xm_*Z2)/(1j*Xm_+Z2)
+                I2 = (V1/(R1+1j*X1_+Zeq))*Zeq/Z2
+                return 3*abs(I2)**2*(R2/s)/ws
+
+            T_v = np.array([T_fn(s) for s in s_r])
+            fig.add_trace(go.Scatter(x=n_r, y=T_v, mode="lines",
+                line=dict(color=cor, width=2.4),
+                name=f"f = {f} Hz  (V₁ = {V1:.0f} V)",
+                hovertemplate=f"f={f} Hz<br>n=%{{x:.0f}} rpm<br>T=%{{y:.2f}} N·m"))
+
+            # Ponto de operação com s constante
+            n_pt = ns * (1 - s_op)
+            T_pt = T_fn(s_op)
+            n_op_pts.append((n_pt, T_pt, cor))
+
+        # Linha de escorregamento constante
+        n_pts_line = [p[0] for p in n_op_pts]
+        T_pts_line = [p[1] for p in n_op_pts]
+        fig.add_trace(go.Scatter(
+            x=n_pts_line, y=T_pts_line, mode="lines+markers",
+            line=dict(color=TX, width=2.0, dash="dash"),
+            marker=dict(size=11, color=[p[2] for p in n_op_pts],
+                        line=dict(width=1.5, color="white")),
+            name=f"Ponto de operação (s={s_op:.2f} = cte.)",
+        ))
+
+        fig.add_hline(y=0, line=dict(color=CZ, width=0.8))
+        fig.add_annotation(x=0.50, y=1.06, xref="paper", yref="paper",
+            text="<i>Escorregamento constante → eficiência e fp otimizados em qualquer velocidade</i>",
+            showarrow=False, font=dict(size=12, color=CZ),
+            bgcolor="rgba(255,255,255,0.80)", borderpad=5)
+        fig.update_layout(
+            title=dict(text="Controle em Malha Fechada — Escorregamento Constante",
+                       font=dict(size=16, color=TX)),
+            xaxis=dict(title=dict(text="Velocidade n (rpm)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13),
+                       gridcolor="rgba(128,128,128,.18)"),
+            yaxis=dict(title=dict(text="Torque T (N·m)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13),
+                       gridcolor="rgba(128,128,128,.18)"),
+            legend=dict(font=dict(size=12), bgcolor="rgba(0,0,0,0)",
+                        orientation="h", y=-0.25),
+            height=450, margin=dict(l=75, r=30, t=60, b=110),
+        )
+        return fig
+
+
     # ════════════════════════════════════════════════════════════════════════
     # CIRCUITOS EQUIVALENTES — schemdraw → PNG → matplotlib
     # ════════════════════════════════════════════════════════════════════════
@@ -1908,44 +2528,42 @@ def run():
 
 **2. Estrutura Construtiva — Estator e Rotor**
 
-**3. Campo Magnético Girante**
-· Composição das FMM · Velocidade síncrona
+**3. Campo Magnético Girante** · FMM trifásica · velocidade síncrona
 
-**4. Escorregamento**
-· Definição · Faixas de operação
+**4. Escorregamento** · definição · faixas de operação
 
-**5. Tensão Induzida — Estator e Rotor**
-· Equação $E_A$ · $E_r = s E_{r0}$ · $f_r = sf$
+**5. Tensão Induzida** · equação EA · Er = s·Er0 · fr = s·f
 
 **6. Circuito Equivalente (por fase)**
-· 6.1 Estator · 6.2 Rotor · 6.3 Completo · IEEE · Thévenin
+· 6.1 Estator · 6.2 Rotor · 6.3 Completo · 6.4 IEEE · 6.5 Thévenin
 
 **7. Ensaios para Determinação dos Parâmetros**
 · Ensaio em vazio · Ensaio com rotor bloqueado
 
-**8. Fluxo de Potência e Balanço de Energia**
-· Tabela de grandezas · Diagramas motor · gerador · frenagem
+**8. Fluxo de Potência** · tabela de grandezas · motor · gerador · frenagem
 
-**9. Torque Eletromagnético**
-· Expressão analítica · $T_{max}$ · $s_{max}$ · Aproximação linear
+**9. Torque Eletromagnético** · Tem(s) · Tmax · smax · aproximação linear
 
-**10. Modos de Operação**
-· Motor · Gerador · Frenagem
-
-**10b. Curva Característica T × n**
-· Pontos notáveis · Região estável · Região instável
+**10. Modos de Operação e Curva T×n**
+· Motor · Gerador · Frenagem · pontos notáveis · região estável
 
 **11. Corrente no Estator e Fator de Potência**
-· $I_1$, $I_2'$, $I_m$ × velocidade · cos φ × carga
+· I1, I2', Im × velocidade · cos φ × carga · correção fp
 
-**12. Eficiência**
-· Perdas · η_max · Classes IE
+**12. Eficiência** · perdas fixas e variáveis · η_max · classes IE · três modos
 
-**13. Métodos de Partida**
-· DOL · Y/Δ · Autotransformador · Resistência no rotor · VFD
+**13. Efeito da Resistência do Rotor**
+· Rotor bobinado com Rext · barra profunda · efeito pelicular
 
-**14. Gaiola de Esquilo Dupla**
-· Efeito pelicular · Curvas de torque
+**14. Gaiola de Esquilo Dupla** · gaiola externa · gaiola interna · curvas T×n
+
+**15. Classificação NEMA** · classes A, B, C, D · tabela · curvas T×n
+
+**16. Métodos de Partida**
+· DOL · estrela-triângulo · autotransformador (compensadora)
+
+**17. Controle de Velocidade**
+· mudança de polos · tensão terminal · V/f constante · malha fechada · escorregamento constante
 
 **🎛️ Exploradores Interativos**
 · T×n · Circ. equiv. · Tensão→T×n · Partida · Eficiência · Corrente e fp · Efic.×Carga
@@ -2052,7 +2670,7 @@ $$\boxed{n_s = \frac{120\,f}{p} \quad \text{(rpm)}} \qquad \omega_s = \frac{2\pi
 onde $f$ é a frequência da rede (Hz) e $p$ é o número de polos da máquina.
 """)
 
-    show_plot(fig_velocidade_sincrona(), key="fig_ns")
+    show_plot(fig_velocidade_sincrona(), key="fig_3_ns")
     st.caption("**Figura 3.2** — Velocidade síncrona para $f = 50$ e $60$ Hz.")
 
     st.divider()
@@ -2100,7 +2718,7 @@ $$\boxed{E_A = 4{,}44 \cdot K_w \cdot N_{ph} \cdot f \cdot \Phi_m}$$
 - $\Phi_m$: fluxo máximo por polo.
 """)
 
-    show_plot(fig_tensao_induzida_estator(), key="fig_ea")
+    show_plot(fig_tensao_induzida_estator(), key="fig_5_ea")
     st.caption("**Figura 5.1** — Forma de onda de $e(t)$ e equação do valor eficaz $E_A$.")
 
     st.markdown(r"""
@@ -2116,7 +2734,7 @@ A reatância de dispersão do rotor também escala: $X_r = s\,X_{r0}$,
 onde $X_{r0} = 2\pi f L_r$.
 """)
 
-    show_plot(fig_tensao_rotor_escorregamento(), key="fig_er")
+    show_plot(fig_tensao_rotor_escorregamento(), key="fig_5_er")
     st.caption("**Figura 5.2** — Variação de $E_r$ (esq.) e $f_r$ (dir.) com o escorregamento $s$.")
 
     st.divider()
@@ -2148,7 +2766,7 @@ O circuito do estator é idêntico ao do primário de um transformador, com a di
 """)
 
     show_fig(fig_circuito_estator(), width_frac=0.78)
-    st.caption("**Figura 6.0** — Circuito equivalente do estator: ramo série $R_1 + jX_1$ "
+    st.caption("**Figura 6.1** — Circuito equivalente do estator: ramo série $R_1 + jX_1$ "
                "e ramo de excitação $R_c ∥ jX_m$.")
 
     st.markdown("### 6.2 Circuito do Rotor")
@@ -2188,14 +2806,14 @@ e ramo do rotor referido ($jX'_2 + R'_2/s$).
                "$R_1$, $X_1$, $R'_2/s$ e $X'_2$.")
 
 
-    st.markdown("### Circuito IEEE Simplificado")
+    st.markdown("### 6.4 Circuito IEEE Simplificado")
     st.markdown("Quando $R_c$ é omitido, o modelo IEEE move $X_m$ para os terminais de entrada:")
 
 
     show_fig(fig_circuito_ieee(), width_frac=0.78)
     st.caption("**Figura 6.2** — Circuito equivalente IEEE simplificado (sem $R_c$).")
 
-    st.markdown("### Equivalente de Thévenin")
+    st.markdown("### 6.5 Equivalente de Thévenin")
     st.markdown(
         "Para facilitar o cálculo analítico do torque, o circuito à esquerda do ramo "
         "do rotor é substituído pelo seu equivalente de Thévenin. "
@@ -2216,9 +2834,9 @@ X_{th} \approx X_1
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════
-    # SEÇÃO 8c — ENSAIOS
+    # SEÇÃO 7 — ENSAIOS
     # ═══════════════════════════════════════════════════════════════════════
-    st.header("8c. Ensaios para Determinação dos Parâmetros")
+    st.header("7. Ensaios para Determinação dos Parâmetros")
     st.markdown(r"""
 Os parâmetros do circuito equivalente são obtidos experimentalmente por dois ensaios clássicos,
 análogos aos ensaios do transformador. Antes dos ensaios, a **resistência do estator** $R_1$
@@ -2252,9 +2870,9 @@ de gaiola, ou determinada por medições adicionais no rotor bobinado.
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════
-    # SEÇÃO 7
+    # SEÇÃO 8 — FLUXO
     # ═══════════════════════════════════════════════════════════════════════
-    st.header("7. Fluxo de Potência e Balanço de Energia")
+    st.header("8. Fluxo de Potência e Balanço de Energia")
     st.markdown(
         "As figuras abaixo ilustram o fluxo de potência nos três modos de operação. "
         "A tabela resume as grandezas envolvidas:"
@@ -2277,23 +2895,23 @@ convertidos em potência mecânica.
 """)
 
     show_fig(fig_fluxo_potencia_motor(), width_frac=0.95)
-    st.caption("**Figura 7.1** — Fluxo de potência no **motor** de indução: "
+    st.caption("**Figura 8.1** — Fluxo de potência no **motor** de indução: "
                "$P_{in}$ (elétrica) → perdas → $P_{out}$ (mecânica no eixo).")
 
     show_fig(fig_fluxo_potencia_gerador(), width_frac=0.95)
-    st.caption("**Figura 7.2** — Fluxo de potência no **gerador** de indução: "
+    st.caption("**Figura 8.2** — Fluxo de potência no **gerador** de indução: "
                "$P_{in}$ (mecânica) → perdas → $P_{out}$ (elétrica no terminal).")
 
     show_fig(fig_fluxo_potencia_frenagem(), width_frac=0.95)
-    st.caption("**Figura 7.3** — Fluxo de potência na **frenagem** ($s > 1$): "
+    st.caption("**Figura 8.3** — Fluxo de potência na **frenagem** ($s > 1$): "
                "potências elétrica e mecânica convergem para o rotor e são dissipadas como calor.")
 
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════
-    # SEÇÃO 8
-    # ═══════════════════════════════════════════════════════════════════════
-    st.header("8. Torque Eletromagnético")
+    # SEÇÃO 9 — TORQUE
+    # ════════════════════════════════════════════════════════════════════════
+    st.header("9. Torque Eletromagnético")
     st.markdown(
         "O torque eletromagnético é obtido da potência de entreferro "
         "dividida pela velocidade síncrona angular:"
@@ -2321,9 +2939,7 @@ desloca-se $s_{max}$ para 1 (torque máximo na partida) sem alterar o valor de $
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════
-    # SEÇÃO 8b — TORQUE LINEAR
-    # ═══════════════════════════════════════════════════════════════════════
-    st.header("8b. Torque — Aproximação Linear para Baixo Escorregamento")
+    st.markdown("### Aproximação Linear para Baixo Escorregamento")
     st.markdown(
         "Para valores **pequenos** de escorregamento (região de operação nominal), "
         "a reatância $X\'_2$ é muito menor que $R\'_2/s$, e o denominador simplifica. "
@@ -2334,18 +2950,17 @@ desloca-se $s_{max}$ para 1 (torque máximo na partida) sem alterar o valor de $
 Comportamento análogo ao de um motor CC de excitação independente com relação linear
 torque-velocidade. Esta aproximação permite análise simplificada do ponto de operação nominal.
 """)
-    show_plot(fig_torque_linear_s(), key="fig_tlin")
-    st.caption("**Figura 9b.1** — Comparação entre a curva exata $T(s)$ (azul) e a "
+    show_plot(fig_torque_linear_s(), key="fig_9_tlin")
+    st.caption("**Figura 9.1** — Comparação entre a curva exata $T(s)$ (azul) e a "
                "aproximação linear T ≈ K·s (vermelho tracejado) para baixo s.")
 
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════
     st.divider()
-
-    # SEÇÃO 9
+    # SEÇÃO 10 — MODOS
     # ═══════════════════════════════════════════════════════════════════════
-    st.header("9. Modos de Operação")
+    st.header("10. Modos de Operação e Curva T×n")
     st.markdown(r"""
 A MIT pode operar em três regiões distintas segundo o escorregamento:
 
@@ -2365,16 +2980,14 @@ Utilizado em frenagem rápida de cargas de alta inércia.
 
 """)
 
-    show_plot(fig_modos_operacao(), key="fig_modos")
-    st.caption("**Figura 9.1** — Curva $T \\times n$ nas três regiões: "
+    show_plot(fig_modos_operacao(), key="fig_10_modos")
+    st.caption("**Figura 10.1** — Curva $T \\times n$ nas três regiões: "
                "motor (verde), gerador (azul) e frenagem (vermelho).")
 
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════
-    # SEÇÃO 10
-    # ═══════════════════════════════════════════════════════════════════════
-    st.header("10. Curva Característica T × n")
+    st.markdown("### Curva Característica T × n")
     st.markdown(r"""
 A curva $T \times n$ na região motora possui pontos notáveis que definem as capacidades
 de partida e operação:
@@ -2391,15 +3004,17 @@ aumenta $s$, aumenta $T_{em}$ e reequilibra o sistema. À esquerda do $T_{max}$ 
 a operação é instável — aumento de carga reduz $T_{em}$.
 """)
 
-    show_plot(fig_curva_torque_velocidade(), key="fig_tv")
-    st.caption("**Figura 10.1** — Curva $T \\times n$ (região motora) com pontos notáveis.")
+    show_plot(fig_curva_torque_velocidade(), key="fig_10_tv")
+    st.caption("**Figura 10.2** — Curva $T \\times n$ (região motora) com pontos notáveis.")
 
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════
-    # SEÇÃO 13 — CORRENTE NO ESTATOR
+
+    st.divider()
+    # SEÇÃO 11 — CORRENTE E FP
     # ═══════════════════════════════════════════════════════════════════════
-    st.header("13. Corrente no Estator")
+    st.header("11. Corrente no Estator e Fator de Potência")
     st.markdown(r"""
 A corrente de linha do estator $I_1$ varia significativamente com o escorregamento.
 Dois casos extremos são importantes:
@@ -2412,7 +3027,7 @@ atingir **5 a 8 vezes** a corrente nominal — principal motivação dos método
 """)
     st.latex(r"I_{1,partida} \approx \frac{V_1}{\sqrt{(R_1+R_2')^2 + (X_1+X_2')^2}}")
 
-    show_plot(fig_corrente_estator_s(), key="fig_I1s")
+    show_plot(fig_corrente_estator_s(), key="fig_11_I1")
     st.caption("**Figura 11.1** — Correntes $|I_1|$, $|I_2'|$ e $|I_m|$ × velocidade. "
                "Alto valor de $I_1$ na partida ($n=0$) e queda para $I_\\phi$ em $n=n_s$.")
 
@@ -2420,38 +3035,30 @@ atingir **5 a 8 vezes** a corrente nominal — principal motivação dos método
 
     # ═══════════════════════════════════════════════════════════════════════
 
-
-    # SEÇÃO 14 — FATOR DE POTÊNCIA
-    # ═══════════════════════════════════════════════════════════════════════
-    st.header("14. Fator de Potência")
+    st.markdown("### Fator de Potência")
     st.markdown(
         "O fator de potência $\\cos\\varphi$ é o cosseno do ângulo de defasagem "
         "entre $V_1$ e $I_1$:"
     )
-    st.latex(r"\cos\varphi = \cos\left(\angle \frac{V_1}{I_1}\right)")
+    st.latex(r"\cos\varphi = \cos\!\left(\angle\,\dfrac{V_1}{I_1}\right)")
     st.markdown(r"""
-As perdas totais são $P_{perdas} = P_{cu,1} + P_{fe} + P_{cu,2} + P_{rot}$.
+**Comportamento típico:**
+- **Carga leve / vazio**: fp baixo (0,1–0,3) — corrente de excitação reativa domina;
+- **Carga nominal**: fp elevado (0,80–0,92) — boa relação ativa/reativa;
+- **Partida** ($s = 1$): fp moderado (0,35–0,55), determinado pela impedância total.
 
-**Eficiência máxima** ocorre quando perdas variáveis (cobre, proporcionais a $I^2$) igualam
-as perdas fixas (ferro e rotacionais, aproximadamente constantes).
+Motores operando cronicamente em carga leve causam baixo fp na instalação,
+exigindo **correção por banco de capacitores**.
 """)
-    st.latex(r"P_{cu,1} + P_{cu,2} \approx P_{fe} + P_{rot} \quad \Rightarrow \quad \eta_{max}")
-    st.markdown("Motores de alto rendimento (classes IE2–IE4) atingem $\\eta > 95\\%$ na faixa 50–100% da carga.")
 
-    show_plot(fig_fator_potencia_s(), key="fig_fp")
-    st.caption("**Figura 11.2** — Fator de potência × velocidade. "
-               "O fp é baixo em vazio, atinge o máximo próximo da carga nominal.")
+    show_plot(fig_fator_potencia_s(), key="fig_11_fp")
+    st.caption("**Figura 11.2** — Fator de potência cos φ × velocidade. "
+               "fp baixo em vazio, máximo próximo da carga nominal, moderado na partida.")
 
     st.divider()
-
+    # SEÇÃO 12 — EFICIÊNCIA
     # ═══════════════════════════════════════════════════════════════════════
-
-
-    st.divider()
-
-    # SEÇÃO 15 — EFICIÊNCIA
-    # ═══════════════════════════════════════════════════════════════════════
-    st.header("15. Eficiência")
+    st.header("12. Eficiência")
     st.markdown("A eficiência do motor de indução é:")
     st.latex(r"\eta = \frac{P_{out}}{P_{in}} = \frac{P_{mec} - P_{rot}}{P_{in}} = 1 - \frac{P_{perdas}}{P_{in}}")
     st.markdown(r"""
@@ -2481,7 +3088,7 @@ Motores de alto rendimento (classes IE2–IE4) atingem $\eta > 95\%$ na faixa 50
                     r"$\eta = 0$" "\n\n"
                     "Toda energia dissipada no rotor.")
 
-    show_plot(fig_eficiencia_curva(), key="fig_eta")
+    show_plot(fig_eficiencia_curva(), key="fig_12_eta")
     st.caption("**Figura 12.1** — Curva de eficiência η × carga (%). "
                "Eficiência máxima tipicamente entre 50–80% da carga nominal.")
 
@@ -2491,43 +3098,61 @@ Motores de alto rendimento (classes IE2–IE4) atingem $\eta > 95\%$ na faixa 50
 
     st.divider()
 
-    # SEÇÃO 11
+    # SEÇÃO 13 — EFEITO R2
     # ═══════════════════════════════════════════════════════════════════════
-    st.header("11. Métodos de Partida")
+    st.header("13. Efeito da Resistência do Rotor")
     st.markdown(r"""
-Na partida direta (DOL), a corrente pode atingir 5 a 8 vezes a corrente nominal, causando
-queda de tensão na rede e solicitação mecânica excessiva. Métodos para limitar a corrente:
+A resistência do rotor $R'_2$ influencia fortemente o desempenho da MIT,
+criando um compromisso entre dois requisitos opostos:
 
-### 1. Partida estrela-triângulo (Y/Δ)
-Conexão em Y na partida reduz a tensão de fase por $1/\sqrt{3}$.
-Corrente e torque de partida são reduzidos por um fator **3** em relação à ligação Δ direta.
+- **Baixa $R'_2$** (necessária em regime permanente): escorregamento pequeno → alta eficiência;
+- **Alta $R'_2$** (necessária na partida): alto fator de potência, alto torque e baixa corrente de partida.
 
-### 2. Autotransformador
-Aplica tensão $\alpha V_1$ ao motor ($\alpha < 1$). Corrente e torque caem por $\alpha^2$.
-Mais flexível que Y/Δ.
-
-### 3. Resistência em série no estator
-Resistores inseridos em série e curto-circuitados após a aceleração. Dissipam calor.
-
-### 4. Resistência no rotor (rotor bobinado)
-Desloca $s_{max}$ para 1, maximizando o torque de partida com corrente controlada.
-Resistência reduzida gradualmente até zero em plena carga.
-
-### 5. Inversor de frequência (VFD)
-Partida com frequência e tensão crescentes (relação $V/f$ constante). Mantém fluxo constante
-e torque de partida elevado com corrente controlada. Método mais moderno e flexível.
+Este conflito motivou o desenvolvimento das diversas construções de rotor estudadas a seguir.
 """)
 
-    show_plot(fig_curva_torque_R2(), key="fig_r2")
-    st.caption("**Figura 13.1** — Efeito de $R'_2$ crescente (rotor bobinado): "
-               "$s_{max}$ se desloca para a partida sem alterar $T_{max}$.")
+    st.markdown("### Rotor Bobinado com Resistência Externa")
+    st.markdown(r"""
+No rotor bobinado, resistências externas $R_{ext}$ são inseridas em série pelo circuito
+dos anéis coletores. Como $T_{max}$ **não depende de $R'_2$**, mas $s_{max}$ é proporcional
+a $R'_2$, a adição de resistência externa permite:
+
+1. **Na partida**: ajustar $R_{ext}$ para que $s_{max} = 1$ → torque de partida máximo
+   com corrente de linha reduzida;
+2. **Durante a aceleração**: reduzir $R_{ext}$ gradualmente mantendo alto torque;
+3. **Em regime**: $R_{ext} = 0$ → operação eficiente com baixo escorregamento.
+""")
+
+    show_plot(fig_rotor_bobinado_R2(), key="fig_13_rb")
+    st.caption("**Figura 13.1** — Efeito de $R'_2$ crescente: $s_{max}$ desloca-se para a partida "
+               "sem alterar $T_{max}$. A curva intermediária atinge $T_{max}$ exatamente em $n=0$.")
+
+    st.markdown("### Gaiola com Barra Profunda")
+    st.markdown(r"""
+Em vez de resistência externa, a **barra profunda** usa o **efeito pelicular**
+(*skin effect*) para variar a resistência efetiva automaticamente com a frequência do rotor:
+
+| Condição | $f_r = sf$ | Distribuição de $J$ | $R_{2,ef}$ | Comportamento |
+|---|---|---|---|---|
+| Partida ($s=1$) | $f_r = f$ | Concentrada no topo | Alta | Alto torque, baixa corrente |
+| Regime ($s\ll1$) | $f_r 	o 0$ | Uniforme | Baixa | Alta eficiência |
+
+A seção transversal da barra é alta e estreita — quanto maior a profundidade, maior a
+reatância de dispersão e menor a utilização da seção em alta frequência.
+""")
+
+    show_fig(fig_barra_profunda(), width_frac=0.88)
+    st.caption("**Figura 13.2** — Seção da barra profunda: distribuição de corrente em alta "
+               "frequência (partida, vermelho) e baixa frequência (regime, azul), e curvas T×n.")
 
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════
-    # SEÇÃO 12
+
+    st.divider()
+    # SEÇÃO 14 — GAIOLA DUPLA
     # ═══════════════════════════════════════════════════════════════════════
-    st.header("12. Gaiola de Esquilo Dupla")
+    st.header("14. Gaiola de Esquilo Dupla")
     st.markdown(r"""
 A **gaiola dupla** melhora a partida sem recorrer ao rotor bobinado. O rotor possui dois
 conjuntos de barras concêntricos:
@@ -2547,7 +3172,7 @@ O mecanismo físico subjacente é o **efeito pelicular** (*skin effect*): em alt
 a corrente concentra-se na superfície das barras, equivalente à gaiola externa.
 """)
 
-    show_plot(fig_gaiola_dupla(), key="fig_dupla")
+    show_plot(fig_gaiola_dupla(), key="fig_14_dupla")
     st.caption("**Figura 14.1** — Curvas $T \\times n$: gaiola dupla (verde), "
                "gaiola externa (vermelho), gaiola interna (azul) e simples de referência (cinza).")
 
@@ -2556,6 +3181,227 @@ a corrente concentra-se na superfície das barras, equivalente à gaiola externa
     # ═══════════════════════════════════════════════════════════════════════
     # EXPLORADORES INTERATIVOS
     # ═══════════════════════════════════════════════════════════════════════
+
+    st.divider()
+    # SEÇÃO 15 — NEMA
+    # ═══════════════════════════════════════════════════════════════════════
+    st.header("15. Classificação NEMA de Motores em Gaiola")
+    st.markdown(r"""
+O NEMA (*National Electrical Manufacturers Association*) classifica os motores de indução
+em gaiola de esquilo em classes segundo suas características de partida e regime,
+estabelecendo um compromisso padronizado entre torque, corrente e eficiência.
+""")
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.markdown(r"""
+**Classe A**
+- Torque de partida: nominal (~150%)
+- Corrente de partida: **alta** (6–8× $I_{nom}$)
+- Escorregamento nominal: < 5%
+- Aplicação: cargas com inércia baixa (ventiladores, bombas centrífugas)
+- Construção: barras rasas, $R_2$ pequena
+
+**Classe B** *(mais comum na indústria)*
+- Torque de partida: normal (150%)
+- Corrente de partida: **reduzida** (5–6× $I_{nom}$)
+- Escorregamento nominal: < 5%
+- Aplicação: uso geral — compressores, bombas, máquinas CNC
+- Construção: barras profundas ou gaiola dupla
+""")
+    with col_b:
+        st.markdown(r"""
+**Classe C**
+- Torque de partida: **alto** (200%)
+- Corrente de partida: moderada (< 6× $I_{nom}$)
+- Escorregamento nominal: < 5%
+- Aplicação: cargas de difícil partida (britadeiras, compressores alternativos)
+- Construção: gaiola dupla com gaiola externa de alta $R$
+
+**Classe D**
+- Torque de partida: **muito alto** (275%)
+- Corrente de partida: moderada
+- Escorregamento nominal: **alto** (8–13%)
+- Aplicação: prensas, elevadores de carga, acionamentos com alto pico de torque
+- Construção: barras de alta resistência (latão ou bronze)
+""")
+
+    show_plot(fig_nema_classes(), key="fig_15_nema")
+    st.caption("**Figura 15.1** — Curvas T×n das classes NEMA A, B, C e D. "
+               "A Classe D opera com alto escorregamento nominal; a Classe B é a mais utilizada.")
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════
+
+    st.divider()
+    # SEÇÃO 16 — PARTIDA
+    # ═══════════════════════════════════════════════════════════════════════
+    st.header("16. Métodos de Partida")
+    st.markdown(r"""
+A corrente de partida de um motor de indução pode atingir 5 a 8 vezes a corrente nominal,
+causando queda de tensão na rede, solicitação mecânica e térmica excessivas.
+Os métodos abaixo reduzem este impacto com diferentes graus de eficácia e custo.
+""")
+
+    st.markdown("### Partida Direta (DOL — *Direct On-Line*)")
+    st.markdown(r"""
+A forma mais simples: as três fases são conectadas diretamente ao motor sem limitação.
+
+- **Vantagens**: custo mínimo, torque de partida máximo disponível, aceleração mais rápida;
+- **Desvantagens**: pico de corrente elevado, queda de tensão na rede, solicitação mecânica;
+- **Aplicação típica**: motores de 0,75 kW a 10 kW em redes com capacidade suficiente.
+
+O transitório dura tipicamente 0,5 a 3 s dependendo da inércia da carga.
+""")
+
+    show_plot(fig_partida_direta(), key="fig_16_dol")
+    st.caption("**Figura 16.1** — Transitório de corrente e velocidade na partida direta (DOL). "
+               "A corrente cai exponencialmente enquanto a velocidade sobe em curva sigmoidal.")
+
+    st.markdown("### Partida Estrela-Triângulo (Y/Δ)")
+    st.markdown(r"""
+O motor é ligado em **estrela (Y)** na partida — recebendo $V_{fase} = V_L/\sqrt{3}$ ≈ 58%
+da tensão nominal — e comutado para **triângulo (Δ)** após atingir ~90% da velocidade.
+
+| Grandeza | Ligação Y (partida) | Ligação Δ (regime) |
+|---|---|---|
+| Tensão de fase | $V_L / \sqrt{3}$ (58%) | $V_L$ (100%) |
+| Corrente de linha | $I_{DOL} / 3$ | $I_{nom}$ |
+| Torque de partida | $T_{DOL} / 3$ | Nominal |
+
+**Requisito**: mínimo 6 terminais acessíveis. A comutação brusca Y→Δ cria um
+segundo pico de corrente — a chave temporizadora deve ser ajustada com cuidado.
+**Indicada para partida em vazio ou carga leve** (torque de partida reduzido 3×).
+""")
+
+    show_fig(fig_partida_estrela_triangulo(), width_frac=0.88)
+    st.caption("**Figura 16.2** — Esquema de ligação Y/Δ e comparação da corrente de linha "
+               "com a partida direta. Observar o segundo pico na comutação Y→Δ.")
+
+    st.markdown("### Partida Compensadora (Autotransformador)")
+    st.markdown(r"""
+Um **autotransformador** aplica tensão reduzida $α V_1$ ao motor durante a partida.
+Após atingir a velocidade, o autotransformador é retirado do circuito.
+
+Relações para relação de transformação $α$ (taps: 50%, 65%, 80%):
+
+$$I_{linha} = α^2 \cdot I_{DOL} \qquad T_{partida} = α^2 \cdot T_{DOL}$$
+
+- **Vantagem sobre Y/Δ**: $α$ ajustável → maior torque de partida para mesma corrente;
+- **Vantagem**: comutação suave (sem segundo pico de corrente);
+- **Desvantagem**: custo e volume maiores (autotransformador adicional).
+- **Aplicação**: motores de médio e grande porte (15 kW a vários MW).
+""")
+
+    show_fig(fig_partida_compensadora(), width_frac=0.88)
+    st.caption("**Figura 16.3** — Esquema do autotransformador com taps 50/65/80% e "
+               "comparação de corrente e torque de partida por nível de tensão.")
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════
+
+    st.divider()
+    # SEÇÃO 17 — CONTROLE VELOCIDADE
+    # ═══════════════════════════════════════════════════════════════════════
+    st.header("17. Controle de Velocidade")
+    st.markdown(r"""
+Historicamente, motores CC dominavam aplicações de velocidade variável pela
+simplicidade do controle. Com o desenvolvimento dos **controladores de estado sólido**
+(inversores de frequência / VFDs), os motores de indução gaiola tornaram-se competitivos:
+mais baratos, robustos e adequados a altas velocidades — superando os motores CC.
+
+Os principais métodos de controle de velocidade são:
+""")
+
+    st.markdown("### 1. Mudança do Número de Polos")
+    st.markdown(r"""
+Enrolamentos com dois ou mais conjuntos de bobinas permitem rearranjamento para
+diferentes números de polos, alterando $n_s = 120f/p$.
+
+- Velocidade **discreta** (2, 4, 6 ou 8 polos);
+- Motor de **dois velocidades**: um único conjunto de bobinas com ligação dahlander
+  (relação 2:1 de velocidades);
+- Sem equipamento eletrônico adicional — chaveamento simples;
+- Limitado a 2–3 velocidades fixas.
+""")
+
+    st.markdown("### 2. Controle por Tensão Terminal")
+    st.markdown(r"""
+Reduzindo $V_1$, o torque cai proporcionalmente a $V_1^2$, deslocando o ponto de
+operação para maior escorregamento. O controle pode ser feito por:
+
+- **Chaves de estado sólido** (SCRs / TRIACs) — controle de ângulo de disparo;
+- **Variedades**: reguladores de tensão CA.
+
+**Limitações**: eficiência cai (maior $s$ → maior $P_{cu,2}$); faixa de controle restrita;
+torque cai mais rapidamente que a velocidade — instabilidade para cargas constantes.
+Adequado apenas para cargas com torque proporcional à velocidade (ventiladores, bombas).
+""")
+
+    show_plot(fig_controle_tensao_terminal(), key="fig_17_V")
+    st.caption("**Figura 17.1** — Controle por tensão terminal: T ∝ V₁². "
+               "Para carga com torque variável (curva pontilhada), há ponto de operação estável "
+               "em cada nível de tensão.")
+
+    st.markdown("### 3. Controle por Frequência (V/f Constante)")
+    st.markdown(r"""
+Mantendo a relação $V_1/f$ constante, o **fluxo magnético** permanece constante e
+$T_{max}$ é preservado em toda a faixa de velocidade:
+
+$$\frac{V_1}{f} = 	ext{const} \quad \Rightarrow \quad \Phi_m \approx 	ext{const}$$
+
+A velocidade síncrona é proporcional à frequência: $n_s = 120f/p$.
+
+- **Implementação**: inversor de frequência (VFD) — retifica a rede e gera CA variável;
+- **Faixa**: tipicamente 5–120 Hz (para frequência nominal de 60 Hz);
+- **Abaixo da base**: V/f constante (torque constante);
+- **Acima da base** (*field weakening*): $f$ aumenta mas $V_1$ fixo → fluxo cai → torque
+  máximo cai, mas potência constante (análogo ao enfraquecimento de campo no motor CC).
+""")
+
+    show_plot(fig_controle_frequencia(), key="fig_17_f")
+    st.caption("**Figura 17.2** — Controle V/f constante: a família de curvas T×n desloca-se "
+               "proporcionalmente a $f$, mantendo $T_{max}$ constante e $n_s$ proporcional a $f$.")
+
+    st.markdown("### 4. Controle em Malha Fechada")
+    st.markdown(r"""
+A malha fechada adiciona um **sensor de velocidade** (encoder ou tacômetro) e um
+**controlador** (PI/PID) que ajusta continuamente a frequência e a tensão do inversor
+para seguir a referência de velocidade $n^*$:
+
+$$e(t) = n^* - n \quad \Rightarrow \quad 	ext{controlador} \quad \Rightarrow \quad f, V_1$$
+""")
+
+    show_fig(fig_malha_fechada_velocidade(), width_frac=0.88)
+    st.caption("**Figura 17.3** — Diagrama de blocos do controle em malha fechada de velocidade: "
+               "referência → controlador PI → inversor → MIT → realimentação do encoder.")
+
+    st.markdown("#### Estratégia de Escorregamento Constante")
+    st.markdown(r"""
+Uma estratégia avançada dentro da malha fechada é manter o **escorregamento constante**
+($s = 	ext{const}$), o que significa operar sempre no mesmo ponto relativo da curva T×n:
+
+- Eficiência e fator de potência **otimizados** em qualquer velocidade;
+- O controlador monitora $n$ e $n_s$ e ajusta $f$ para manter $s = (n_s - n)/n_s$ fixo;
+- Equivalente ao controle de campo orientado simplificado.
+
+Os pontos de operação formam uma linha quase linear sobre as curvas T×n da família V/f.
+""")
+
+    show_plot(fig_escorregamento_constante(), key="fig_17_s")
+    st.caption("**Figura 17.4** — Controle por escorregamento constante: os pontos de operação "
+               "(linha tracejada) seguem o mesmo valor de $s$ em todas as frequências, "
+               "otimizando eficiência e fator de potência.")
+
+    st.divider()
+
+
+    # ═══════════════════════════════════════════════════════════════════════
+
+    st.divider()
+
     st.header("🎛️ Exploradores Interativos")
 
     tabs = st.tabs([
