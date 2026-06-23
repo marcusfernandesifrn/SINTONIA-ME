@@ -383,6 +383,64 @@ def run():
         fig.tight_layout(pad=0.3)
         return fig
 
+    def fig_escorregamento_def():
+        """Diagrama conceitual vertical: ns, n, n=0 com seta ns−n e equação de s."""
+        fig, ax = plt.subplots(figsize=(5.8, 4.8))
+        fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
+        ax.set_xlim(0, 6.5); ax.set_ylim(0, 6.5)
+
+        xv = 1.3  # posição x do eixo vertical
+
+        # Eixo vertical de velocidade
+        ax.annotate("", xy=(xv, 6.1), xytext=(xv, 0.4),
+                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.8))
+        ax.text(xv, 6.35, "$n$\n(rpm)", ha="center", fontsize=10,
+                color=TX, va="bottom", fontweight="bold")
+
+        # Três pontos notáveis
+        y_ns, y_n, y_0 = 5.2, 3.7, 0.75
+        ax.plot(xv, y_ns, "o", color=AZ, ms=13, zorder=5, markeredgecolor="white", markeredgewidth=1.5)
+        ax.plot(xv, y_n,  "o", color=VD, ms=13, zorder=5, markeredgecolor="white", markeredgewidth=1.5)
+        ax.plot(xv, y_0,  "o", color=LR, ms=13, zorder=5, markeredgecolor="white", markeredgewidth=1.5)
+
+        # Linhas de referência horizontais curtas
+        for y, cor in [(y_ns, AZ), (y_n, VD), (y_0, LR)]:
+            ax.plot([xv - 0.18, xv + 0.18], [y, y], color=cor, lw=1.0)
+
+        # Textos descritivos à direita
+        ax.text(xv + 0.32, y_ns,
+                r"$n_s = \dfrac{120\,f}{p}$  — velocidade síncrona",
+                fontsize=10, color=AZ, va="center")
+        ax.text(xv + 0.32, y_n,
+                r"$n$ — velocidade do rotor  ($n < n_s$)",
+                fontsize=10, color=VD, va="center")
+        ax.text(xv + 0.32, y_0,
+                r"$n = 0$  (rotor parado — partida)",
+                fontsize=10, color=LR, va="center")
+
+        # Seta dupla ↕ ns − n
+        ax.annotate("", xy=(xv - 0.40, y_n + 0.06),
+                    xytext=(xv - 0.40, y_ns - 0.06),
+                    arrowprops=dict(arrowstyle="<->", color=RX, lw=2.0))
+        ax.text(xv - 0.55, (y_ns + y_n) / 2, "$n_s - n$",
+                ha="right", fontsize=10, color=RX, va="center", fontweight="bold")
+
+        # Caixa da equação (quadrante direito inferior, sem sobrepor texto)
+        eq_x, eq_y = 4.2, 2.4
+        ax.text(eq_x, eq_y,
+                r"$s = \dfrac{n_s - n}{n_s}$",
+                fontsize=15, color=TX, ha="center", va="center",
+                bbox=dict(fc="white", ec=CZ, lw=1.4,
+                          boxstyle="round,pad=0.40", alpha=0.90))
+        ax.text(eq_x, eq_y - 0.82,
+                r"$0 \leq s \leq 1$ em operação motora",
+                fontsize=9, color=CZ, ha="center", style="italic")
+
+        ax.set_title("Definição de Escorregamento",
+                     fontsize=12, fontweight="bold", color=TX, pad=6)
+        fig.tight_layout()
+        return fig
+
     def fig_velocidade_sincrona():
         """Velocidade síncrona ns = 120f/p — Plotly interativo."""
         polos = [2, 4, 6, 8, 10, 12]
