@@ -384,174 +384,156 @@ def run():
         return fig
 
     def fig_velocidade_sincrona():
-        """ns = 120f/p para f = 50 e 60 Hz, p = 2, 4, 6, 8, 10, 12."""
-        fig, ax = _mpl_base_on((6.5, 4.0))
-        polos   = [2, 4, 6, 8, 10, 12]
-        for f0, cor, lbl in [(60, AZ, "60 Hz"), (50, VD, "50 Hz")]:
+        """Velocidade síncrona ns = 120f/p — Plotly interativo."""
+        polos = [2, 4, 6, 8, 10, 12]
+        fig = go.Figure()
+        for f0, cor, dash, sym in [(60, AZ, "solid", "circle"), (50, VD, "dash", "square")]:
             ns_vals = [120 * f0 / p for p in polos]
-            ax.plot(polos, ns_vals, "o-", color=cor, lw=2.0, ms=7,
-                    label=f"$f = {f0}$ Hz", zorder=4)
-            for p, ns in zip(polos, ns_vals):
-                ax.text(p + 0.15, ns + 25, f"{int(ns)}", fontsize=8,
-                        color=cor, ha="left")
-        ax.set_xlabel("Número de polos $p$", fontsize=11, color=TX)
-        ax.set_ylabel("Velocidade síncrona $n_s$ (rpm)", fontsize=11, color=TX)
-        ax.set_title("Velocidade Síncrona × Número de Polos",
-                     fontsize=11.5, fontweight="bold", color=TX)
-        ax.legend(fontsize=9, framealpha=0.0)
-        ax.set_xticks(polos)
-        ax.grid(True, alpha=0.20, linestyle="--", color=CZ)
-        fig.tight_layout()
-        return fig
-
-    def fig_escorregamento_def():
-        """Diagrama vertical: ns, n, n=0 com seta de escorregamento e equação."""
-        fig, ax = plt.subplots(figsize=(5.8, 4.6))
-        fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
-        ax.set_xlim(0, 6); ax.set_ylim(0, 6)
-
-        # Eixo de velocidade vertical (x=1.2)
-        xv = 1.2
-        ax.annotate("", xy=(xv, 5.8), xytext=(xv, 0.3),
-                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.6))
-        ax.text(xv, 6.0, "$n$\n(rpm)", ha="center", fontsize=9.5, color=TX, va="bottom")
-
-        # ns (topo)
-        y_ns = 5.0; y_n = 3.6; y_0 = 0.7
-        ax.plot(xv, y_ns, "o", color=AZ, ms=11, zorder=5)
-        ax.plot(xv, y_n,  "o", color=VD, ms=11, zorder=5)
-        ax.plot(xv, y_0,  "o", color=LR, ms=11, zorder=5)
-
-        # Linhas horizontais de referência (tracejadas)
-        for y, cor in [(y_ns, AZ), (y_n, VD), (y_0, LR)]:
-            ax.plot([xv - 0.15, xv + 0.15], [y, y], color=cor, lw=0.8)
-
-        # Textos à direita do eixo
-        ax.text(xv + 0.28, y_ns, r"$n_s = \dfrac{120\,f}{p}$  (vel. síncrona)",
-                fontsize=9.5, color=AZ, va="center")
-        ax.text(xv + 0.28, y_n, r"$n$  — vel. do rotor ($n < n_s$)",
-                fontsize=9.5, color=VD, va="center")
-        ax.text(xv + 0.28, y_0, r"$n = 0$  (rotor parado — partida)",
-                fontsize=9.5, color=LR, va="center")
-
-        # Seta dupla ns − n
-        ax.annotate("", xy=(xv - 0.35, y_n + 0.05),
-                    xytext=(xv - 0.35, y_ns - 0.05),
-                    arrowprops=dict(arrowstyle="<->", color=RX, lw=1.8))
-        ax.text(xv - 0.50, (y_ns + y_n) / 2, "$n_s - n$",
-                ha="right", fontsize=9.5, color=RX, va="center")
-
-        # Caixa da equação (centrada, sem sobrepor texto)
-        eq_x, eq_y = 3.8, 2.6
-        ax.text(eq_x, eq_y,
-                r"$s = \dfrac{n_s - n}{n_s}$",
-                fontsize=14, color=TX, ha="center", va="center",
-                bbox=dict(fc="white", ec=CZ, lw=1.2,
-                          boxstyle="round,pad=0.35", alpha=0.88))
-        ax.text(eq_x, eq_y - 0.75,
-                r"$0 \leq s \leq 1$ em operação motora",
-                fontsize=8.5, color=CZ, ha="center", style="italic")
-
-        ax.set_title("Definição de Escorregamento",
-                     fontsize=11.5, fontweight="bold", color=TX, pad=6)
-        fig.tight_layout()
+            hover = [f"p={p} polos<br>nₛ = {int(v)} rpm" for p, v in zip(polos, ns_vals)]
+            fig.add_trace(go.Scatter(
+                x=polos, y=ns_vals,
+                mode="lines+markers+text",
+                name=f"f = {f0} Hz",
+                line=dict(color=cor, width=3, dash=dash),
+                marker=dict(size=11, color=cor, symbol=sym),
+                text=[f"<b>{int(v)}</b>" for v in ns_vals],
+                textposition="top right",
+                textfont=dict(size=12, color=cor),
+                hovertext=hover, hoverinfo="text",
+            ))
+        fig.update_layout(
+            title=dict(text="Velocidade Síncrona × Número de Polos",
+                       font=dict(size=16, color=TX)),
+            xaxis=dict(title=dict(text="Número de polos p", font=dict(size=14, color=TX)),
+                       tickvals=polos, tickfont=dict(size=13, color=TX),
+                       gridcolor="rgba(128,128,128,.18)"),
+            yaxis=dict(title=dict(text="Velocidade síncrona nₛ (rpm)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX),
+                       gridcolor="rgba(128,128,128,.18)"),
+            legend=dict(font=dict(size=14), bgcolor="rgba(0,0,0,0)"),
+            height=420, margin=dict(l=70, r=30, t=60, b=60),
+        )
         return fig
 
     def fig_tensao_induzida_estator():
-        """Tensão induzida no estator: forma de onda e equação do valor eficaz."""
-        fig, ax = plt.subplots(figsize=(7, 3.6))
-        fig.patch.set_alpha(0); ax.set_facecolor("none")
-        ax.spines[["top", "right"]].set_visible(False)
-        ax.spines[["bottom", "left"]].set_color(CZ)
-        ax.tick_params(colors=CZ, labelsize=8)
-
-        t  = np.linspace(0, 2, 400)  # 2 períodos normalizados
-        e  = np.sin(2 * np.pi * t)
-        ax.plot(t, e, color=AZ, lw=2.4, zorder=4)
-        ax.axhline(0, color=CZ, lw=0.8)
-
-        # Anotação E_max (seta dupla vertical)
-        t_pico = 0.25
-        ax.annotate("", xy=(t_pico, 1.0), xytext=(t_pico, 0.0),
-                    arrowprops=dict(arrowstyle="<->", color=VM, lw=1.8))
-        ax.text(t_pico + 0.04, 0.52, "$E_{\\mathrm{max}}$",
-                fontsize=10, color=VM, va="center")
-
-        # Equação fora da área da curva (canto superior esquerdo)
-        ax.text(0.02, 0.97,
-                r"$E_A = 4{,}44 \cdot K_w \cdot N_{ph} \cdot f \cdot \Phi_m$",
-                fontsize=10.5, color=TX, va="top",
-                transform=ax.transAxes,
-                bbox=dict(fc="white", ec=CZ, lw=1.0,
-                          boxstyle="round,pad=0.3", alpha=0.90))
-
-        # Legenda dos parâmetros — abaixo do eixo x, dentro do axes
-        ax.text(0.5, -0.22,
-                "$K_w$: fator de enrolamento     "
-                "$N_{ph}$: espiras por fase     "
-                "$\\Phi_m$: fluxo por polo",
-                fontsize=7.5, color=CZ, ha="center", transform=ax.transAxes)
-
-        ax.set_xlabel("tempo (p.u.)", fontsize=9, color=TX)
-        ax.set_ylabel("$e(t)$ (p.u.)", fontsize=9, color=TX)
-        ax.set_title("Tensão Induzida — Enrolamento do Estator",
-                     fontsize=11, fontweight="bold", color=TX, pad=6)
-        ax.set_ylim(-1.25, 1.40)
-        fig.subplots_adjust(bottom=0.22)
+        """Tensão induzida no estator — forma de onda senoidal, Plotly."""
+        t = np.linspace(0, 2, 500)
+        e = np.sin(2 * np.pi * t)
+        hover = [f"t = {ti:.3f} p.u.<br>e = {ei:.3f} p.u." for ti, ei in zip(t, e)]
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=t, y=e, mode="lines",
+            line=dict(color=AZ, width=3),
+            name="e(t) = E<sub>max</sub> sin(ωt)",
+            hovertext=hover, hoverinfo="text",
+        ))
+        # Linha zero
+        fig.add_hline(y=0, line=dict(color=CZ, width=1, dash="dot"))
+        # Anotação da amplitude (segmento vertical no pico)
+        fig.add_shape(type="line", x0=0.25, x1=0.25, y0=0, y1=1.0,
+                      line=dict(color=VM, width=2.5, dash="dash"))
+        fig.add_annotation(x=0.30, y=0.50,
+                           text="<b>E<sub>max</sub></b>",
+                           showarrow=False, font=dict(color=VM, size=15))
+        # Equação
+        fig.add_annotation(
+            x=0.02, y=1.30, xref="paper", yref="y",
+            text="<b>E<sub>A</sub> = 4,44 · K<sub>w</sub> · N<sub>ph</sub> · f · Φ<sub>m</sub></b>",
+            showarrow=False, font=dict(size=14, color=TX),
+            bgcolor="rgba(255,255,255,0.88)",
+            bordercolor=CZ, borderwidth=1.2, borderpad=7, align="left",
+        )
+        # Legenda parâmetros
+        fig.add_annotation(
+            x=0.50, y=-1.45, xref="paper", yref="y",
+            text="K<sub>w</sub>: fator de enrolamento  ·  N<sub>ph</sub>: espiras por fase  ·  Φ<sub>m</sub>: fluxo por polo",
+            showarrow=False, font=dict(size=12, color=CZ),
+        )
+        fig.update_layout(
+            title=dict(text="Tensão Induzida — Enrolamento do Estator",
+                       font=dict(size=16, color=TX)),
+            xaxis=dict(title=dict(text="Tempo (p.u.)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX),
+                       gridcolor="rgba(128,128,128,.18)"),
+            yaxis=dict(title=dict(text="e(t) (p.u.)", font=dict(size=14, color=TX)),
+                       range=[-1.62, 1.62],
+                       tickfont=dict(size=13, color=TX),
+                       gridcolor="rgba(128,128,128,.18)"),
+            showlegend=True,
+            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)"),
+            height=420, margin=dict(l=70, r=30, t=60, b=80),
+        )
         return fig
 
     def fig_tensao_rotor_escorregamento():
-        """Er = s·Er0 e fr = s·f em função do escorregamento."""
-        fig, axes = plt.subplots(1, 2, figsize=(9, 3.8))
-        fig.patch.set_alpha(0)
+        """Er = s·Er0 e fr = s·f — dois subplots Plotly lado a lado."""
         s = np.linspace(0, 1, 300)
-
-        # Tensão no rotor
-        ax0 = axes[0]; ax0.set_facecolor("none")
-        ax0.spines[["top","right"]].set_visible(False)
-        ax0.spines[["bottom","left"]].set_color(CZ)
-        ax0.tick_params(colors=CZ)
-        ax0.plot(s, s, color=AZ, lw=2.4, zorder=4)
-        ax0.scatter([0, 1], [0, 1], color=AZ, s=55, zorder=6)
-        ax0.text(0.05, 0.10,  r"$s=0 \Rightarrow E_r=0$",   fontsize=8, color=CZ)
-        ax0.text(0.55, 0.88,  r"$s=1 \Rightarrow E_r=E_{r0}$", fontsize=8, color=CZ)
-        ax0.text(0.50, 0.38,  r"$E_r = s \cdot E_{r0}$",
-                 fontsize=12, color=AZ, ha="center")
-        ax0.set_xlabel(r"Escorregamento $s$", fontsize=10, color=TX)
-        ax0.set_ylabel(r"$E_r / E_{r0}$ (p.u.)", fontsize=10, color=TX)
-        ax0.set_title("Tensão Induzida no Rotor",
-                      fontsize=10.5, fontweight="bold", color=TX)
-        ax0.grid(True, alpha=0.18, linestyle="--", color=CZ)
-        ax0.set_xlim(-0.02, 1.05); ax0.set_ylim(-0.02, 1.10)
-
-        # Frequência no rotor
-        ax1 = axes[1]; ax1.set_facecolor("none")
-        ax1.spines[["top","right"]].set_visible(False)
-        ax1.spines[["bottom","left"]].set_color(CZ)
-        ax1.tick_params(colors=CZ)
-        for f0, cor, lbl in [(60, AZ, "60 Hz"), (50, VD, "50 Hz")]:
-            ax1.plot(s, s * f0, color=cor, lw=2.0, label=f"$f={f0}$ Hz")
-        ax1.set_xlabel(r"Escorregamento $s$", fontsize=10, color=TX)
-        ax1.set_ylabel(r"$f_r = s \cdot f$ (Hz)", fontsize=10, color=TX)
-        ax1.set_title("Frequência do Rotor",
-                      fontsize=10.5, fontweight="bold", color=TX)
-        ax1.legend(fontsize=9, framealpha=0.0)
-        ax1.grid(True, alpha=0.18, linestyle="--", color=CZ)
-        ax1.set_xlim(-0.02, 1.05)
-
-        fig.tight_layout(pad=1.0)
+        fig = make_subplots(
+            rows=1, cols=2,
+            subplot_titles=["<b>Tensão no Rotor  Eᵣ = s · Eᵣ₀</b>",
+                             "<b>Frequência do Rotor  fᵣ = s · f</b>"],
+            horizontal_spacing=0.14,
+        )
+        # Painel esquerdo
+        hover_l = [f"s = {si:.2f}<br>Eᵣ = {si:.2f} · Eᵣ₀" for si in s]
+        fig.add_trace(go.Scatter(
+            x=s, y=s, mode="lines",
+            line=dict(color=AZ, width=3), name="Eᵣ = s·Eᵣ₀",
+            hovertext=hover_l, hoverinfo="text",
+        ), row=1, col=1)
+        fig.add_trace(go.Scatter(
+            x=[0, 1], y=[0, 1], mode="markers",
+            marker=dict(size=12, color=AZ, symbol="circle"),
+            showlegend=False,
+            hovertext=["s=0 → Eᵣ=0", "s=1 → Eᵣ=Eᵣ₀"], hoverinfo="text",
+        ), row=1, col=1)
+        for s_p, text_p, ay_p in [(0.08, "s=0 → Eᵣ=0", 30), (0.88, "s=1 → Eᵣ=Eᵣ₀", -30)]:
+            fig.add_annotation(x=s_p, y=s_p, text=text_p,
+                               showarrow=True, ay=ay_p, ax=30,
+                               font=dict(size=12, color=CZ),
+                               arrowcolor=CZ, arrowwidth=1.2,
+                               row=1, col=1)
+        # Painel direito
+        for f0, cor, dash, nm in [(60, AZ, "solid", "f = 60 Hz"), (50, VD, "dash", "f = 50 Hz")]:
+            hover_r = [f"s = {si:.2f}<br>fᵣ = {si*f0:.1f} Hz" for si in s]
+            fig.add_trace(go.Scatter(
+                x=s, y=s * f0, mode="lines",
+                line=dict(color=cor, width=3, dash=dash), name=nm,
+                hovertext=hover_r, hoverinfo="text",
+            ), row=1, col=2)
+        # Eixos
+        for col in [1, 2]:
+            fig.update_xaxes(
+                title=dict(text="Escorregamento s", font=dict(size=13, color=TX)),
+                tickfont=dict(size=12, color=TX), range=[-0.02, 1.05],
+                gridcolor="rgba(128,128,128,.18)", row=1, col=col,
+            )
+        fig.update_yaxes(
+            title=dict(text="Eᵣ / Eᵣ₀ (p.u.)", font=dict(size=13, color=TX)),
+            tickfont=dict(size=12, color=TX), range=[-0.02, 1.12],
+            gridcolor="rgba(128,128,128,.18)", row=1, col=1,
+        )
+        fig.update_yaxes(
+            title=dict(text="fᵣ (Hz)", font=dict(size=13, color=TX)),
+            tickfont=dict(size=12, color=TX),
+            gridcolor="rgba(128,128,128,.18)", row=1, col=2,
+        )
+        fig.update_annotations(font_size=14)
+        fig.update_layout(
+            height=420, margin=dict(l=70, r=30, t=70, b=60),
+            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)",
+                        orientation="h", y=-0.18),
+        )
         return fig
 
     def fig_modos_operacao():
-        """Curva T × n nas três regiões: motor, gerador e frenagem."""
-        fig, ax = _mpl_base_on((7.5, 4.6))
-
+        """Curva T × n nas três regiões de operação — Plotly interativo."""
         V1, R1, X1, R2, X2, Xm = 127.0, 0.5, 1.0, 0.4, 1.0, 50.0
         ns = 1800.0; ws = ns * 2 * np.pi / 60
 
-        s_all  = np.concatenate([
-            np.linspace(-1.2, -1e-3, 250),
-            np.linspace( 1e-3, 2.2,  550),
+        s_all = np.concatenate([
+            np.linspace(-1.2, -1e-3, 300),
+            np.linspace( 1e-3, 2.2,  700),
         ])
         n_all = ns * (1 - s_all)
 
@@ -562,53 +544,67 @@ def run():
             return 3 * abs(I2)**2 * (R2/s) / ws
 
         T_all = np.array([torque(s) for s in s_all])
+        T_pk  = float(np.max(T_all[(n_all >= 0) & (n_all <= ns)]))
 
-        # Faixas de cor por região
-        m_mot  = (n_all >= 0) & (n_all <= ns)
-        m_gen  = n_all > ns
-        m_fre  = n_all < 0
+        hover = [f"n = {ni:.0f} rpm<br>s = {(ns-ni)/ns:.3f}<br>T = {ti:.2f} N·m"
+                 for ni, ti in zip(n_all, T_all)]
 
-        ax.fill_between(n_all, T_all, 0, where=m_mot,
-                        color=VD, alpha=0.09, zorder=1)
-        ax.fill_between(n_all, T_all, 0, where=m_gen,
-                        color=AZ, alpha=0.09, zorder=1)
-        ax.fill_between(n_all, T_all, 0, where=m_fre,
-                        color=VM, alpha=0.09, zorder=1)
-
-        ax.plot(n_all, T_all, color=TX, lw=2.3, zorder=4)
-        ax.axhline(0, color=CZ, lw=0.8)
-        ax.axvline(ns, color=AZ, lw=1.0, ls="--", alpha=0.55)
-        ax.axvline(0,  color=CZ, lw=0.8, ls="--", alpha=0.45)
-
-        T_max_motor = float(np.max(T_all[m_mot])) if m_mot.any() else 1.0
-
-        # Labels das regiões (posicionados dentro da faixa correta)
-        ax.text(ns * 0.50,  T_max_motor * 0.50, "MOTOR\n$0 < s < 1$",
-                ha="center", fontsize=10, color=VD, fontweight="bold", alpha=0.8)
-        ax.text(ns * 1.55,  T_max_motor * 0.28, "GERADOR\n$s < 0$",
-                ha="center", fontsize=10, color=AZ, fontweight="bold", alpha=0.8)
-        ax.text(-ns * 0.45, T_max_motor * 0.28, "FRENAGEM\n$s > 1$",
-                ha="center", fontsize=10, color=VM, fontweight="bold", alpha=0.8)
-
-        ax.text(ns + 30,  ax.get_ylim()[0] * 0.90 if ax.get_ylim()[0] < 0 else -0.8,
-                "$n_s$", ha="left", fontsize=9, color=AZ)
-
-        ax.set_xlabel("Velocidade $n$ (rpm)", fontsize=11, color=TX)
-        ax.set_ylabel("Torque $T$ (N·m)", fontsize=11, color=TX)
-        ax.set_title("Regiões de Operação — Máquina de Indução",
-                     fontsize=11.5, fontweight="bold", color=TX)
-        ax.set_xlim(-0.80 * ns, 2.20 * ns)
-        ax.grid(True, alpha=0.15, linestyle="--", color=CZ)
-        fig.tight_layout()
+        fig = go.Figure()
+        # Regiões preenchidas (fill via scatter com tozeroy)
+        for mask, fc, name in [
+            ((n_all >= 0) & (n_all <= ns), "rgba(31,157,85,0.10)",  "Motor (0 < s < 1)"),
+            (n_all > ns,                    "rgba(61,142,240,0.10)", "Gerador (s < 0)"),
+            (n_all < 0,                     "rgba(224,62,62,0.10)",  "Frenagem (s > 1)"),
+        ]:
+            fig.add_trace(go.Scatter(
+                x=n_all[mask], y=T_all[mask],
+                fill="tozeroy", fillcolor=fc,
+                line=dict(width=0), name=name, mode="lines",
+                hoverinfo="skip",
+            ))
+        # Curva principal
+        fig.add_trace(go.Scatter(
+            x=n_all, y=T_all, mode="lines",
+            line=dict(color=TX, width=3),
+            name="T(n)", showlegend=False,
+            hovertext=hover, hoverinfo="text",
+        ))
+        # Linhas de referência
+        fig.add_vline(x=ns, line=dict(color=AZ, width=1.5, dash="dash"))
+        fig.add_vline(x=0,  line=dict(color=CZ, width=1,   dash="dot"))
+        fig.add_hline(y=0,  line=dict(color=CZ, width=1))
+        # Anotações das regiões
+        for x_pos, y_pos, texto, cor in [
+            (ns * 0.50,  T_pk * 0.50, "<b>MOTOR</b><br>0 < s < 1", VD),
+            (ns * 1.60,  T_pk * 0.28, "<b>GERADOR</b><br>s < 0",   AZ),
+            (-ns * 0.42, T_pk * 0.28, "<b>FRENAGEM</b><br>s > 1",  VM),
+        ]:
+            fig.add_annotation(x=x_pos, y=y_pos, text=texto,
+                               showarrow=False, font=dict(size=15, color=cor))
+        # Label ns
+        fig.add_annotation(x=ns, y=float(np.min(T_all)) * 0.82,
+                           text="<b>nₛ</b>", showarrow=False,
+                           font=dict(size=14, color=AZ))
+        fig.update_layout(
+            title=dict(text="Regiões de Operação — Máquina de Indução",
+                       font=dict(size=16, color=TX)),
+            xaxis=dict(title=dict(text="Velocidade n (rpm)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX), range=[-0.88 * ns, 2.28 * ns],
+                       gridcolor="rgba(128,128,128,.18)"),
+            yaxis=dict(title=dict(text="Torque T (N·m)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX),
+                       gridcolor="rgba(128,128,128,.18)"),
+            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)",
+                        orientation="h", y=-0.18),
+            height=460, margin=dict(l=75, r=30, t=60, b=80),
+        )
         return fig
 
     def fig_curva_torque_velocidade():
-        """Curva T × n (região motora) com pontos T_part, T_max e T_nom."""
-        fig, ax = _mpl_base_on((7.0, 4.5))
-
+        """Curva T × n (região motora) com pontos notáveis — Plotly interativo."""
         V1, R1, X1, R2, X2, Xm = 127.0, 0.5, 1.0, 0.4, 1.0, 50.0
         ns = 1800.0; ws = ns * 2 * np.pi / 60
-        s_range = np.linspace(1e-3, 1.0, 600)
+        s_range = np.linspace(1e-3, 1.0, 800)
         n_range = ns * (1 - s_range)
 
         def T_s(s):
@@ -618,83 +614,123 @@ def run():
             return 3 * abs(I2)**2 * (R2/s) / ws
 
         T_vals = np.array([T_s(s) for s in s_range])
-
-        ax.plot(n_range, T_vals, color=AZ, lw=2.5, zorder=4)
-        ax.axhline(0, color=CZ, lw=0.7)
-        ax.axvline(ns, color=AZ, lw=1.0, ls="--", alpha=0.5)
-
         idx_max = int(np.argmax(T_vals))
-        T_max  = T_vals[idx_max]; n_max = n_range[idx_max]
-        T_part = T_s(1.0)
-        s_nom  = 0.05
-        T_nom  = T_s(s_nom); n_nom = ns * (1 - s_nom)
+        T_max_v = T_vals[idx_max]; n_max = n_range[idx_max]
+        T_part  = T_s(1.0)
+        s_nom   = 0.05; T_nom = T_s(s_nom); n_nom = ns * (1 - s_nom)
 
-        # Pontos notáveis com offset de texto para não sobrepor
+        hover = [f"n = {ni:.0f} rpm<br>s = {si:.4f}<br>T = {ti:.2f} N·m"
+                 for ni, si, ti in zip(n_range, s_range, T_vals)]
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=n_range, y=T_vals, mode="lines",
+            line=dict(color=AZ, width=3.5), name="T(n)",
+            hovertext=hover, hoverinfo="text",
+        ))
+        # Pontos notáveis com anotações individuais
         pontos = [
-            (0,      T_part, "$T_{part}$", "s",  VM,  ( 80, -15)),
-            (n_max,  T_max,  "$T_{max}$",  "^",  LR,  (-20,  10)),
-            (n_nom,  T_nom,  "$T_{nom}$",  "o",  VD,  ( 20, -18)),
-            (ns,     0,      "$n_s$",       "D",  AZ,  (  8,  10)),
+            (0,     T_part,  "T<sub>part</sub>", VM,  "square",      "bottom right", (-30, 30)),
+            (n_max, T_max_v, "T<sub>max</sub>",  LR,  "triangle-up", "top center",   (0, -35)),
+            (n_nom, T_nom,   "T<sub>nom</sub>",  VD,  "circle",      "bottom right", (30, 30)),
+            (ns,    0,       "nₛ",               AZ,  "diamond",     "bottom right", (30, 30)),
         ]
-        for x, y, lbl, mk, cor, (dx, dy) in pontos:
-            ax.plot(x, y, mk, color=cor, ms=9, zorder=6)
-            ax.annotate(lbl, xy=(x, y), xytext=(x + dx, y + dy),
-                        fontsize=9, color=cor,
-                        arrowprops=dict(arrowstyle="-", color=cor, lw=0.7))
-
-        ax.set_xlabel("Velocidade $n$ (rpm)", fontsize=11, color=TX)
-        ax.set_ylabel("Torque $T$ (N·m)", fontsize=11, color=TX)
-        ax.set_title("Curva Característica Torque × Velocidade",
-                     fontsize=11.5, fontweight="bold", color=TX)
-        ax.set_xlim(-50, ns + 120)
-        ax.grid(True, alpha=0.18, linestyle="--", color=CZ)
-        fig.tight_layout()
+        fig.add_trace(go.Scatter(
+            x=[p[0] for p in pontos],
+            y=[p[1] for p in pontos],
+            mode="markers",
+            marker=dict(size=14,
+                        color=[p[3] for p in pontos],
+                        symbol=[p[4] for p in pontos],
+                        line=dict(width=1.5, color="white")),
+            hovertext=[f"{p[2]}<br>n = {p[0]:.0f} rpm<br>T = {p[1]:.2f} N·m"
+                       for p in pontos],
+            hoverinfo="text",
+            name="Pontos notáveis", showlegend=True,
+        ))
+        for x, y, lbl, cor, sym, tpos, (ax, ay) in pontos:
+            fig.add_annotation(x=x, y=y, text=f"<b>{lbl}</b>",
+                               showarrow=True, ax=ax, ay=ay,
+                               font=dict(size=13, color=cor),
+                               arrowcolor=cor, arrowwidth=1.5)
+        fig.add_vline(x=ns, line=dict(color=AZ, width=1.5, dash="dash"))
+        fig.add_hline(y=0,  line=dict(color=CZ, width=1))
+        fig.update_layout(
+            title=dict(text="Curva Característica Torque × Velocidade (Região Motora)",
+                       font=dict(size=16, color=TX)),
+            xaxis=dict(title=dict(text="Velocidade n (rpm)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX), range=[-80, ns + 160],
+                       gridcolor="rgba(128,128,128,.18)"),
+            yaxis=dict(title=dict(text="Torque T (N·m)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX),
+                       gridcolor="rgba(128,128,128,.18)"),
+            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)"),
+            height=460, margin=dict(l=75, r=30, t=60, b=70),
+        )
         return fig
 
     def fig_curva_torque_R2():
-        """Família T × n para R'2 crescente (rotor bobinado com resistência externa)."""
-        fig, ax = _mpl_base_on((7.0, 4.5))
-
+        """Família T × n para R'₂ crescente (rotor bobinado) — Plotly interativo."""
         V1, R1, X1, X2, Xm = 127.0, 0.5, 1.0, 1.0, 50.0
         ns = 1800.0; ws = ns * 2 * np.pi / 60
-        s_range = np.linspace(1e-3, 1.0, 500)
+        s_range = np.linspace(1e-3, 1.0, 600)
         n_range = ns * (1 - s_range)
 
-        R2_vals  = [0.2, 0.4, 0.6, 1.0, 1.5]
-        cores_v  = [AZ, VD, LR, RX, CI]
-        ls_list  = ["-", "--", "-.", ":", (0, (3,1,1,1))]
+        R2_vals = [0.2, 0.4, 0.6, 1.0, 1.5]
+        cores_v = [AZ, VD, LR, RX, CI]
+        dashes   = ["solid", "dash", "dashdot", "dot", "longdash"]
 
-        for R2, cor, ls in zip(R2_vals, cores_v, ls_list):
+        fig = go.Figure()
+        for R2, cor, dash in zip(R2_vals, cores_v, dashes):
             def T_fn(s, R2=R2):
                 Z2  = R2/s + 1j*X2
                 Zeq = (1j*Xm * Z2) / (1j*Xm + Z2)
                 I2  = (V1 / (R1 + 1j*X1 + Zeq)) * Zeq / Z2
                 return 3 * abs(I2)**2 * (R2/s) / ws
-            T_v = np.array([T_fn(s) for s in s_range])
-            ax.plot(n_range, T_v, color=cor, lw=1.9, ls=ls,
-                    label=f"$R'_2 = {R2}\\,\\Omega$", zorder=4)
+            T_v  = np.array([T_fn(s) for s in s_range])
+            hover = [f"R'₂ = {R2} Ω<br>n = {ni:.0f} rpm<br>T = {ti:.2f} N·m"
+                     for ni, ti in zip(n_range, T_v)]
+            fig.add_trace(go.Scatter(
+                x=n_range, y=T_v, mode="lines",
+                line=dict(color=cor, width=2.8, dash=dash),
+                name=f"R'₂ = {R2} Ω",
+                hovertext=hover, hoverinfo="text",
+            ))
 
-        ax.axvline(ns, color=AZ, lw=1.0, ls="--", alpha=0.5)
-        ax.axhline(0,  color=CZ, lw=0.7)
-        ax.set_xlabel("Velocidade $n$ (rpm)", fontsize=11, color=TX)
-        ax.set_ylabel("Torque $T$ (N·m)", fontsize=11, color=TX)
-        ax.set_title("Efeito de $R'_2$ na Curva $T \\times n$ (Rotor Bobinado)",
-                     fontsize=11, fontweight="bold", color=TX)
-        ax.legend(fontsize=8.5, framealpha=0.0, ncol=2,
-                  loc="upper left")
-        ax.set_xlim(-50, ns + 80)
-        ax.grid(True, alpha=0.18, linestyle="--", color=CZ)
-        fig.tight_layout()
+        fig.add_vline(x=ns, line=dict(color=AZ, width=1.5, dash="dash"))
+        fig.add_hline(y=0,  line=dict(color=CZ, width=1))
+        fig.add_annotation(x=ns, y=-3, text="<b>nₛ</b>",
+                           showarrow=False, font=dict(size=14, color=AZ))
+        fig.add_annotation(
+            x=0.50, y=1.06, xref="paper", yref="paper",
+            text="<i>T<sub>max</sub> independe de R'₂ · s<sub>max</sub> desloca-se proporcionalmente a R'₂</i>",
+            showarrow=False, font=dict(size=12, color=CZ),
+            bgcolor="rgba(255,255,255,0.75)", borderpad=5,
+        )
+        fig.update_layout(
+            title=dict(text="Efeito de R'₂ na Curva T × n — Rotor Bobinado",
+                       font=dict(size=16, color=TX)),
+            xaxis=dict(title=dict(text="Velocidade n (rpm)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX), range=[-80, ns + 120],
+                       gridcolor="rgba(128,128,128,.18)"),
+            yaxis=dict(title=dict(text="Torque T (N·m)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX),
+                       gridcolor="rgba(128,128,128,.18)"),
+            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)",
+                        orientation="h", y=-0.20),
+            height=460, margin=dict(l=75, r=30, t=70, b=100),
+        )
         return fig
 
     def fig_gaiola_dupla():
-        """T × n: gaiola dupla resulta de gaiola externa (alta R) + interna (baixa R)."""
-        fig, ax = _mpl_base_on((7.0, 4.5))
-
+        """T × n: gaiola dupla = gaiola externa + interna — Plotly interativo."""
         V1, R1, X1, Xm = 127.0, 0.5, 1.0, 50.0
         ns = 1800.0; ws = ns * 2 * np.pi / 60
-        s_range = np.linspace(1e-3, 1.0, 500)
+        s_range = np.linspace(1e-3, 1.0, 600)
         n_range = ns * (1 - s_range)
+
+        R2_ext, X2_ext = 2.0, 0.5   # externa: alta R, baixa X
+        R2_int, X2_int = 0.3, 3.5   # interna: baixa R, alta X
 
         def T_single(s, R2, X2):
             Z2  = R2/s + 1j*X2
@@ -702,50 +738,61 @@ def run():
             I2  = (V1 / (R1 + 1j*X1 + Zeq)) * Zeq / Z2
             return 3 * abs(I2)**2 * (R2/s) / ws
 
-        # Gaiola dupla: paralelo das duas gaiolas
-        R2_ext, X2_ext = 2.0, 0.5   # externa: alta R, baixa X
-        R2_int, X2_int = 0.3, 3.5   # interna: baixa R, alta X
-
         def T_double(s):
-            Z_ext = R2_ext/s + 1j*X2_ext
-            Z_int = R2_int/s + 1j*X2_int
-            Z2_par = Z_ext * Z_int / (Z_ext + Z_int)
-            Zeq    = (1j*Xm * Z2_par) / (1j*Xm + Z2_par)
-            I_tot  = V1 / (R1 + 1j*X1 + Zeq)
-            Veq    = I_tot * Zeq
-            I_e    = Veq / Z_ext
-            I_i    = Veq / Z_int
-            Pag    = 3*(abs(I_e)**2*(R2_ext/s) + abs(I_i)**2*(R2_int/s))
-            return Pag / ws
+            Z_e = R2_ext/s + 1j*X2_ext; Z_i = R2_int/s + 1j*X2_int
+            Z2p = Z_e * Z_i / (Z_e + Z_i)
+            Zeq = (1j*Xm * Z2p) / (1j*Xm + Z2p)
+            It  = V1 / (R1 + 1j*X1 + Zeq)
+            Vq  = It * Zeq
+            return 3*(abs(Vq/Z_e)**2*(R2_ext/s) + abs(Vq/Z_i)**2*(R2_int/s)) / ws
 
         T_ext = np.array([T_single(s, R2_ext, X2_ext) for s in s_range])
         T_int = np.array([T_single(s, R2_int, X2_int) for s in s_range])
         T_dup = np.array([T_double(s) for s in s_range])
-        # Gaiola simples de referência: R2 = R2_int, mesma resistência nominal
         T_sim = np.array([T_single(s, R2_int, X2_int * 0.30) for s in s_range])
 
-        ax.plot(n_range, T_sim, color=CZ, lw=1.4, ls="--",
-                label="Gaiola simples (ref.)", zorder=3)
-        ax.plot(n_range, T_ext, color=VM,  lw=1.6, ls="-.",
-                label=f"Gaiola externa ($R={R2_ext}\\,\\Omega$, $X={X2_ext}\\,\\Omega$)",
-                zorder=4)
-        ax.plot(n_range, T_int, color=AZ,  lw=1.6, ls=":",
-                label=f"Gaiola interna ($R={R2_int}\\,\\Omega$, $X={X2_int}\\,\\Omega$)",
-                zorder=4)
-        ax.plot(n_range, T_dup, color=VD,  lw=2.6, ls="-",
-                label="Gaiola dupla (resultante)", zorder=5)
+        traces = [
+            (T_sim, CZ, "dash",    "Gaiola simples (ref.)"),
+            (T_ext, VM, "dashdot", f"Gaiola externa  R={R2_ext} Ω, X={X2_ext} Ω"),
+            (T_int, AZ, "dot",     f"Gaiola interna  R={R2_int} Ω, X={X2_int} Ω"),
+            (T_dup, VD, "solid",   "Gaiola dupla (resultante)"),
+        ]
+        widths = [2.0, 2.4, 2.4, 3.5]
+        fig = go.Figure()
+        for (T_v, cor, dash, nm), w in zip(traces, widths):
+            hover = [f"{nm}<br>n = {ni:.0f} rpm<br>T = {ti:.2f} N·m"
+                     for ni, ti in zip(n_range, T_v)]
+            fig.add_trace(go.Scatter(
+                x=n_range, y=T_v, mode="lines",
+                line=dict(color=cor, width=w, dash=dash), name=nm,
+                hovertext=hover, hoverinfo="text",
+            ))
 
-        ax.axvline(ns, color=AZ, lw=1.0, ls="--", alpha=0.5)
-        ax.axhline(0,  color=CZ, lw=0.7)
-        ax.set_xlabel("Velocidade $n$ (rpm)", fontsize=11, color=TX)
-        ax.set_ylabel("Torque $T$ (N·m)", fontsize=11, color=TX)
-        ax.set_title("Motor com Gaiola de Esquilo Dupla",
-                     fontsize=11, fontweight="bold", color=TX)
-        ax.legend(fontsize=8.0, framealpha=0.0, loc="upper left")
-        ax.set_xlim(-50, ns + 80)
-        ax.grid(True, alpha=0.18, linestyle="--", color=CZ)
-        fig.tight_layout()
+        fig.add_vline(x=ns, line=dict(color=AZ, width=1.5, dash="dash"))
+        fig.add_hline(y=0,  line=dict(color=CZ, width=1))
+        fig.add_annotation(x=ns, y=-1.5, text="<b>nₛ</b>",
+                           showarrow=False, font=dict(size=14, color=AZ))
+        fig.add_annotation(
+            x=0.50, y=1.06, xref="paper", yref="paper",
+            text="<i>Alta s (partida): gaiola externa domina · Baixa s (regime): gaiola interna domina</i>",
+            showarrow=False, font=dict(size=12, color=CZ),
+            bgcolor="rgba(255,255,255,0.75)", borderpad=5,
+        )
+        fig.update_layout(
+            title=dict(text="Motor com Gaiola de Esquilo Dupla — Curvas de Torque",
+                       font=dict(size=16, color=TX)),
+            xaxis=dict(title=dict(text="Velocidade n (rpm)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX), range=[-80, ns + 120],
+                       gridcolor="rgba(128,128,128,.18)"),
+            yaxis=dict(title=dict(text="Torque T (N·m)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13, color=TX),
+                       gridcolor="rgba(128,128,128,.18)"),
+            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)",
+                        orientation="h", y=-0.22),
+            height=470, margin=dict(l=75, r=30, t=60, b=110),
+        )
         return fig
+
 
     # ════════════════════════════════════════════════════════════════════════
     # CIRCUITOS EQUIVALENTES — schemdraw → PNG → matplotlib
@@ -1394,7 +1441,7 @@ $$\boxed{n_s = \frac{120\,f}{p} \quad \text{(rpm)}} \qquad \omega_s = \frac{2\pi
 onde $f$ é a frequência da rede (Hz) e $p$ é o número de polos da máquina.
 """)
 
-    show_fig(fig_velocidade_sincrona(), width_frac=0.68)
+    show_plot(fig_velocidade_sincrona(), key="fig_ns")
     st.caption("**Figura 3.2** — Velocidade síncrona para $f = 50$ e $60$ Hz.")
 
     st.divider()
@@ -1442,7 +1489,7 @@ $$\boxed{E_A = 4{,}44 \cdot K_w \cdot N_{ph} \cdot f \cdot \Phi_m}$$
 - $\Phi_m$: fluxo máximo por polo.
 """)
 
-    show_fig(fig_tensao_induzida_estator(), width_frac=0.72)
+    show_plot(fig_tensao_induzida_estator(), key="fig_ea")
     st.caption("**Figura 5.1** — Forma de onda de $e(t)$ e equação do valor eficaz $E_A$.")
 
     st.markdown(r"""
@@ -1458,7 +1505,7 @@ A reatância de dispersão do rotor também escala: $X_r = s\,X_{r0}$,
 onde $X_{r0} = 2\pi f L_r$.
 """)
 
-    show_fig(fig_tensao_rotor_escorregamento(), width_frac=0.82)
+    show_plot(fig_tensao_rotor_escorregamento(), key="fig_er")
     st.caption("**Figura 5.2** — Variação de $E_r$ (esq.) e $f_r$ (dir.) com o escorregamento $s$.")
 
     st.divider()
@@ -1610,7 +1657,7 @@ Em rotores bobinados, alimentando o rotor pelos anéis coletores com o estator e
 o motor gira no sentido **oposto** ao campo do estator.
 """)
 
-    show_fig(fig_modos_operacao(), width_frac=0.78)
+    show_plot(fig_modos_operacao(), key="fig_modos")
     st.caption("**Figura 9.1** — Curva $T \\times n$ nas três regiões: "
                "motor (verde), gerador (azul) e frenagem (vermelho).")
 
@@ -1636,7 +1683,7 @@ aumenta $s$, aumenta $T_{em}$ e reequilibra o sistema. À esquerda do $T_{max}$ 
 a operação é instável — aumento de carga reduz $T_{em}$.
 """)
 
-    show_fig(fig_curva_torque_velocidade(), width_frac=0.75)
+    show_plot(fig_curva_torque_velocidade(), key="fig_tv")
     st.caption("**Figura 10.1** — Curva $T \\times n$ (região motora) com pontos notáveis.")
 
     st.divider()
@@ -1669,7 +1716,7 @@ Partida com frequência e tensão crescentes (relação $V/f$ constante). Manté
 e torque de partida elevado com corrente controlada. Método mais moderno e flexível.
 """)
 
-    show_fig(fig_curva_torque_R2(), width_frac=0.75)
+    show_plot(fig_curva_torque_R2(), key="fig_r2")
     st.caption("**Figura 11.1** — Efeito de $R'_2$ crescente (rotor bobinado): "
                "$s_{max}$ se desloca para a partida sem alterar $T_{max}$.")
 
@@ -1698,7 +1745,7 @@ O mecanismo físico subjacente é o **efeito pelicular** (*skin effect*): em alt
 a corrente concentra-se na superfície das barras, equivalente à gaiola externa.
 """)
 
-    show_fig(fig_gaiola_dupla(), width_frac=0.75)
+    show_plot(fig_gaiola_dupla(), key="fig_dupla")
     st.caption("**Figura 12.1** — Curvas $T \\times n$: gaiola dupla (verde), "
                "gaiola externa (vermelho), gaiola interna (azul) e simples de referência (cinza).")
 
