@@ -854,44 +854,44 @@ def run():
 
 
     def fig_circuito_estator():
-        """Circuito do estator: V1 → R1 → jX1 → Rc∥jXm → E1 (terminais abertos para o rotor)."""
+        """Circuito do estator: V1 → R1 → jX1 → Rc∥jXm → terminais E1 abertos."""
         with schemdraw.Drawing() as d:
-            d.config(unit=2.2)
+            d.config(unit=2)
 
-            # ── Fio superior: V1+ → R1 → jX1 → nó A ─────────────────────
-            elm.Line().right(0.25 * d.unit).dot(open=True)
-            elm.Gap().down(d.unit * 1.75).label(("+", "$V_1$", "−")).dot(open=True)
-            V1p = elm.Line().right(0.25 * d.unit)
+            # ── Fonte V1 à esquerda (terminal aberto embaixo, sobe para o fio) ──
+            V1n = elm.Line().left(d.unit * 0.5).dot(open=True)
+            elm.Gap().up(d.unit * 1.75).label(("−", "$V_1$", "+")).dot(open=True)
+            V1p = elm.Line().right(d.unit * 0.5)
+
+            # ── Fio superior: R1 → jX1 → nó A ─────────────────────────────
             elm.Resistor().right().label("$R_1$")
             elm.Inductor().right().label("$jX_1$")
-            elm.Line().right(0.25 * d.unit).dot(open=False)   # nó A
+            elm.Line().right(d.unit * 0.25).dot(open=False)   # nó A
 
-            # ── Ramo shunt Xm (nó A → fio inferior) ──────────────────────
+            # ── Ramo shunt: Xm e Rc em paralelo (nó A → fio inferior) ──────
             d.push()
-            Ifi = elm.Line().down(0.375 * d.unit)
+            Ifi = elm.Line().down(d.unit * 0.375)
             Xm_e = elm.Inductor().down().label("$jX_m$", loc="bottom")
-            Xm_bot = elm.Line().down(0.375 * d.unit)
+            elm.Line().down(d.unit * 0.375)
             d.pop()
 
-            # ── Ramo shunt Rc (paralelo a Xm, à esquerda) ─────────────────
             d.push()
             d.move(dx=0, dy=-0.5 * d.unit)
-            elm.Line().left(0.32 * d.unit)
+            elm.Line().left(d.unit * 0.28)
             Rc_e = elm.Resistor().down().label("$R_c$")
-            elm.Line().right(0.32 * d.unit)
+            elm.Line().right(d.unit * 0.28)
             d.pop()
 
-            # ── Terminais E1 abertos à direita do nó A ────────────────────
-            elm.Line().right(0.8 * d.unit).dot(open=True)
-            elm.Gap().down(d.unit * 1.75).label(("+", "$E_1$", "−")).dot(open=True)
-            elm.Line().left(0.8 * d.unit)           # fio inferior, sob E1
+            # ── Terminais E1 abertos à direita (nó A → saída) ─────────────
+            elm.Line().right(d.unit * 0.5).dot(open=True)
+            elm.Gap().down(d.unit * 1.75).label(("−", "$E_1$", "+")).dot(open=True)
+            elm.Line().left(d.unit * 0.5)
 
-            # ── Fio inferior: fecha pela coordenada do Xm_bot → V1− ───────
-            elm.Line().toy(Xm_bot.end.y)
-            elm.Line().tox(V1p.start)
-            elm.Line().left(0.5 * d.unit).dot(open=True)
+            # ── Fio inferior: fecha o circuito voltando a V1− ───────────────
+            elm.Line().toy(V1n.end.y)
+            elm.Line().to(V1n.end)
 
-            # ── Rótulos de corrente ────────────────────────────────────────
+            # ── Rótulos de corrente ─────────────────────────────────────────
             elm.CurrentLabel(top=True,  length=1.0,  ofst=0.3).at(V1p).label("$I_1$")
             elm.CurrentLabel(top=True,  length=0.75, ofst=0.3).at(Ifi).label(r"$I_\phi$")
             elm.CurrentLabel(top=False, length=0.75, ofst=0.7).at(Rc_e).label("$I_c$")
@@ -907,31 +907,30 @@ def run():
         return fig
 
     def fig_circuito_rotor():
-        """Circuito do rotor: fonte sE2 aberta (como V1 no estator) → jX2 → R2 em série."""
+        """Circuito do rotor: fonte sE2 aberta → jX2 → R2 em série (malha fechada)."""
         with schemdraw.Drawing() as d:
-            d.config(unit=2.2)
+            d.config(unit=2)
 
-            # ── Terminais sE2 abertos à esquerda (entrada do rotor) ───────
-            # Espelha exatamente V1 no estator: terminal + no topo
-            elm.Line().right(0.25 * d.unit).dot(open=True)
-            elm.Gap().down(d.unit * 1.75).label(("+", "$sE_2$", "−")).dot(open=True)
-            I2_lbl = elm.Line().right(0.25 * d.unit)   # ponto de label de I2
+            # ── Fonte sE2 à esquerda — mesma convenção que V1 no estator ───
+            sE2n = elm.Line().left(d.unit * 0.5).dot(open=True)
+            elm.Gap().up(d.unit * 1.75).label(("−", "$sE_2$", "+")).dot(open=True)
+            I2_lbl = elm.Line().right(d.unit * 0.5)
 
-            # ── Ramo série: jX2 → R2 (no fio superior) ───────────────────
+            # ── Ramo série superior: jX2 → R2 ───────────────────────────────
             elm.Inductor().right().label("$jX_2$")
             elm.Resistor().right().label("$R_2$")
-            elm.Line().right(0.25 * d.unit)
+            elm.Line().right(d.unit * 0.25)
 
-            # ── Fecha a malha pelo fio inferior ───────────────────────────
-            elm.Line().down(d.unit * 1.75)
-            elm.Line().tox(I2_lbl.start)
+            # ── Fecha a malha pelo fio inferior ─────────────────────────────
+            elm.Line().toy(sE2n.end.y)
+            elm.Line().to(sE2n.end)
 
-            # ── Corrente I2 ───────────────────────────────────────────────
+            # ── Corrente I2 ──────────────────────────────────────────────────
             elm.CurrentLabel(top=True, length=0.9, ofst=0.3).at(I2_lbl).label("$I_2$")
 
             d.save("/tmp/_mei_rot.png", dpi=140)
 
-        fig, ax2 = plt.subplots(figsize=(6.5, 2.8))
+        fig, ax2 = plt.subplots(figsize=(7.0, 3.0))
         fig.patch.set_alpha(0); ax2.set_facecolor("none"); ax2.axis("off")
         ax2.imshow(plt.imread("/tmp/_mei_rot.png"))
         plt.close("all")
