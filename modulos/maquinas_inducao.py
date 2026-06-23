@@ -2129,7 +2129,7 @@ O circuito do estator é idêntico ao do primário de um transformador, com a di
 
     show_fig(fig_circuito_estator(), width_frac=0.78)
     st.caption("**Figura 6.0** — Circuito equivalente do estator: ramo série $R_1 + jX_1$ "
-               "e ramo de excitação $R_c \parallel jX_m$.")
+               "e ramo de excitação $R_c ∥ jX_m$.")
 
     st.markdown("### 6.2 Circuito do Rotor")
     st.markdown(r"""
@@ -2490,28 +2490,16 @@ Motores de alto rendimento (classes IE2–IE4) atingem $\eta > 95\%$ na faixa 50
 
     col_eff1, col_eff2, col_eff3 = st.columns(3)
     with col_eff1:
-        st.markdown("**Motor** ($0 < s < 1$)
-
-"
-                    r"$\eta = P_{out}/P_{in} < 1$" "
-
-"
+        st.markdown("**Motor** ($0 < s < 1$)\n\n"
+                    r"$\eta = P_{out}/P_{in} < 1$" "\n\n"
                     "Potência elétrica → mecânica.")
     with col_eff2:
-        st.markdown("**Gerador** ($s < 0$)
-
-"
-                    r"$\eta = P_{out}/P_{in} < 1$" "
-
-"
+        st.markdown("**Gerador** ($s < 0$)\n\n"
+                    r"$\eta = P_{out}/P_{in} < 1$" "\n\n"
                     "Potência mecânica → elétrica.")
     with col_eff3:
-        st.markdown("**Frenagem** ($s > 1$)
-
-"
-                    r"$\eta = 0$" "
-
-"
+        st.markdown("**Frenagem** ($s > 1$)\n\n"
+                    r"$\eta = 0$" "\n\n"
                     "Toda energia dissipada no rotor.")
 
     show_plot(fig_eficiencia_curva(), key="fig_eta")
