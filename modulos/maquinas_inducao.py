@@ -1636,70 +1636,86 @@ def run():
         return fig
 
     def fig_partida_compensadora():
-        """Esquema do autotransformador — matplotlib, sem sobreposição."""
-        fig, ax = plt.subplots(figsize=(7.5, 4.5))
+        """Esquema do autotransformador — sem sobreposições, espaçamento adequado."""
+        fig, ax = plt.subplots(figsize=(11, 4.2))
         fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
-        ax.set_xlim(0, 10); ax.set_ylim(-1.0, 8.5)
+        ax.set_xlim(0, 14); ax.set_ylim(-1.8, 7.0)
 
-        def bloco(ax, cx, cy, w, h, txt, cor, fs=9.5):
+        def bloco(ax, cx, cy, w, h, txt, cor, fs=10):
             ax.add_patch(mpatches.FancyBboxPatch(
                 (cx - w/2, cy - h/2), w, h,
-                boxstyle="round,pad=0.1", fc="#f0f4ff", ec=cor, lw=1.8))
+                boxstyle="round,pad=0.12", fc="#f0f4ff", ec=cor, lw=2.0))
             ax.text(cx, cy, txt, ha="center", va="center",
                     fontsize=fs, color=TX, fontweight="bold")
 
-        def seta(ax, x1, y1, x2, y2, cor=TX):
+        def seta(ax, x1, y1, x2, y2, cor=TX, lw=1.8):
             ax.annotate("", xy=(x2, y2), xytext=(x1, y1),
                         arrowprops=dict(arrowstyle="-|>", color=cor,
-                                        lw=1.8, mutation_scale=14))
+                                        lw=lw, mutation_scale=15))
 
-        # ── Rede ─────────────────────────────────────────────────────────────
-        for i, c in enumerate([AZ, VD, LR]):
-            y = 6.5 - i * 0.6
-            ax.plot([0.4, 1.6], [y, y], color=c, lw=2.0)
-            ax.text(0.1, y, f"L{i+1}", fontsize=9, color=c,
-                    fontweight="bold", va="center")
+        # ── Rede (esquerda) ───────────────────────────────────────────────────
+        for i, (lbl, cor) in enumerate(
+                [("L1", AZ), ("L2", VD), ("L3", LR)]):
+            y = 5.2 - i * 0.7
+            ax.plot([0.3, 1.5], [y, y], color=cor, lw=2.2)
+            ax.text(0.0, y, lbl, fontsize=10, color=cor,
+                    fontweight="bold", va="center", ha="center")
 
-        # ── Autotransformador (bloco) ─────────────────────────────────────────
-        bloco(ax, 3.0, 5.8, 2.2, 3.2, "Auto-\ntransformador\n(3φ)", AZ, 9)
-        seta(ax, 1.6, 5.8, 3.0 - 1.1, 5.8)
+        # ── Autotransformador ─────────────────────────────────────────────────
+        AT_CX = 3.5; AT_CY = 4.2
+        bloco(ax, AT_CX, AT_CY, 3.2, 3.4, "Auto-\ntransformador\n(3φ)", AZ, 10)
+        # Seta rede → AT
+        seta(ax, 1.5, AT_CY, AT_CX - 1.6, AT_CY)
 
-        # Taps
-        for tap, ty, clr in [(0.50, 5.0, AZ), (0.65, 5.8, VD), (0.80, 6.6, LR)]:
-            ax.plot([4.1, 5.0], [ty, ty], color=clr, lw=1.5, ls="--")
-            ax.text(5.1, ty, f"{int(tap*100)}%", fontsize=9,
-                    color=clr, va="center")
+        # ── Taps (claramente fora do AT, à direita dele, antes do chaveador) ─
+        tap_x0 = AT_CX + 1.6   # saída do AT (borda direita)
+        tap_x1 = 7.2            # ponto médio dos taps
+        for tap, ty, clr in [
+                (0.80, 5.0, LR),
+                (0.65, 4.2, VD),
+                (0.50, 3.4, AZ)]:
+            # Linha horizontal do AT até o ponto de tap
+            ax.plot([tap_x0, tap_x1 - 0.3], [ty, ty],
+                    color=clr, lw=1.8, ls="--")
+            ax.text(tap_x1 - 0.25, ty + 0.22, f"{int(tap*100)}%",
+                    fontsize=9.5, color=clr, ha="center")
 
-        # ── Contator de partida ───────────────────────────────────────────────
-        bloco(ax, 6.5, 5.8, 1.6, 1.4, "K\n(fechado)", VD, 9)
-        seta(ax, 5.2, 5.8, 6.5 - 0.8, 5.8)
+        # Seta do tap selecionado (65%) → chaveador
+        seta(ax, tap_x1 - 0.3, 4.2, 8.0 - 0.8, 4.2, cor=VD)
+
+        # ── Chaveador / Contator ──────────────────────────────────────────────
+        CH_CX = 8.8; CH_CY = 4.2
+        bloco(ax, CH_CX, CH_CY, 1.8, 1.4, "Contator\n(K)", VD, 9.5)
+
+        # ── Tensão reduzida α·V₁ (label acima da seta) ───────────────────────
+        seta(ax, CH_CX + 0.9, CH_CY, 11.0 - 0.9, CH_CY)
+        ax.text(10.0, CH_CY + 0.50, "α·V₁",
+                fontsize=12, color=VM, ha="center", fontweight="bold")
 
         # ── Motor ─────────────────────────────────────────────────────────────
-        ax.add_patch(mpatches.Circle(
-            (8.8, 5.8), 0.85, fc="#dce4f0", ec=TX, lw=1.8))
-        ax.text(8.8, 5.8, "MIT", ha="center", va="center",
-                fontsize=10.5, fontweight="bold", color=TX)
-        seta(ax, 7.3, 5.8, 7.95, 5.8)
+        ax.add_patch(mpatches.Ellipse(
+            (11.8, CH_CY), 1.6, 1.6, fc="#dce4f0", ec=TX, lw=2.0))
+        ax.text(11.8, CH_CY, "MIT", ha="center", va="center",
+                fontsize=11, fontweight="bold", color=TX)
 
-        # Tensão reduzida
-        ax.text(7.9, 6.5, "α·V₁",
-                fontsize=11, color=VM, ha="center", fontweight="bold")
-        ax.annotate("", xy=(7.9, 5.85), xytext=(7.9, 6.35),
-                    arrowprops=dict(arrowstyle="-|>", color=VM, lw=1.5))
-
-        # ── Fórmulas ──────────────────────────────────────────────────────────
-        ax.text(5.0, 3.5,
+        # ── Fórmulas (caixa separada abaixo, alinhada ao centro do diagrama) ──
+        fx = 7.0; fy_top = 2.0
+        ax.add_patch(mpatches.FancyBboxPatch(
+            (3.5, -1.4), 7.0, 3.2,
+            boxstyle="round,pad=0.2", fc="white",
+            ec=CZ, lw=1.2, ls="--", alpha=0.85))
+        ax.text(fx, fy_top - 0.1,
                 r"$I_{linha} = \alpha^2 \cdot I_{DOL}$",
-                ha="center", fontsize=11, color=TX)
-        ax.text(5.0, 2.7,
+                ha="center", fontsize=12, color=TX)
+        ax.text(fx, fy_top - 0.95,
                 r"$T_{partida} = \alpha^2 \cdot T_{DOL}$",
-                ha="center", fontsize=11, color=TX)
-        ax.text(5.0, 2.0,
+                ha="center", fontsize=12, color=TX)
+        ax.text(fx, fy_top - 1.85,
                 r"$\alpha \in \{0{,}50\ ;\ 0{,}65\ ;\ 0{,}80\}$",
-                ha="center", fontsize=10, color=CZ, style="italic")
+                ha="center", fontsize=10.5, color=CZ, style="italic")
 
         ax.set_title("Partida com Autotransformador (Compensadora)",
-                     fontsize=12, fontweight="bold", color=TX, pad=8)
+                     fontsize=13, fontweight="bold", color=TX, pad=10)
         fig.tight_layout()
         return fig
 
@@ -1751,17 +1767,17 @@ def run():
         return fig
 
     def fig_controle_tensao_terminal():
-        """Família T×n para diferentes tensões terminais — slide 16 PPTX-03."""
+        """Família T×n para diferentes tensões terminais — eixo y limitado a 200 N·m."""
         V1_nom, R1, X1, R2, X2, Xm = 127.0, 0.5, 1.0, 0.4, 1.0, 50.0
-        ns = 1800.0; ws = ns * 2*np.pi/60
+        ns = 1800.0; ws = ns * 2 * np.pi / 60
         s_r = np.linspace(1e-3, 1.0, 500)
-        n_r = ns*(1-s_r)
+        n_r = ns * (1 - s_r)
 
         def T_fn(s, V1):
-            Z2 = R2/s + 1j*X2
-            Zeq = (1j*Xm*Z2)/(1j*Xm+Z2)
-            I2 = (V1/(R1+1j*X1+Zeq))*Zeq/Z2
-            return 3*abs(I2)**2*(R2/s)/ws
+            Z2  = R2/s + 1j*X2
+            Zeq = (1j*Xm * Z2) / (1j*Xm + Z2)
+            I2  = (V1 / (R1 + 1j*X1 + Zeq)) * Zeq / Z2
+            return 3 * abs(I2)**2 * (R2/s) / ws
 
         fracs = [1.0, 0.85, 0.70, 0.55]
         cores = [AZ, VD, LR, VM]
@@ -1769,36 +1785,40 @@ def run():
         for frac, cor in zip(fracs, cores):
             V1 = frac * V1_nom
             T_v = np.array([T_fn(s, V1) for s in s_r])
-            hover = [f"V={frac*100:.0f}%V_nom<br>n={ni:.0f} rpm<br>T={ti:.2f} N·m"
-                     for ni,ti in zip(n_r, T_v)]
-            fig.add_trace(go.Scatter(x=n_r, y=T_v, mode="lines",
-                line=dict(color=cor, width=2.8),
+            hover = [f"V₁={frac*100:.0f}%V_nom<br>n={ni:.0f} rpm<br>T={ti:.2f} N·m"
+                     for ni, ti in zip(n_r, T_v)]
+            fig.add_trace(go.Scatter(
+                x=n_r, y=T_v, mode="lines",
+                line=dict(color=cor, width=3.0),
                 name=f"V₁ = {frac*100:.0f}% V_nom",
                 hovertext=hover, hoverinfo="text"))
 
-        # Carga hiperbólica constante
-        T_carga = 15.0 / (n_r + 10) * ns * 0.55
-        fig.add_trace(go.Scatter(x=n_r, y=T_carga, mode="lines",
+        # Curva de carga (constante — ventilador simplificado, clipada ao range)
+        T_carga = np.clip(0.9e-4 * n_r**2, 0, 200)
+        fig.add_trace(go.Scatter(
+            x=n_r, y=T_carga, mode="lines",
             line=dict(color=CZ, width=1.8, dash="dot"),
-            name="Conjugado da carga"))
+            name="Conjugado da carga (ventilador  ∝ n²)"))
+
         fig.add_annotation(x=0.50, y=1.06, xref="paper", yref="paper",
-            text="<i>T ∝ V² — redução de tensão desloca o ponto de operação</i>",
+            text="<i>T ∝ V₁²  —  redução de tensão desloca o ponto de operação para maior s</i>",
             showarrow=False, font=dict(size=12, color=CZ),
-            bgcolor="rgba(255,255,255,0.80)", borderpad=5)
+            bgcolor="rgba(255,255,255,0.85)", borderpad=5)
         fig.add_vline(x=ns, line=dict(color=AZ, width=1.5, dash="dash"))
-        fig.add_hline(y=0,  line=dict(color=CZ, width=0.8))
+
         fig.update_layout(
             title=dict(text="Controle por Tensão Terminal — T×n para Diferentes V₁",
                        font=dict(size=16, color=TX)),
             xaxis=dict(title=dict(text="Velocidade n (rpm)", font=dict(size=14, color=TX)),
-                       tickfont=dict(size=13), range=[-60, ns+120],
-                       gridcolor="rgba(128,128,128,.18)"),
+                       tickfont=dict(size=13), range=[-40, ns + 100],
+                       gridcolor="rgba(128,128,128,.15)"),
             yaxis=dict(title=dict(text="Torque T (N·m)", font=dict(size=14, color=TX)),
                        tickfont=dict(size=13),
-                       gridcolor="rgba(128,128,128,.18)"),
+                       range=[0, 200],
+                       gridcolor="rgba(128,128,128,.15)"),
             legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)",
-                        orientation="h", y=-0.22),
-            height=440, margin=dict(l=75, r=30, t=60, b=100),
+                        orientation="h", y=-0.24),
+            height=460, margin=dict(l=75, r=30, t=65, b=110),
         )
         return fig
 
@@ -1865,84 +1885,100 @@ def run():
         return fig
 
     def fig_malha_fechada_velocidade():
-        """Diagrama de blocos do controle em malha fechada de velocidade."""
-        fig, ax = plt.subplots(figsize=(12, 4.0))
+        """Diagrama de blocos — controle em malha fechada de velocidade.
+        Somador: círculo sem texto interno.
+        Todos os conectores tocam exatamente nas bordas dos blocos.
+        Realimentação passa por baixo, fora dos blocos.
+        """
+        W, H_FIG = 16.0, 5.0
+        fig, ax = plt.subplots(figsize=(W, H_FIG))
         fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
-        ax.set_xlim(0, 13); ax.set_ylim(-1.2, 3.8)
+        ax.set_xlim(0, W); ax.set_ylim(-1.8, H_FIG - 0.5)
 
-        # ── Blocos: (centro_x, centro_y, largura, altura, texto, cor) ──────
-        BLOCO = [
-            (1.2,  1.8, 1.8, 1.2, "$n^*$\nRef.",        CZ),
-            (4.0,  1.8, 2.6, 1.4, "Controlador\nPI/PID", AZ),
-            (7.0,  1.8, 2.4, 1.4, "Inversor\n(VFD)",     VD),
-            (10.2, 1.8, 2.0, 1.4, "MIT",                  LR),
-        ]
-        for cx, cy, w, h, txt, cor in BLOCO:
+        # ── Geometria: todos os valores em coordenadas do eixo ───────────────
+        # Linha central
+        CY = 2.8
+        # Blocos: (label, cx, half-width, half-height, cor_borda)
+        R   = 0.30   # raio do somador
+        REF   = (1.0,  1.1, 0.80, CZ, "$n^*$\nRef.")
+        SUM_CX = 3.0               # centro do somador
+        CTRL  = (5.4,  1.5, 0.75, AZ, "Controlador\nPI/PID")
+        INV   = (8.6,  1.5, 0.75, VD, "Inversor\n(VFD)")
+        MIT   = (11.8, 1.3, 0.75, LR, "MIT")
+
+        def draw_box(cx, cw, ch, cor, txt):
             ax.add_patch(mpatches.FancyBboxPatch(
-                (cx - w/2, cy - h/2), w, h,
-                boxstyle="round,pad=0.1",
+                (cx - cw, CY - ch), 2*cw, 2*ch,
+                boxstyle="round,pad=0.10",
                 fc="white", ec=cor, lw=2.2, zorder=3))
-            ax.text(cx, cy, txt, ha="center", va="center",
+            ax.text(cx, CY, txt, ha="center", va="center",
                     fontsize=10, color=TX, zorder=4)
 
-        # ── Somador (círculo) ────────────────────────────────────────────────
-        SUM_X, SUM_Y = 2.4, 1.8
+        def arrow(x1, y1, x2, y2, cor=TX, lw=1.8):
+            ax.annotate("",
+                xy=(x2, y2), xytext=(x1, y1),
+                arrowprops=dict(
+                    arrowstyle="-|>",
+                    color=cor, lw=lw, mutation_scale=16),
+                zorder=5)
+
+        # ── Blocos ────────────────────────────────────────────────────────────
+        # Referência
+        draw_box(*REF[:5])
+        # Controlador, Inversor, MIT
+        for (cx, cw, ch, cor, txt) in [CTRL, INV, MIT]:
+            draw_box(cx, cw, ch, cor, txt)
+
+        # ── Somador (círculo sem texto interno) ───────────────────────────────
         ax.add_patch(mpatches.Circle(
-            (SUM_X, SUM_Y), 0.28,
-            fc="white", ec=TX, lw=2.0, zorder=5))
-        ax.text(SUM_X, SUM_Y, "Σ", ha="center", va="center",
-                fontsize=13, color=TX, zorder=6)
-        ax.text(SUM_X - 0.02, SUM_Y + 0.33, "+", fontsize=10,
-                color=TX, ha="center", va="center")
-        ax.text(SUM_X - 0.32, SUM_Y - 0.22, "−", fontsize=12,
-                color=VM, ha="center", va="center", fontweight="bold")
+            (SUM_CX, CY), R,
+            fc="white", ec=TX, lw=2.2, zorder=5))
+        # Sinais +/− como texto próximo ao círculo
+        ax.text(SUM_CX,       CY + R + 0.16, "+", fontsize=12,
+                color=TX, ha="center", va="bottom", zorder=6)
+        ax.text(SUM_CX - R - 0.16, CY,       "−", fontsize=13,
+                color=VM, ha="right",  va="center", fontweight="bold", zorder=6)
 
-        # ── Setas do caminho direto ──────────────────────────────────────────
-        # ref → Σ
-        ax.annotate("", xy=(SUM_X - 0.28, SUM_Y),
-                    xytext=(1.2 + 0.9, SUM_Y),
-                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.8))
-        # Σ → Controlador
-        ax.annotate("", xy=(4.0 - 1.3, SUM_Y),
-                    xytext=(SUM_X + 0.28, SUM_Y),
-                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.8))
+        # ── Conectores do caminho direto ──────────────────────────────────────
+        # Ref → Somador (borda direita da ref até borda esquerda do círculo)
+        arrow(REF[0] + REF[1], CY,  SUM_CX - R, CY)
+        # Somador → Controlador (borda direita do círculo até borda esquerda do bloco)
+        arrow(SUM_CX + R, CY,  CTRL[0] - CTRL[1], CY)
         # Controlador → Inversor
-        ax.annotate("", xy=(7.0 - 1.2, SUM_Y),
-                    xytext=(4.0 + 1.3, SUM_Y),
-                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.8))
+        arrow(CTRL[0] + CTRL[1], CY,  INV[0] - INV[1], CY)
         # Inversor → MIT
-        ax.annotate("", xy=(10.2 - 1.0, SUM_Y),
-                    xytext=(7.0 + 1.2, SUM_Y),
-                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.8))
-        # MIT → saída n
-        ax.annotate("", xy=(12.2, SUM_Y),
-                    xytext=(10.2 + 1.0, SUM_Y),
-                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.8))
-        ax.text(12.4, SUM_Y, "$n$", fontsize=12,
-                color=TX, fontweight="bold", va="center")
+        arrow(INV[0] + INV[1], CY,  MIT[0] - MIT[1], CY)
+        # MIT → Saída n
+        OUT_X = MIT[0] + MIT[1] + 0.8
+        arrow(MIT[0] + MIT[1], CY,  OUT_X, CY)
+        ax.text(OUT_X + 0.15, CY, "$n$",
+                fontsize=13, color=TX, fontweight="bold", va="center")
 
-        # Sinais internos
-        ax.text(5.5, SUM_Y + 0.50, "$f,\\,V_1$", fontsize=9.5,
-                color=VD, ha="center")
-        ax.text(8.6, SUM_Y + 0.50, "$i_{abc}$", fontsize=9.5,
-                color=LR, ha="center")
-        ax.text(2.85, SUM_Y + 0.50, "$e = n^* - n$", fontsize=9,
-                color=AZ, ha="center")
+        # ── Labels de sinais nos conectores ──────────────────────────────────
+        def sig_label(x, txt, cor):
+            ax.text(x, CY + 0.55, txt,
+                    fontsize=9.5, color=cor, ha="center", style="italic")
 
-        # ── Realimentação: n → Σ (FORA dos blocos, por baixo) ───────────────
-        FB_Y = 0.45   # y da linha de realimentação (abaixo de todos os blocos)
-        # Ponto de coleta (após MIT)
-        ax.plot([12.2, 12.2], [SUM_Y, FB_Y], color=VM, lw=1.8)
-        # Linha horizontal até o somador
-        ax.plot([12.2, SUM_X],  [FB_Y, FB_Y], color=VM, lw=1.8)
-        # Sobe até o somador
-        ax.annotate("", xy=(SUM_X, SUM_Y - 0.28),
-                    xytext=(SUM_X, FB_Y),
-                    arrowprops=dict(arrowstyle="-|>", color=VM, lw=1.8))
-        # Label de realimentação
-        ax.text(7.0, FB_Y - 0.38,
+        sig_label((SUM_CX + R + CTRL[0] - CTRL[1]) / 2, "e = n* − n", AZ)
+        sig_label((CTRL[0] + CTRL[1] + INV[0] - INV[1]) / 2, "f, V₁", VD)
+        sig_label((INV[0] + INV[1] + MIT[0] - MIT[1]) / 2, "i_abc", LR)
+
+        # ── Realimentação: parte da borda direita do MIT, vai por baixo ───────
+        FB_Y  = 0.25   # y da linha de realimentação (bem abaixo dos blocos)
+        COL_X = OUT_X  # coluna de coleta (à direita do MIT)
+        SUM_BX = SUM_CX  # x de retorno ao somador (entrada inferior do círculo)
+
+        # Desce da saída
+        ax.plot([COL_X, COL_X], [CY, FB_Y], color=VM, lw=1.8, zorder=4)
+        # Linha horizontal de retorno
+        ax.plot([COL_X, SUM_BX], [FB_Y, FB_Y], color=VM, lw=1.8, zorder=4)
+        # Sobe até a borda inferior do círculo
+        arrow(SUM_BX, FB_Y,  SUM_BX, CY - R,  cor=VM, lw=1.8)
+
+        # Label da realimentação
+        ax.text((COL_X + SUM_BX) / 2, FB_Y - 0.45,
                 "Sensor de velocidade  (encoder / tacômetro)",
-                ha="center", fontsize=9.5, color=VM, style="italic")
+                ha="center", fontsize=10, color=VM, style="italic")
 
         ax.set_title("Controle em Malha Fechada de Velocidade",
                      fontsize=13, fontweight="bold", color=TX, pad=10)
