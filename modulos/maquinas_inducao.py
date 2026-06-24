@@ -878,10 +878,10 @@ def run():
             elm.Line().right(d.unit * 0.28)
             d.pop()
 
-            # ── Terminais E1 abertos à direita (nó A → saída) ─────────────
-            elm.Line().right(d.unit * 0.5).dot(open=True)
+            # ── Terminais E1 afastados à direita (evita sobreposição com jXm) ──
+            elm.Line().right(d.unit * 1.2).dot(open=True)
             elm.Gap().down(d.unit * 1.75).label(("−", "$E_1$", "+")).dot(open=True)
-            elm.Line().left(d.unit * 0.5)
+            elm.Line().left(d.unit * 1.2)
 
             # ── Fio inferior: fecha o circuito voltando a V1− ───────────────
             elm.Line().toy(V1n.end.y)
@@ -1501,156 +1501,253 @@ def run():
         return fig
 
     def fig_partida_estrela_triangulo():
-        """Diagrama de ligação Y/Δ e transitório de corrente."""
-        fig, axes = plt.subplots(1, 2, figsize=(10, 4.2))
+        """Esquema Y/Δ: diagrama de ligação correto (matplotlib)."""
+        fig, axes = plt.subplots(1, 2, figsize=(8.5, 4.5))
         fig.patch.set_alpha(0)
 
-        # ── Painel esquerdo: diagrama de ligação ────────────────────────────
-        ax0 = axes[0]; ax0.set_facecolor("none"); ax0.axis("off")
-        ax0.set_xlim(-0.5, 5.5); ax0.set_ylim(-0.5, 5.5)
+        for ax in axes:
+            ax.set_facecolor("none"); ax.axis("off")
 
-        # Ligação estrela (Y)
-        ax0.text(0.5, 5.2, "Ligação Y (partida)", fontsize=10,
-                 fontweight="bold", color=VD)
-        # Triângulo representativo
-        pts_Y = [(1.0, 2.0), (1.0, 4.5), (1.0, 3.25)]  # pontas das bobinas
-        for i, (bx, by) in enumerate([(1.0, 3.5), (1.0, 3.0), (1.0, 2.5)]):
+        # ── Painel esquerdo: Ligação Y ─────────────────────────────────────
+        ax0 = axes[0]
+        ax0.set_xlim(-3.5, 3.5); ax0.set_ylim(-4.0, 4.5)
+        ax0.set_title("Ligação Y  (partida)", fontsize=10.5,
+                      fontweight="bold", color=VD, pad=6)
+
+        # Barras de alimentação no topo (L1, L2, L3)
+        for i, (lbl, cor, xb) in enumerate(
+                [("L1", AZ, -1.8), ("L2", VD, 0.0), ("L3", LR, 1.8)]):
+            ax0.plot([xb, xb], [3.8, 3.0], color=cor, lw=2.2)
+            ax0.plot(xb, 3.8, "o", ms=8, color=cor)
+            ax0.text(xb, 4.2, lbl, ha="center", fontsize=10,
+                     color=cor, fontweight="bold")
+
+        # Três bobinas verticais em paralelo
+        for i, (xb, cor) in enumerate(
+                [(-1.8, AZ), (0.0, VD), (1.8, LR)]):
+            # Bobina = segmento com curvas (simula indutor)
             ax0.add_patch(mpatches.FancyBboxPatch(
-                (0.4, by - 0.18), 1.2, 0.36,
-                boxstyle="round,pad=0.05", fc=VD, ec=TX, lw=1.0, alpha=0.7))
-            ax0.text(1.0, by, f"B{i+1}", ha="center", fontsize=8,
-                     color="white", fontweight="bold")
-        # Neutro (estrela)
-        ax0.plot([1.0, 1.0], [2.32, 1.5], color=TX, lw=1.8)
-        ax0.plot(1.0, 1.5, "o", color=TX, ms=6)
-        ax0.text(1.0, 1.2, "N (estrela)", ha="center", fontsize=8, color=TX)
-        ax0.annotate("", xy=(1.6, 3.5), xytext=(2.8, 3.5),
-                     arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.5))
-        ax0.text(2.0, 3.8, "após\nts", ha="center", fontsize=8, color=CZ)
+                (xb - 0.35, -0.6), 0.70, 3.2,
+                boxstyle="round,pad=0.25",
+                fc=cor, ec=TX, lw=1.2, alpha=0.22))
+            # Fio superior da bobina → terminal L
+            ax0.plot([xb, xb], [3.0, 2.6], color=cor, lw=2.2)
+            # Fio inferior da bobina → nó estrela
+            ax0.plot([xb, xb], [-0.6, -1.4], color=TX, lw=2.0)
 
-        # Ligação triângulo (Δ)
-        ax0.text(3.3, 5.2, "Ligação Δ (regime)", fontsize=10,
-                 fontweight="bold", color=LR)
-        tri_x = [3.5, 5.0, 4.25]; tri_y = [2.0, 2.0, 4.5]
+        # Nó estrela (neutro)
+        ax0.plot([-1.8, 1.8], [-1.4, -1.4], color=TX, lw=2.0)
+        ax0.plot(0.0, -1.4, "o", ms=12, color=TX, zorder=5)
+        ax0.text(0.0, -2.0, "N  (neutro)", ha="center", fontsize=9.5, color=TX)
+        ax0.text(0.0, -2.7,
+                 r"$V_{fase} = V_L/\sqrt{3} \approx 58\%\,V_{nom}$",
+                 ha="center", fontsize=9, color=CZ, style="italic")
+
+        # ── Painel direito: Ligação Δ ───────────────────────────────────────
+        ax1 = axes[1]
+        ax1.set_xlim(-3.5, 3.5); ax1.set_ylim(-4.0, 4.5)
+        ax1.set_title("Ligação Δ  (regime)", fontsize=10.5,
+                      fontweight="bold", color=LR, pad=6)
+
+        # Vértices do triângulo (onde ficam os terminais L1, L2, L3)
+        Vx = [0.0, -2.2,  2.2]
+        Vy = [3.0, -1.5, -1.5]
+        cores_v = [AZ, VD, LR]
+        labels_v = ["L1", "L2", "L3"]
+
+        for xi, yi, cor, lbl in zip(Vx, Vy, cores_v, labels_v):
+            ax1.plot(xi, yi, "o", ms=10, color=cor, zorder=5)
+            off = (0, 0.55) if yi > 0 else (0, -0.65)
+            ax1.text(xi + off[0], yi + off[1], lbl,
+                     ha="center", fontsize=10, color=cor, fontweight="bold")
+
+        # Arestas do triângulo — cada aresta tem uma bobina no meio
         for i in range(3):
-            j = (i+1) % 3
-            mx = (tri_x[i]+tri_x[j])/2; my = (tri_y[i]+tri_y[j])/2
-            ax0.add_patch(mpatches.FancyBboxPatch(
-                (mx-0.5, my-0.18), 1.0, 0.36,
-                boxstyle="round,pad=0.05", fc=LR, ec=TX, lw=1.0, alpha=0.7))
-        for xi, yi, lbl in zip(tri_x, tri_y, ["L1","L2","L3"]):
-            ax0.plot(xi, yi, "o", color=TX, ms=6, zorder=5)
-            ax0.text(xi, yi-0.3, lbl, ha="center", fontsize=8, color=TX)
-        ax0.plot(tri_x + [tri_x[0]], tri_y + [tri_y[0]],
-                 color=LR, lw=1.5, alpha=0.7)
+            j = (i + 1) % 3
+            x1_, y1_ = Vx[i], Vy[i]
+            x2_, y2_ = Vx[j], Vy[j]
+            mx, my = (x1_ + x2_) / 2, (y1_ + y2_) / 2
+            # Linha da aresta
+            ax1.plot([x1_, x2_], [y1_, y2_], color=TX, lw=1.5, alpha=0.35)
+            # Bobina (retângulo) no centro da aresta
+            angle_deg = np.degrees(np.arctan2(y2_ - y1_, x2_ - x1_))
+            t = ax1.transData
+            w_box, h_box = 1.4, 0.45
+            ax1.add_patch(mpatches.FancyBboxPatch(
+                (mx - w_box/2, my - h_box/2), w_box, h_box,
+                boxstyle="round,pad=0.12",
+                fc=cores_v[i], ec=TX, lw=1.2,
+                alpha=0.30,
+                transform=(mpatches.transforms.Affine2D()
+                            .rotate_deg_around(mx, my, angle_deg) + t)))
+            ax1.text(mx, my, ["A-B","B-C","C-A"][i],
+                     ha="center", va="center", fontsize=8, color=TX)
 
-        # ── Painel direito: comparação de corrente ──────────────────────────
-        ax1 = axes[1]; ax1.set_facecolor("none")
-        ax1.spines[["top","right"]].set_visible(False)
-        ax1.spines[["bottom","left"]].set_color(CZ)
-        ax1.tick_params(colors=CZ)
+        ax1.text(0.0, -2.7,
+                 r"$V_{fase} = V_L$  (tensão nominal)",
+                 ha="center", fontsize=9, color=CZ, style="italic")
 
-        t = np.linspace(0, 6, 500); ts = 2.5  # tempo de comutação
-
-        # DOL
-        I_DOL = np.where(t < 0.01, 6.0, 1.0 + (6.0-1.0)*np.exp(-t/0.35))
-
-        # Y/Δ: fase Y (1/3 da corrente DOL), comuta para Δ em ts
-        I_Y = np.where(t < ts,
-                       1.0/3 + (6.0/3 - 1.0/3)*np.exp(-t/0.35),
-                       1.0 + 2.5*np.exp(-(t-ts)/0.5))
-
-        ax1.plot(t, I_DOL, color=VM, lw=2.0, ls="--", label="Direta (DOL)")
-        ax1.plot(t, I_Y,   color=VD, lw=2.5, ls="-",  label="Estrela-Triângulo")
-        ax1.axvline(ts, color=CZ, lw=0.8, ls=":", alpha=0.6)
-        ax1.text(ts+0.1, 5.5, "Y → Δ", fontsize=8, color=CZ)
-        ax1.axhline(1.0, color=CZ, lw=0.8, ls="--", alpha=0.5)
-        ax1.text(5.5, 1.1, "Inom", fontsize=8, color=CZ)
-        ax1.set_xlabel("Tempo (s)", fontsize=10, color=TX)
-        ax1.set_ylabel("Corrente (× Inom)", fontsize=10, color=TX)
-        ax1.set_title("Corrente de Linha", fontsize=10, fontweight="bold", color=TX)
-        ax1.legend(fontsize=9, framealpha=0.0)
-        ax1.grid(True, alpha=0.18, ls="--", color=CZ)
-        ax1.set_ylim(0, 7)
-
-        fig.suptitle("Partida Estrela-Triângulo (Y/Δ)",
-                     fontsize=12, fontweight="bold", color=TX, y=1.01)
+        fig.suptitle("Partida Estrela-Triângulo (Y/Δ) — Ligações",
+                     fontsize=12, fontweight="bold", color=TX, y=1.0)
         fig.tight_layout(pad=0.5)
         return fig
 
+    def fig_partida_yd_transitorio():
+        """Plotly: corrente de linha no transitório Y/Δ vs DOL."""
+        t = np.linspace(0, 6.5, 600)
+        ts = 2.8   # instante de comutação Y→Δ
+
+        I_DOL = 1.0 + (6.0 - 1.0) * np.exp(-t / 0.35)
+        I_YD  = np.where(t < ts,
+                         1.0/3 + (2.0 - 1.0/3) * np.exp(-t / 0.38),
+                         1.0 + 2.8 * np.exp(-(t - ts) / 0.55))
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=t, y=I_DOL, mode="lines",
+            line=dict(color=VM, width=2.5, dash="dash"),
+            name="Partida Direta (DOL)",
+            hovertemplate="t=%{x:.2f} s<br>I=%{y:.2f}×I_nom"))
+        fig.add_trace(go.Scatter(x=t, y=I_YD, mode="lines",
+            line=dict(color=VD, width=3.0),
+            name="Estrela-Triângulo (Y/Δ)",
+            hovertemplate="t=%{x:.2f} s<br>I=%{y:.2f}×I_nom"))
+
+        # Linha Y→Δ
+        fig.add_vline(x=ts, line=dict(color=CZ, width=1.2, dash="dot"))
+        fig.add_annotation(x=ts + 0.08, y=4.5, text="<b>Y→Δ</b>",
+                           showarrow=False, font=dict(size=12, color=CZ))
+        # Corrente nominal
+        fig.add_hline(y=1.0, line=dict(color=CZ, width=1.0, dash="dot"))
+        fig.add_annotation(x=6.2, y=1.08, text="$I_{nom}$",
+                           showarrow=False, font=dict(size=12, color=CZ))
+
+        fig.update_layout(
+            title=dict(text="Corrente de Linha — Y/Δ vs DOL",
+                       font=dict(size=16, color=TX)),
+            xaxis=dict(title=dict(text="Tempo (s)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13), range=[0, 6.5],
+                       gridcolor="rgba(128,128,128,.15)"),
+            yaxis=dict(title=dict(text="Corrente (× I_nom)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13), range=[0, 7.2],
+                       gridcolor="rgba(128,128,128,.15)"),
+            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)"),
+            height=400, margin=dict(l=75, r=30, t=60, b=70),
+        )
+        return fig
+
     def fig_partida_compensadora():
-        """Diagrama de partida por autotransformador (compensadora)."""
-        fig, axes = plt.subplots(1, 2, figsize=(10, 4.2))
-        fig.patch.set_alpha(0)
+        """Esquema do autotransformador — matplotlib, sem sobreposição."""
+        fig, ax = plt.subplots(figsize=(7.5, 4.5))
+        fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
+        ax.set_xlim(0, 10); ax.set_ylim(-1.0, 8.5)
 
-        # ── Painel esquerdo: esquema do autotransformador ───────────────────
-        ax0 = axes[0]; ax0.set_facecolor("none"); ax0.axis("off")
-        ax0.set_xlim(-0.5, 6.5); ax0.set_ylim(-1.0, 6.0)
+        def bloco(ax, cx, cy, w, h, txt, cor, fs=9.5):
+            ax.add_patch(mpatches.FancyBboxPatch(
+                (cx - w/2, cy - h/2), w, h,
+                boxstyle="round,pad=0.1", fc="#f0f4ff", ec=cor, lw=1.8))
+            ax.text(cx, cy, txt, ha="center", va="center",
+                    fontsize=fs, color=TX, fontweight="bold")
 
-        # Rede
-        ax0.text(0.3, 5.5, "Rede  $V_1$", ha="center", fontsize=9,
-                 fontweight="bold", color=TX)
-        ax0.plot([0.3, 0.3], [5.0, 4.0], color=TX, lw=2.0)
+        def seta(ax, x1, y1, x2, y2, cor=TX):
+            ax.annotate("", xy=(x2, y2), xytext=(x1, y1),
+                        arrowprops=dict(arrowstyle="-|>", color=cor,
+                                        lw=1.8, mutation_scale=14))
 
-        # Autotransformador
-        at_box = mpatches.FancyBboxPatch(
-            (-0.2, 1.8), 1.0, 2.0,
-            boxstyle="round,pad=0.1", fc="#e8edf5", ec=TX, lw=1.5)
-        ax0.add_patch(at_box)
-        ax0.text(0.3, 3.6, "Auto-\ntransf.", ha="center", fontsize=8, color=TX)
+        # ── Rede ─────────────────────────────────────────────────────────────
+        for i, c in enumerate([AZ, VD, LR]):
+            y = 6.5 - i * 0.6
+            ax.plot([0.4, 1.6], [y, y], color=c, lw=2.0)
+            ax.text(0.1, y, f"L{i+1}", fontsize=9, color=c,
+                    fontweight="bold", va="center")
+
+        # ── Autotransformador (bloco) ─────────────────────────────────────────
+        bloco(ax, 3.0, 5.8, 2.2, 3.2, "Auto-\ntransformador\n(3φ)", AZ, 9)
+        seta(ax, 1.6, 5.8, 3.0 - 1.1, 5.8)
 
         # Taps
-        for tap, y, lbl in [(0.50, 3.0, "50%"), (0.65, 2.6, "65%"), (0.80, 2.2, "80%")]:
-            ax0.plot([0.8, 2.0], [y, y], color=CZ, lw=1.0, ls="--", alpha=0.7)
-            ax0.text(2.1, y, lbl, fontsize=8, color=CZ, va="center")
+        for tap, ty, clr in [(0.50, 5.0, AZ), (0.65, 5.8, VD), (0.80, 6.6, LR)]:
+            ax.plot([4.1, 5.0], [ty, ty], color=clr, lw=1.5, ls="--")
+            ax.text(5.1, ty, f"{int(tap*100)}%", fontsize=9,
+                    color=clr, va="center")
 
-        # Motor
-        motor = mpatches.Circle((5.0, 2.8), 0.9, fc="#dce4f0", ec=TX, lw=1.5)
-        ax0.add_patch(motor)
-        ax0.text(5.0, 2.8, "MIT", ha="center", va="center",
-                 fontsize=10, fontweight="bold", color=TX)
-        ax0.plot([2.2, 4.1], [2.8, 2.8], color=TX, lw=1.8)
+        # ── Contator de partida ───────────────────────────────────────────────
+        bloco(ax, 6.5, 5.8, 1.6, 1.4, "K\n(fechado)", VD, 9)
+        seta(ax, 5.2, 5.8, 6.5 - 0.8, 5.8)
 
-        # Tensão reduzida label
-        ax0.annotate("α·V₁", xy=(3.2, 2.8), xytext=(3.2, 4.2),
-                     ha="center", fontsize=10, color=VM,
-                     arrowprops=dict(arrowstyle="-|>", color=VM, lw=1.2))
+        # ── Motor ─────────────────────────────────────────────────────────────
+        ax.add_patch(mpatches.Circle(
+            (8.8, 5.8), 0.85, fc="#dce4f0", ec=TX, lw=1.8))
+        ax.text(8.8, 5.8, "MIT", ha="center", va="center",
+                fontsize=10.5, fontweight="bold", color=TX)
+        seta(ax, 7.3, 5.8, 7.95, 5.8)
 
-        ax0.text(0.3, -0.5, "Corrente: α²×DOL  |  Torque: α²×DOL",
-                 ha="center", fontsize=8, color=CZ, style="italic")
+        # Tensão reduzida
+        ax.text(7.9, 6.5, "α·V₁",
+                fontsize=11, color=VM, ha="center", fontweight="bold")
+        ax.annotate("", xy=(7.9, 5.85), xytext=(7.9, 6.35),
+                    arrowprops=dict(arrowstyle="-|>", color=VM, lw=1.5))
 
-        # ── Painel direito: comparação corrente/torque por tap ─────────────
-        ax1 = axes[1]; ax1.set_facecolor("none")
-        ax1.spines[["top","right"]].set_visible(False)
-        ax1.spines[["bottom","left"]].set_color(CZ)
-        ax1.tick_params(colors=CZ)
+        # ── Fórmulas ──────────────────────────────────────────────────────────
+        ax.text(5.0, 3.5,
+                r"$I_{linha} = \alpha^2 \cdot I_{DOL}$",
+                ha="center", fontsize=11, color=TX)
+        ax.text(5.0, 2.7,
+                r"$T_{partida} = \alpha^2 \cdot T_{DOL}$",
+                ha="center", fontsize=11, color=TX)
+        ax.text(5.0, 2.0,
+                r"$\alpha \in \{0{,}50\ ;\ 0{,}65\ ;\ 0{,}80\}$",
+                ha="center", fontsize=10, color=CZ, style="italic")
 
-        alphas = [0.50, 0.65, 0.80, 1.0]
-        I_dol = 6.0; T_dol = 1.5
-        cores = [AZ, VD, LR, VM]
+        ax.set_title("Partida com Autotransformador (Compensadora)",
+                     fontsize=12, fontweight="bold", color=TX, pad=8)
+        fig.tight_layout()
+        return fig
+
+    def fig_partida_compensadora_barras():
+        """Plotly: corrente e torque × tap do autotransformador."""
+        alphas = [0.50, 0.65, 0.80, 1.00]
+        I_dol  = 6.0; T_dol = 1.50
+        labels = ["50%", "65%", "80%", "DOL (100%)"]
+        cores  = [AZ, VD, LR, VM]
+
         I_vals = [a**2 * I_dol for a in alphas]
         T_vals = [a**2 * T_dol for a in alphas]
-        labels = [f"α={a:.2f}" for a in alphas[:-1]] + ["DOL (α=1)"]
 
-        x = np.arange(len(alphas))
-        bars_I = ax1.bar(x - 0.2, I_vals, 0.35, color=cores,
-                          alpha=0.75, label="Corrente (×Inom)", edgecolor=TX, lw=0.8)
-        bars_T = ax1.bar(x + 0.2, T_vals, 0.35, color=cores,
-                          alpha=0.45, label="Torque (×Tnom)", edgecolor=TX,
-                          lw=0.8, hatch="//")
-
-        ax1.set_xticks(x)
-        ax1.set_xticklabels(labels, fontsize=9, color=TX)
-        ax1.set_ylabel("Valor relativo (p.u.)", fontsize=10, color=TX)
-        ax1.set_title("Corrente e Torque por Tap do AT",
-                      fontsize=10, fontweight="bold", color=TX)
-        ax1.legend(fontsize=8.5, framealpha=0.0)
-        ax1.grid(True, alpha=0.18, ls="--", color=CZ, axis="y")
-        ax1.axhline(1.0, color=CZ, lw=0.8, ls=":", alpha=0.6)
-
-        fig.suptitle("Partida com Autotransformador (Compensadora)",
-                     fontsize=12, fontweight="bold", color=TX, y=1.01)
-        fig.tight_layout(pad=0.5)
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=labels, y=I_vals,
+            name="Corrente (× I_nom)",
+            marker=dict(color=cores, opacity=0.85,
+                        line=dict(color=TX, width=1.2)),
+            text=[f"{v:.2f}" for v in I_vals],
+            textposition="outside",
+        ))
+        fig.add_trace(go.Bar(
+            x=labels, y=T_vals,
+            name="Torque (× T_nom)",
+            marker=dict(color=cores, opacity=0.42,
+                        pattern_shape="/",
+                        line=dict(color=TX, width=1.2)),
+            text=[f"{v:.2f}" for v in T_vals],
+            textposition="outside",
+        ))
+        fig.add_hline(y=1.0, line=dict(color=CZ, width=1.2, dash="dot"))
+        fig.update_layout(
+            title=dict(text="Corrente e Torque de Partida por Tap do AT",
+                       font=dict(size=16, color=TX)),
+            barmode="group",
+            xaxis=dict(title=dict(text="Tap do Autotransformador",
+                                  font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13),
+                       gridcolor="rgba(128,128,128,.15)"),
+            yaxis=dict(title=dict(text="Valor relativo (p.u.)",
+                                  font=dict(size=14, color=TX)),
+                       tickfont=dict(size=13), range=[0, 7.2],
+                       gridcolor="rgba(128,128,128,.15)"),
+            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)",
+                        orientation="h", y=-0.22),
+            height=400, margin=dict(l=75, r=30, t=60, b=90),
+        )
         return fig
 
     def fig_controle_tensao_terminal():
@@ -1768,60 +1865,87 @@ def run():
         return fig
 
     def fig_malha_fechada_velocidade():
-        """Diagrama de blocos do controle em malha fechada de velocidade — slide 18."""
-        fig, ax = plt.subplots(figsize=(10, 3.5))
+        """Diagrama de blocos do controle em malha fechada de velocidade."""
+        fig, ax = plt.subplots(figsize=(12, 4.0))
         fig.patch.set_alpha(0); ax.set_facecolor("none"); ax.axis("off")
-        ax.set_xlim(0, 12); ax.set_ylim(-1.5, 3.5)
+        ax.set_xlim(0, 13); ax.set_ylim(-1.2, 3.8)
 
-        # ── Blocos ──────────────────────────────────────────────────────────
-        blocos = [
-            (0.4,  1.0, 1.2, 1.6, "$n^*$ Referência",  CZ),
-            (2.2,  0.8, 1.6, 1.8, "Controlador PI/PID",   AZ),
-            (4.6,  0.8, 1.6, 1.8, "Inversor (VFD)",          VD),
-            (7.2,  0.8, 1.6, 1.8, "MIT",                      LR),
-            (9.6,  0.8, 1.4, 1.8, "Carga mecânica",          CZ),
+        # ── Blocos: (centro_x, centro_y, largura, altura, texto, cor) ──────
+        BLOCO = [
+            (1.2,  1.8, 1.8, 1.2, "$n^*$\nRef.",        CZ),
+            (4.0,  1.8, 2.6, 1.4, "Controlador\nPI/PID", AZ),
+            (7.0,  1.8, 2.4, 1.4, "Inversor\n(VFD)",     VD),
+            (10.2, 1.8, 2.0, 1.4, "MIT",                  LR),
         ]
-        for (x, y, w, h, lbl, cor) in blocos:
+        for cx, cy, w, h, txt, cor in BLOCO:
             ax.add_patch(mpatches.FancyBboxPatch(
-                (x, y), w, h, boxstyle="round,pad=0.08",
-                fc="#f0f4ff" if cor==CZ else "white", ec=cor, lw=1.8))
-            ax.text(x+w/2, y+h/2, lbl, ha="center", va="center",
-                    fontsize=8.5, color=TX)
+                (cx - w/2, cy - h/2), w, h,
+                boxstyle="round,pad=0.1",
+                fc="white", ec=cor, lw=2.2, zorder=3))
+            ax.text(cx, cy, txt, ha="center", va="center",
+                    fontsize=10, color=TX, zorder=4)
 
-        # ── Setas ───────────────────────────────────────────────────────────
-        conexoes = [
-            (1.6, 1.7, 2.2, 1.7),   # ref → somador
-            (3.8, 1.7, 4.6, 1.7),   # control → inv
-            (6.2, 1.7, 7.2, 1.7),   # inv → MIT
-            (8.8, 1.7, 9.6, 1.7),   # MIT → carga
-        ]
-        for x1,y1,x2,y2 in conexoes:
-            ax.annotate("", xy=(x2,y2), xytext=(x1,y1),
-                arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.5))
+        # ── Somador (círculo) ────────────────────────────────────────────────
+        SUM_X, SUM_Y = 2.4, 1.8
+        ax.add_patch(mpatches.Circle(
+            (SUM_X, SUM_Y), 0.28,
+            fc="white", ec=TX, lw=2.0, zorder=5))
+        ax.text(SUM_X, SUM_Y, "Σ", ha="center", va="center",
+                fontsize=13, color=TX, zorder=6)
+        ax.text(SUM_X - 0.02, SUM_Y + 0.33, "+", fontsize=10,
+                color=TX, ha="center", va="center")
+        ax.text(SUM_X - 0.32, SUM_Y - 0.22, "−", fontsize=12,
+                color=VM, ha="center", va="center", fontweight="bold")
 
-        # Sinais de controle
-        ax.text(4.2, 1.95, "$f$, $V$", fontsize=8, color=VD, ha="center")
-        ax.text(6.7, 1.95, "$i_{abc}$", fontsize=8, color=VD, ha="center")
+        # ── Setas do caminho direto ──────────────────────────────────────────
+        # ref → Σ
+        ax.annotate("", xy=(SUM_X - 0.28, SUM_Y),
+                    xytext=(1.2 + 0.9, SUM_Y),
+                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.8))
+        # Σ → Controlador
+        ax.annotate("", xy=(4.0 - 1.3, SUM_Y),
+                    xytext=(SUM_X + 0.28, SUM_Y),
+                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.8))
+        # Controlador → Inversor
+        ax.annotate("", xy=(7.0 - 1.2, SUM_Y),
+                    xytext=(4.0 + 1.3, SUM_Y),
+                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.8))
+        # Inversor → MIT
+        ax.annotate("", xy=(10.2 - 1.0, SUM_Y),
+                    xytext=(7.0 + 1.2, SUM_Y),
+                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.8))
+        # MIT → saída n
+        ax.annotate("", xy=(12.2, SUM_Y),
+                    xytext=(10.2 + 1.0, SUM_Y),
+                    arrowprops=dict(arrowstyle="-|>", color=TX, lw=1.8))
+        ax.text(12.4, SUM_Y, "$n$", fontsize=12,
+                color=TX, fontweight="bold", va="center")
 
-        # Realimentação (sensor de velocidade)
-        ax.plot([8.0, 8.0, 1.9, 1.9], [1.7, 0.4, 0.4, 0.82],
-                color=VM, lw=1.5)
-        ax.annotate("", xy=(1.9, 0.82), xytext=(1.9, 0.4),
-                    arrowprops=dict(arrowstyle="-|>", color=VM, lw=1.5))
-        ax.text(5.0, 0.15, "Realimentação de velocidade  $n$ (encoder/taco)",
-                ha="center", fontsize=8, color=VM, style="italic")
+        # Sinais internos
+        ax.text(5.5, SUM_Y + 0.50, "$f,\\,V_1$", fontsize=9.5,
+                color=VD, ha="center")
+        ax.text(8.6, SUM_Y + 0.50, "$i_{abc}$", fontsize=9.5,
+                color=LR, ha="center")
+        ax.text(2.85, SUM_Y + 0.50, "$e = n^* - n$", fontsize=9,
+                color=AZ, ha="center")
 
-        # Nó somador
-        ax.add_patch(mpatches.Circle((2.05, 1.7), 0.18, fc="white", ec=TX, lw=1.5, zorder=5))
-        ax.text(2.05, 1.7, "Σ", ha="center", va="center", fontsize=10, color=TX, zorder=6)
-        ax.text(2.05, 2.05, "+", fontsize=9, color=TX, ha="center")
-        ax.text(1.82, 1.50, "−", fontsize=9, color=VM, ha="center")
-
-        # Erro
-        ax.text(3.0, 2.1, "$e = n^* - n$", fontsize=8.5, color=AZ, ha="center")
+        # ── Realimentação: n → Σ (FORA dos blocos, por baixo) ───────────────
+        FB_Y = 0.45   # y da linha de realimentação (abaixo de todos os blocos)
+        # Ponto de coleta (após MIT)
+        ax.plot([12.2, 12.2], [SUM_Y, FB_Y], color=VM, lw=1.8)
+        # Linha horizontal até o somador
+        ax.plot([12.2, SUM_X],  [FB_Y, FB_Y], color=VM, lw=1.8)
+        # Sobe até o somador
+        ax.annotate("", xy=(SUM_X, SUM_Y - 0.28),
+                    xytext=(SUM_X, FB_Y),
+                    arrowprops=dict(arrowstyle="-|>", color=VM, lw=1.8))
+        # Label de realimentação
+        ax.text(7.0, FB_Y - 0.38,
+                "Sensor de velocidade  (encoder / tacômetro)",
+                ha="center", fontsize=9.5, color=VM, style="italic")
 
         ax.set_title("Controle em Malha Fechada de Velocidade",
-                     fontsize=12, fontweight="bold", color=TX, pad=8)
+                     fontsize=13, fontweight="bold", color=TX, pad=10)
         fig.tight_layout()
         return fig
 
@@ -2696,6 +2820,16 @@ $$\boxed{s = \frac{n_s - n}{n_s}} \qquad n = n_s(1 - s)$$
 | Frenagem (fase invertida) | $s > 1$ | $n < 0$ |
 """)
 
+    st.markdown(r"""
+Os três modos de operação da MIT segundo o escorregamento:
+
+| Modo | Faixa de $s$ | Velocidade $n$ | Descrição |
+|---|---|---|---|
+| **Motor** | $0 < s < 1$ | $0 < n < n_s$ | Potência elétrica → mecânica. Uso mais frequente. |
+| **Gerador** | $s < 0$ | $n > n_s$ | Potência mecânica → elétrica. Ex.: turbinas eólicas. |
+| **Frenagem** | $s > 1$ | $n < 0$ | Ambas as potências dissipadas no rotor. Frenagem rápida. |
+""")
+
     show_fig(fig_escorregamento_def(), width_frac=0.58)
     st.caption("**Figura 4.1** — Relação entre $n_s$, $n$ e o escorregamento $s$.")
 
@@ -2955,34 +3089,18 @@ torque-velocidade. Esta aproximação permite análise simplificada do ponto de 
                "aproximação linear T ≈ K·s (vermelho tracejado) para baixo s.")
 
     st.divider()
-
-    # ═══════════════════════════════════════════════════════════════════════
-    st.divider()
     # SEÇÃO 10 — MODOS
     # ═══════════════════════════════════════════════════════════════════════
     st.header("10. Modos de Operação e Curva T×n")
-    st.markdown(r"""
-A MIT pode operar em três regiões distintas segundo o escorregamento:
-
-### Motor ($0 < s < 1$)
-O estator é alimentado e o rotor gira na direção do campo com $n < n_s$.
-Potência elétrica entra pelo estator e é convertida em potência mecânica. Uso mais frequente.
-
-### Gerador ($s < 0$)
-O rotor é acionado mecanicamente com $n > n_s$. O fluxo relativo inverte,
-invertendo o sentido do torque — a máquina devolve potência à rede.
-Aplicação: turbinas eólicas conectadas diretamente à rede.
-
-### Frenagem ($s > 1$)
-O rotor gira no sentido oposto ao campo ($n < 0$, obtido pela inversão de fase).
-Tanto a potência elétrica quanto a mecânica são dissipadas como calor no rotor.
-Utilizado em frenagem rápida de cargas de alta inércia.
-
-""")
+    st.markdown(
+        "Os três modos de operação — **motor** ($0 < s < 1$), **gerador** ($s < 0$) "
+        "e **frenagem** ($s > 1$) — foram definidos na Seção 4. "
+        "A curva abaixo ilustra o torque eletromagnético nas três regiões."
+    )
 
     show_plot(fig_modos_operacao(), key="fig_10_modos")
-    st.caption("**Figura 10.1** — Curva $T \\times n$ nas três regiões: "
-               "motor (verde), gerador (azul) e frenagem (vermelho).")
+    st.caption("**Figura 10.1** — Curva $T \\times n$ nas três regiões de operação: "
+               "motor (verde, $0 < s < 1$), gerador (azul, $s < 0$) e frenagem (vermelho, $s > 1$).")
 
     st.divider()
 
@@ -3010,8 +3128,6 @@ a operação é instável — aumento de carga reduz $T_{em}$.
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════
-
-    st.divider()
     # SEÇÃO 11 — CORRENTE E FP
     # ═══════════════════════════════════════════════════════════════════════
     st.header("11. Corrente no Estator e Fator de Potência")
@@ -3096,8 +3212,6 @@ Motores de alto rendimento (classes IE2–IE4) atingem $\eta > 95\%$ na faixa 50
 
     # ═══════════════════════════════════════════════════════════════════════
 
-    st.divider()
-
     # SEÇÃO 13 — EFEITO R2
     # ═══════════════════════════════════════════════════════════════════════
     st.header("13. Efeito da Resistência do Rotor")
@@ -3148,8 +3262,6 @@ reatância de dispersão e menor a utilização da seção em alta frequência.
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════
-
-    st.divider()
     # SEÇÃO 14 — GAIOLA DUPLA
     # ═══════════════════════════════════════════════════════════════════════
     st.header("14. Gaiola de Esquilo Dupla")
@@ -3175,12 +3287,6 @@ a corrente concentra-se na superfície das barras, equivalente à gaiola externa
     show_plot(fig_gaiola_dupla(), key="fig_14_dupla")
     st.caption("**Figura 14.1** — Curvas $T \\times n$: gaiola dupla (verde), "
                "gaiola externa (vermelho), gaiola interna (azul) e simples de referência (cinza).")
-
-    st.divider()
-
-    # ═══════════════════════════════════════════════════════════════════════
-    # EXPLORADORES INTERATIVOS
-    # ═══════════════════════════════════════════════════════════════════════
 
     st.divider()
     # SEÇÃO 15 — NEMA
@@ -3233,8 +3339,6 @@ estabelecendo um compromisso padronizado entre torque, corrente e eficiência.
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════
-
-    st.divider()
     # SEÇÃO 16 — PARTIDA
     # ═══════════════════════════════════════════════════════════════════════
     st.header("16. Métodos de Partida")
@@ -3275,9 +3379,14 @@ segundo pico de corrente — a chave temporizadora deve ser ajustada com cuidado
 **Indicada para partida em vazio ou carga leve** (torque de partida reduzido 3×).
 """)
 
-    show_fig(fig_partida_estrela_triangulo(), width_frac=0.88)
-    st.caption("**Figura 16.2** — Esquema de ligação Y/Δ e comparação da corrente de linha "
-               "com a partida direta. Observar o segundo pico na comutação Y→Δ.")
+    show_fig(fig_partida_estrela_triangulo(), width_frac=0.75)
+    st.caption("**Figura 16.2** — Esquema das ligações Y (partida) e Δ (regime). "
+               "Na ligação Y, as três bobinas compartilham o neutro; na ligação Δ, "
+               "cada bobina recebe a tensão de linha completa.")
+
+    show_plot(fig_partida_yd_transitorio(), key="fig_16_yd_trans")
+    st.caption("**Figura 16.2b** — Corrente de linha no transitório Y/Δ vs DOL. "
+               "Observar o segundo pico na comutação Y→Δ e a redução inicial de corrente.")
 
     st.markdown("### Partida Compensadora (Autotransformador)")
     st.markdown(r"""
@@ -3294,15 +3403,18 @@ $$I_{linha} = α^2 \cdot I_{DOL} \qquad T_{partida} = α^2 \cdot T_{DOL}$$
 - **Aplicação**: motores de médio e grande porte (15 kW a vários MW).
 """)
 
-    show_fig(fig_partida_compensadora(), width_frac=0.88)
-    st.caption("**Figura 16.3** — Esquema do autotransformador com taps 50/65/80% e "
-               "comparação de corrente e torque de partida por nível de tensão.")
+    show_fig(fig_partida_compensadora(), width_frac=0.72)
+    st.caption("**Figura 16.3** — Esquema da partida compensadora: "
+               "rede → autotransformador (taps 50/65/80%) → motor. "
+               "A tensão reduzida α·V₁ limita corrente e torque por α².")
+
+    show_plot(fig_partida_compensadora_barras(), key="fig_16_comp_bar")
+    st.caption("**Figura 16.3b** — Corrente e torque de partida para cada tap do AT. "
+               "Em todos os casos, a redução é proporcional a α².")
 
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════
-
-    st.divider()
     # SEÇÃO 17 — CONTROLE VELOCIDADE
     # ═══════════════════════════════════════════════════════════════════════
     st.header("17. Controle de Velocidade")
@@ -3394,11 +3506,6 @@ Os pontos de operação formam uma linha quase linear sobre as curvas T×n da fa
     st.caption("**Figura 17.4** — Controle por escorregamento constante: os pontos de operação "
                "(linha tracejada) seguem o mesmo valor de $s$ em todas as frequências, "
                "otimizando eficiência e fator de potência.")
-
-    st.divider()
-
-
-    # ═══════════════════════════════════════════════════════════════════════
 
     st.divider()
 
