@@ -1872,22 +1872,23 @@ def run():
         return fig
 
     def fig_malha_fechada_velocidade():
-        """Diagrama de blocos em malha fechada — todas as linhas com início/fim nos blocos."""
-        # ── Coordinate constants ──────────────────────────────────────────────
-        CY  = 3.5    # y da linha de sinal principal
-        FBY = 1.2    # y da linha de realimentação
-        R   = 0.38   # raio do somador
-        BW  = 1.1    # meia-largura dos blocos
-        BH  = 0.7    # meia-altura dos blocos
+        """Diagrama de blocos em malha fechada.
+        n* como texto (sem bloco). Seta de saída longa para a realimentação descer após ela.
+        """
+        CY  = 3.5   # y da linha de sinal principal
+        FBY = 1.2   # y da linha de realimentação
+        R   = 0.38  # raio do somador
+        BW  = 1.1   # meia-largura dos blocos
+        BH  = 0.7   # meia-altura dos blocos
 
-        REF_CX  = 1.1
-        SUM_CX  = 3.5
-        CTRL_CX = 6.2
-        INV_CX  = 9.5
-        MIT_CX  = 12.8
-        OUT_X   = 14.4   # ponta da seta de saída / ponto de coleta da realimentação
+        REF_X   = 1.0    # posição x do texto n* (sem bloco)
+        SUM_CX  = 2.8
+        CTRL_CX = 5.8
+        INV_CX  = 9.0
+        MIT_CX  = 12.2
+        OUT_TIP = 15.0   # ponta da seta de saída; realimentação desce daqui
 
-        fig, ax = plt.subplots(figsize=(14, 5.5), facecolor='white')
+        fig, ax = plt.subplots(figsize=(14.5, 5.5), facecolor='white')
         ax.set_facecolor('white'); ax.axis('off')
         ax.set_xlim(0, 16); ax.set_ylim(0, 6)
 
@@ -1899,7 +1900,6 @@ def run():
                     fontsize=10.5, color=TX, zorder=4)
 
         def fwd(x1, x2, cor=TX):
-            """Seta horizontal no caminho direto (y=CY)."""
             ax.annotate("", xy=(x2, CY), xytext=(x1, CY),
                         arrowprops=dict(arrowstyle="-|>", color=cor,
                                         lw=2.0, mutation_scale=16), zorder=5)
@@ -1907,33 +1907,34 @@ def run():
         def seg(x1, y1, x2, y2, cor=TX, lw=2.0):
             ax.plot([x1, x2], [y1, y2], color=cor, lw=lw, zorder=4)
 
-        # ── Blocos ────────────────────────────────────────────────────────────
-        box(REF_CX,  BW, BH, "$n^*$\nRef.",        CZ)
-        box(CTRL_CX, BW, BH, "Controlador\nPI/PID", AZ)
-        box(INV_CX,  BW, BH, "Inversor\n(VFD)",     VD)
-        box(MIT_CX,  BW, BH, "MIT",                  LR)
+        # ── n* como texto com seta (sem bloco) ───────────────────────────────
+        ax.text(REF_X, CY, "$n^*$",
+                fontsize=14, color=TX, fontweight="bold",
+                ha="center", va="center", zorder=4)
+        fwd(REF_X + 0.25, SUM_CX - R)
 
-        # ── Somador: círculo sem texto interno ────────────────────────────────
+        # ── Somador (círculo, sem texto interno) ──────────────────────────────
         ax.add_patch(mpatches.Circle(
             (SUM_CX, CY), R, fc="white", ec=TX, lw=2.3, zorder=5))
-        # + acima do círculo
         ax.text(SUM_CX, CY + R + 0.13, "+",
                 fontsize=13, color=TX, ha="center", va="bottom",
                 fontweight="bold", zorder=6)
-        # − abaixo do círculo (ponto de chegada da realimentação)
         ax.text(SUM_CX, CY - R - 0.15, "−",
                 fontsize=15, color=VM, ha="center", va="top",
                 fontweight="bold", zorder=6)
 
-        # ── Setas do caminho direto ───────────────────────────────────────────
-        fwd(REF_CX + BW,    SUM_CX - R)       # REF → Σ
-        fwd(SUM_CX + R,     CTRL_CX - BW)     # Σ → CTRL
-        fwd(CTRL_CX + BW,   INV_CX - BW)      # CTRL → INV
-        fwd(INV_CX + BW,    MIT_CX - BW)      # INV → MIT
-        fwd(MIT_CX + BW,    OUT_X)             # MIT → saída
+        # ── Blocos ────────────────────────────────────────────────────────────
+        box(CTRL_CX, BW, BH, "Controlador\nPI/PID", AZ)
+        box(INV_CX,  BW, BH, "Inversor\n(VFD)",     VD)
+        box(MIT_CX,  BW, BH, "MIT",                  LR)
 
-        # Label de saída
-        ax.text(OUT_X + 0.25, CY, "$n$",
+        # ── Setas do caminho direto ───────────────────────────────────────────
+        fwd(SUM_CX + R,   CTRL_CX - BW)
+        fwd(CTRL_CX + BW, INV_CX - BW)
+        fwd(INV_CX + BW,  MIT_CX - BW)
+        fwd(MIT_CX + BW,  OUT_TIP)       # seta longa de saída
+
+        ax.text(OUT_TIP + 0.18, CY, "$n$",
                 fontsize=14, color=TX, fontweight="bold", va="center")
 
         # ── Labels dos sinais (acima dos conectores) ──────────────────────────
@@ -1945,16 +1946,14 @@ def run():
         sig((CTRL_CX + BW + INV_CX - BW) / 2, "$f,\\ V_1$", VD)
         sig((INV_CX + BW + MIT_CX - BW) / 2,  "$i_{abc}$",  LR)
 
-        # ── Realimentação (percorre por baixo dos blocos) ─────────────────────
-        seg(OUT_X,   CY,   OUT_X,   FBY,   cor=VM)   # desce
-        seg(OUT_X,   FBY,  SUM_CX,  FBY,   cor=VM)   # vai para a esquerda
-        # sobe até a borda inferior do círculo com seta
+        # ── Realimentação: desce de OUT_TIP, percorre por baixo ──────────────
+        seg(OUT_TIP, CY,   OUT_TIP, FBY,   cor=VM)
+        seg(OUT_TIP, FBY,  SUM_CX,  FBY,   cor=VM)
         ax.annotate("", xy=(SUM_CX, CY - R), xytext=(SUM_CX, FBY),
                     arrowprops=dict(arrowstyle="-|>", color=VM,
                                     lw=2.0, mutation_scale=16), zorder=5)
 
-        # Label da realimentação
-        ax.text((OUT_X + SUM_CX) / 2, FBY - 0.30,
+        ax.text((OUT_TIP + SUM_CX) / 2, FBY - 0.30,
                 "Sensor de velocidade  (encoder / tacômetro)",
                 ha="center", fontsize=10, color=VM, style="italic")
 
