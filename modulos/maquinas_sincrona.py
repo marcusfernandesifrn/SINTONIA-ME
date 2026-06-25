@@ -1,5 +1,5 @@
 """
-⚡ Máquinas Síncronas Polifásicas
+🌐 Máquinas Síncronas Polifásicas
 Disciplina: Conversão Eletromecânica de Energia I
 Curso: Engenharia de Energia
 Instituição: IFRN — Campus Natal-Central (CNAT)
@@ -248,65 +248,66 @@ def run():
         return fig
 
     def fig_geracao_tensao_mes():
-        """Matplotlib: esquema de geração de Ef por rotação de Φf."""
-        fig, ax = _mpl_base_off((7.5, 4.0))
-        ax.set_xlim(-1, 13); ax.set_ylim(-2.5, 3.2)
+        """Esquema de geração de Ef por rotação de Φf — sem sobreposições."""
+        fig, ax = plt.subplots(figsize=(12, 4.5), facecolor='white')
+        ax.set_facecolor('white'); ax.axis('off')
+        ax.set_xlim(0, 14); ax.set_ylim(0, 5)
 
-        # ── Rotor girando → fluxo Φf ──────────────────────────────────────────
-        ax.add_patch(mpatches.Ellipse((1.8, 0), 2.8, 2.8,
+        def arrow(x1, y1, x2, y2, cor, lw=2.2, ms=14):
+            ax.annotate("", xy=(x2, y2), xytext=(x1, y1),
+                        arrowprops=dict(arrowstyle="-|>", color=cor,
+                                        lw=lw, mutation_scale=ms))
+
+        # ── Rotor ─────────────────────────────────────────────────────────────
+        ax.add_patch(mpatches.Circle((2.2, 3.0), 1.3,
                                       fc="#dce8f8", ec=AZ, lw=1.8))
-        ax.text(1.8, 0.4, "Rotor", ha="center", fontsize=9.5, color=AZ)
-        ax.text(1.8, -0.3, r"(excitado por $I_f$)", ha="center",
+        ax.text(2.2, 3.20, "Rotor", ha="center",
+                fontsize=10, color=AZ, fontweight="bold")
+        ax.text(2.2, 2.70, r"(excitado por $I_f$)", ha="center",
                 fontsize=8.5, color=CZ, style="italic")
-        # Flecha de rotação
-        ang_arr = np.linspace(0.15, 1.55, 30)
-        ax.plot(1.8 + 1.6 * np.cos(ang_arr), 1.6 * np.sin(ang_arr),
-                color=LR, lw=2.0)
-        ax.annotate("", xy=(1.8 + 1.6 * math.cos(1.55),
-                             1.6 * math.sin(1.55)),
-                    xytext=(1.8 + 1.6 * math.cos(1.45),
-                            1.6 * math.sin(1.45)),
-                    arrowprops=dict(arrowstyle="-|>", color=LR, lw=2.0,
-                                   mutation_scale=14))
-        ax.text(3.7, 1.4, r"$n_s$", fontsize=12, color=LR)
 
-        # ── Fluxo Φf ──────────────────────────────────────────────────────────
-        ax.annotate("", xy=(4.5, 0), xytext=(2.3, 0),
-                    arrowprops=dict(arrowstyle="-|>", color=VM,
-                                   lw=2.2, mutation_scale=16))
-        ax.text(3.4, 0.28, r"$\Phi_f$", fontsize=13, color=VM,
-                fontweight="bold")
+        # Arco de rotação
+        arc = np.linspace(0.28, 1.42, 40)
+        ax.plot(2.2 + 1.7*np.cos(arc), 3.0 + 1.7*np.sin(arc), color=LR, lw=2.2)
+        ax.annotate("",
+            xy=(2.2 + 1.7*math.cos(1.42), 3.0 + 1.7*math.sin(1.42)),
+            xytext=(2.2 + 1.7*math.cos(1.32), 3.0 + 1.7*math.sin(1.32)),
+            arrowprops=dict(arrowstyle="-|>", color=LR, lw=2.2, mutation_scale=14))
+        ax.text(4.2, 4.50, r"$n_s$", fontsize=13, color=LR, fontweight="bold")
 
-        # ── Estator (bobina) ──────────────────────────────────────────────────
+        # Φf: de x=3.5 (borda rotor) até x=4.8 (antes do bloco estator em x=5.5)
+        arrow(3.5, 3.0, 4.8, 3.0, VM)
+        ax.text(4.15, 3.33, r"$\Phi_f$", fontsize=13, color=VM, fontweight="bold")
+
+        # ── Estator ────────────────────────────────────────────────────────────
         ax.add_patch(mpatches.FancyBboxPatch(
-            (4.8, -1.0), 2.4, 2.0,
-            boxstyle="round,pad=0.1", fc="#f0f4ff", ec=AZ, lw=1.8))
-        ax.text(6.0, 0.3, "Estator", ha="center", fontsize=9.5, color=AZ)
-        ax.text(6.0, -0.3, r"(armadura N voltas)", ha="center",
+            (5.5, 2.0), 2.0, 2.0,
+            boxstyle="round,pad=0.10", fc="#f0f4ff", ec=AZ, lw=1.8))
+        ax.text(6.5, 3.20, "Estator", ha="center",
+                fontsize=10, color=AZ, fontweight="bold")
+        ax.text(6.5, 2.72, r"(armadura, $N$ voltas)", ha="center",
                 fontsize=8.5, color=CZ, style="italic")
 
-        # ── Tensão induzida Ef ────────────────────────────────────────────────
-        ax.annotate("", xy=(9.8, 0), xytext=(7.2, 0),
-                    arrowprops=dict(arrowstyle="-|>", color=VD,
-                                   lw=2.2, mutation_scale=16))
-        ax.text(8.5, 0.30, r"$E_f$", fontsize=13, color=VD, fontweight="bold")
+        # Ef: de x=7.5 até x=9.2
+        arrow(7.5, 3.0, 9.2, 3.0, VD)
+        ax.text(8.35, 3.33, r"$E_f$", fontsize=13, color=VD, fontweight="bold")
 
-        # Sinal senoidal de Ef
-        t_ef = np.linspace(0, 2 * np.pi, 200)
-        ax.plot(10.0 + t_ef * 0.45, 1.2 * np.sin(t_ef),
-                color=VD, lw=2.2)
-        ax.text(11.5, -0.4, r"$f, 3\phi$", fontsize=10, color=VD)
+        # Sinal senoidal
+        t_s = np.linspace(0, 2*np.pi, 200)
+        ax.plot(9.5 + t_s * 0.60, 3.0 + 1.0*np.sin(t_s), color=VD, lw=2.2)
+        ax.text(12.2, 2.48, r"$f,\ 3\phi$", fontsize=11, color=VD)
 
-        # ── Equações ──────────────────────────────────────────────────────────
-        ax.text(0.0, -1.9,
-                r"$n_s = \dfrac{120\,f}{p}$",
-                fontsize=12, color=TX)
-        ax.text(4.5, -1.9,
+        # ── Equações (rodapé) ─────────────────────────────────────────────────
+        ax.text(1.2, 1.20, r"$n_s = \dfrac{120\,f}{p}$",
+                fontsize=13, color=TX, va="center")
+        ax.text(5.2, 1.20,
                 r"$E_f = 4{,}44\,f\,N\,\Phi_f\,K_w = k_f\,n_s\,\Phi_f$",
-                fontsize=12, color=TX)
+                fontsize=13, color=TX, va="center")
 
-        ax.set_title(r"Geração de Tensão — Rotação de $\Phi_f$ induz $E_f$ no Estator",
-                     fontsize=12, fontweight="bold", color=TX, pad=8)
+        ax.set_title(
+            r"Geração de Tensão — Rotação de $\Phi_f$ induz $E_f$ no Estator",
+            fontsize=13, fontweight="bold", color=TX, pad=10)
+        fig.tight_layout(pad=0.5)
         return fig
 
     def fig_curva_occ_mes():
@@ -416,7 +417,7 @@ def run():
             elm.Inductor().right().label(r"$jX_s$", loc="top")
             elm.Resistor().right().label(r"$R_a$")
             Ia_elm = elm.Line().right(d.unit * 0.5).dot(open=True)
-            elm.Gap().down(d.unit * 2.0).label(("+", r"$V_t$", "−"))
+            elm.Gap().down(d.unit * 2.0).label(("−", r"$V_t$", "+"))
 
             elm.CurrentLabel(top=True, length=1, ofst=0.3).at(Ia_elm).label(r"$I_a$")
 
@@ -447,7 +448,7 @@ def run():
             elm.Inductor().right().label(r"$jX_s$", loc="top")
             elm.Resistor().right().label(r"$R_a$")
             Ia_elm = elm.Line().right(d.unit * 0.5).dot(open=True)
-            elm.Gap().down(d.unit * 2.0).label(("+", r"$V_t$", "−"))
+            elm.Gap().down(d.unit * 2.0).label(("−", r"$V_t$", "+"))
 
             elm.CurrentLabel(top=True, length=1, ofst=0.3).at(Ia_elm).label(r"$I_a$").reverse()
 
@@ -463,53 +464,79 @@ def run():
 
     def fig_diagrama_fasorial_mes(Vt=1.0, Ef=1.2, delta_deg=25.0,
                                    Xs=1.0, Ra=0.0, modo="Gerador"):
-        """Matplotlib: diagrama fasorial cilíndrico (gerador ou motor)."""
-        fig, ax = plt.subplots(figsize=(5.5, 5.5))
-        fig.patch.set_alpha(0); ax.set_facecolor("none")
-        ax.set_aspect("equal"); ax.axis("off")
-        ax.set_xlim(-1.8, 2.2); ax.set_ylim(-1.8, 2.2)
-
+        """Plotly: diagrama fasorial cilíndrico interativo."""
         delta = math.radians(delta_deg)
-
-        # Tensões fasoriais
-        Vt_c = complex(Vt, 0)
-        Ef_c = complex(Ef * math.cos(delta), Ef * math.sin(delta))
+        Vt_c  = complex(Vt, 0)
+        Ef_c  = complex(Ef * math.cos(delta), Ef * math.sin(delta))
 
         if modo == "Gerador":
-            Ia_c = (Ef_c - Vt_c) / complex(Ra, Xs)
-            sinal = 1
+            Ia_c  = (Ef_c - Vt_c) / complex(Ra, Xs)
+            RaIa  =  Ra * Ia_c
+            jXsIa =  complex(0, Xs) * Ia_c
         else:
-            Ia_c = (Vt_c - Ef_c) / complex(Ra, Xs)
-            sinal = -1
+            Ia_c  = (Vt_c - Ef_c) / complex(Ra, Xs)
+            RaIa  = -Ra * Ia_c
+            jXsIa = -complex(0, Xs) * Ia_c
 
-        jXsIa = complex(0, Xs) * Ia_c * sinal
-        RaIa  = Ra * Ia_c * sinal
+        fig = go.Figure()
 
-        def quiver(ax, o, v, cor, lbl, lbl_off=(0.04, 0.06)):
-            ax.annotate("", xy=(o.real + v.real, o.imag + v.imag),
-                        xytext=(o.real, o.imag),
-                        arrowprops=dict(arrowstyle="-|>", color=cor,
-                                        lw=2.2, mutation_scale=14))
-            mx = o.real + v.real/2 + lbl_off[0]
-            my = o.imag + v.imag/2 + lbl_off[1]
-            ax.text(mx, my, lbl, fontsize=11, color=cor, fontweight="bold")
+        def fasor(ox, oy, dx, dy, cor, nome, dash="solid", width=2.8):
+            fig.add_trace(go.Scatter(
+                x=[ox, ox+dx], y=[oy, oy+dy], mode="lines",
+                line=dict(color=cor, width=width, dash=dash),
+                showlegend=True, name=nome,
+                hovertemplate=f"{nome}: {math.hypot(dx,dy):.3f} pu<extra></extra>"))
+            fig.add_annotation(
+                x=ox+dx, y=oy+dy, ax=ox, ay=oy,
+                xref="x", yref="y", axref="x", ayref="y",
+                arrowhead=2, arrowsize=1.4, arrowwidth=2.5,
+                arrowcolor=cor, showarrow=True, text="")
+            mx = ox + dx*0.55; my = oy + dy*0.55
+            fig.add_annotation(x=mx, y=my, text=f"<b>{nome}</b>",
+                               showarrow=False,
+                               font=dict(size=13, color=cor),
+                               bgcolor="rgba(255,255,255,0.78)", borderpad=2)
 
-        quiver(ax, 0+0j,  Vt_c, AZ,  r"$V_t$",  (-0.18, 0.06))
-        quiver(ax, 0+0j,  Ef_c, VM,  r"$E_f$",  (0.06, 0.05))
-        quiver(ax, 0+0j,  Ia_c * 0.9, VD, r"$I_a$", (0.06, -0.12))
-        quiver(ax, Vt_c,  RaIa, LR,  r"$R_a I_a$" if Ra > 0 else "", (0.04, 0.04))
-        quiver(ax, Vt_c + RaIa, jXsIa, CZ, r"$jX_s I_a$", (0.04, 0.04))
+        fasor(0, 0, Vt_c.real, Vt_c.imag, AZ, "Vₜ", width=3.0)
+        Ia_sc = Ia_c * 0.75
+        fasor(0, 0, Ia_sc.real, Ia_sc.imag, VD, "Iₐ", dash="dot", width=2.2)
+        fasor(0, 0, Ef_c.real, Ef_c.imag, VM, "Eƒ", width=3.0)
+        if abs(RaIa) > 0.01:
+            fasor(Vt_c.real, Vt_c.imag, RaIa.real, RaIa.imag, LR, "Rₐ·Iₐ", width=2.2)
+        origin = Vt_c + RaIa
+        fasor(origin.real, origin.imag, jXsIa.real, jXsIa.imag, CZ, "jXₛ·Iₐ", width=2.2)
 
-        # Ângulo δ
-        ang_arc = np.linspace(0, delta, 40)
-        ax.plot(0.25 * np.cos(ang_arc), 0.25 * np.sin(ang_arc),
-                color=TX, lw=1.2, ls="--")
-        ax.text(0.32, 0.06, r"$\delta$", fontsize=11, color=TX)
+        # Arco do ângulo δ
+        arc_r = 0.22
+        arc_t = np.linspace(0, delta, 30)
+        fig.add_trace(go.Scatter(
+            x=arc_r*np.cos(arc_t), y=arc_r*np.sin(arc_t),
+            mode="lines", line=dict(color=TX, width=1.5, dash="dash"),
+            showlegend=False, hoverinfo="skip"))
+        fig.add_annotation(
+            x=arc_r*math.cos(delta/2)*1.6, y=arc_r*math.sin(delta/2)*1.6,
+            text="<b>δ</b>", showarrow=False, font=dict(size=14, color=TX))
 
-        ax.set_title(f"Diagrama Fasorial — {modo} Cilíndrico  (δ = {delta_deg:.0f}°)",
-                     fontsize=11, fontweight="bold", color=TX, pad=8)
-        ax.axhline(0, color=CZ, lw=0.6, alpha=0.4)
-        ax.axvline(0, color=CZ, lw=0.6, alpha=0.4)
+        fig.add_hline(y=0, line=dict(color=CZ, width=0.8, dash="dot"))
+        fig.add_vline(x=0, line=dict(color=CZ, width=0.8, dash="dot"))
+
+        lim = max(Vt, Ef, abs(Ia_c)*0.75) * 1.35
+        fig.update_layout(
+            title=dict(
+                text=f"Diagrama Fasorial — {modo} Cilíndrico  (δ = {delta_deg:.0f}°)",
+                font=dict(size=16, color=TX)),
+            xaxis=dict(range=[-lim*0.4, lim*1.15], scaleanchor="y",
+                       showgrid=True, gridcolor="rgba(128,128,128,.15)",
+                       zeroline=False, tickfont=dict(size=12),
+                       title=dict(text="Real (pu)", font=dict(size=12, color=CZ))),
+            yaxis=dict(range=[-lim*0.55, lim*0.9],
+                       showgrid=True, gridcolor="rgba(128,128,128,.15)",
+                       zeroline=False, tickfont=dict(size=12),
+                       title=dict(text="Imaginário (pu)", font=dict(size=12, color=CZ))),
+            legend=dict(font=dict(size=12), bgcolor="rgba(255,255,255,0.85)",
+                        x=0.01, y=0.99, xanchor="left", yanchor="top"),
+            height=480, margin=dict(l=65, r=30, t=60, b=60),
+        )
         return fig
 
     def fig_occ_scc_mes():
@@ -709,9 +736,9 @@ def run():
     # ═══════════════════════════════════════════════════════════════════════════
     # CABEÇALHO
     # ═══════════════════════════════════════════════════════════════════════════
-    st.title("⚡ Máquinas Síncronas Polifásicas")
+    st.title("🌐 Máquinas Síncronas Polifásicas")
     st.caption(
-        "⚡ SINTONIA · Conversão Eletromecânica de Energia I · "
+        "🌐 SINTONIA · Conversão Eletromecânica de Energia I · "
         "👤 Marcus V A Fernandes · ✉️ marcus.fernandes@ifrn.edu.br"
     )
     st.markdown("---")
@@ -997,9 +1024,9 @@ O fator de potência afeta o posicionamento de $I_a$:
 - **Carga capacitiva (adiantada)**: $I_a$ adianta $V_t$ — $E_f < V_t$ pode ocorrer
 """)
 
-    show_fig(fig_diagrama_fasorial_mes(
+    show_plot(fig_diagrama_fasorial_mes(
         Vt=1.0, Ef=1.35, delta_deg=28, Xs=1.0, Ra=0.05, modo="Gerador"),
-        width_frac=0.50)
+        key="fig_7_1_static")
     st.caption(
         r"**Figura 7.1** — Diagrama fasorial do gerador síncrono cilíndrico: "
         r"$V_t$ (referência), $E_f$ adiantado por $\delta$, queda $R_a I_a$ e $jX_s I_a$. "
@@ -1104,10 +1131,13 @@ pois o fluxo de entreferro é pequeno).
 
 **Cálculo de $X_s$:**
 
-$$X_{s,nsat} = \frac{E_f|_{AGL,\;I_{f0}}/\sqrt{3}}{I_a|_{SCC,\;I_{f0}}} \qquad
-  X_{s,sat} = \frac{E_f|_{OCC,\;I_{f0}}/\sqrt{3}}{I_a|_{SCC,\;I_{f0}}}$$
+$$X_{s,nsat} = \frac{E_{f,AGL}(I_{f0})/\sqrt{3}}{I_{a,SCC}(I_{f0})} \qquad
+X_{s,sat} = \frac{E_{f,OCC}(I_{f0})/\sqrt{3}}{I_{a,SCC}(I_{f0})}$$
 
-Na prática, usa-se $X_{s,sat}$ (valor saturado) para análises mais realistas.
+onde $E_{f,AGL}$ é o valor lido na linha do entreferro (AGL) e $E_{f,OCC}$ é o valor
+lido na curva OCC — ambos para o mesmo ponto de corrente de campo $I_{f0}$.
+Na prática, usa-se $X_{s,sat}$ (valor saturado) para análises mais realistas,
+pois reflete a operação com núcleo saturado.
 """)
 
     show_plot(fig_occ_scc_mes(), key="fig_10_occ_scc")
@@ -1128,7 +1158,7 @@ Na prática, usa-se $X_{s,sat}$ (valor saturado) para análises mais realistas.
     tab1, tab2, tab3 = st.tabs([
         "📐 Diagrama Fasorial",
         "📊 Curva V (Ia × If)",
-        "⚡ Potência × Ângulo δ",
+        "📐 Potência × Ângulo δ",
     ])
 
     # ── Aba 1: Diagrama Fasorial ──────────────────────────────────────────────
@@ -1147,7 +1177,7 @@ Na prática, usa-se $X_{s,sat}$ (valor saturado) para análises mais realistas.
             fig_exp1 = fig_diagrama_fasorial_mes(
                 Vt=Vt_exp, Ef=Ef_exp, delta_deg=dl_exp,
                 Xs=Xs_exp, Ra=Ra_exp, modo=modo_exp)
-            show_fig(fig_exp1, width_frac=1.0)
+            show_plot(fig_exp1, key="exp_fasorial_dyn")
 
     # ── Aba 2: Curva V ────────────────────────────────────────────────────────
     with tab2:
@@ -1258,8 +1288,8 @@ Na prática, usa-se $X_{s,sat}$ (valor saturado) para análises mais realistas.
     # ── Rodapé ────────────────────────────────────────────────────────────────
     st.markdown("""
 <div style="text-align:center; color:#6b7280; font-size:0.82em; margin-top:2rem;">
-⚡ SINTONIA — Sistema Interativo de Apoio à Aprendizagem em Máquinas Elétricas<br>
+🌐 SINTONIA — Sistema Interativo de Apoio à Aprendizagem em Máquinas Elétricas<br>
 Prof. Marcus V A Fernandes · IFRN-CNAT · marcus.fernandes@ifrn.edu.br<br>
-Módulo 5 — Máquinas Síncronas Polifásicas · v1.0
+🌐 Módulo 5 — Máquinas Síncronas Polifásicas · v1.0
 </div>
 """, unsafe_allow_html=True)
