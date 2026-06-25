@@ -1636,93 +1636,70 @@ def run():
         return fig
 
     def fig_partida_compensadora():
-        """Esquema da partida compensadora — coordenadas absolutas, sem sobreposição."""
-        fig, ax = plt.subplots(figsize=(12, 5.5))
-        fig.patch.set_alpha(0)
-        ax.set_facecolor("none"); ax.axis("off")
-        ax.set_xlim(0, 13); ax.set_ylim(-0.8, 6.5)
+        """Esquema do autotransformador — coordenadas explícitas, sem sobreposições."""
+        fig, ax = plt.subplots(figsize=(12, 5), facecolor='white')
+        ax.set_facecolor('white'); ax.axis('off')
+        ax.set_xlim(0, 12); ax.set_ylim(0, 5)
 
-        # ── helpers ────────────────────────────────────────────────────────
-        def box(cx, cy, w, h, txt, ec, fc="#eef2fb", fs=10):
-            ax.add_patch(mpatches.FancyBboxPatch(
-                (cx - w/2, cy - h/2), w, h,
-                boxstyle="round,pad=0.12",
-                fc=fc, ec=ec, lw=2.0, zorder=3))
-            ax.text(cx, cy, txt, ha="center", va="center",
-                    fontsize=fs, color=TX, fontweight="bold", zorder=4)
-
-        def arr(x1, y1, x2, y2, cor=TX, lw=1.8):
-            ax.annotate("", xy=(x2, y2), xytext=(x1, y1),
+        # ── Rede ─────────────────────────────────────────────────────────────
+        for lbl, cor, y in [("L1", AZ, 3.5), ("L2", VD, 3.0), ("L3", LR, 2.5)]:
+            ax.annotate("", xy=(1.2, y), xytext=(0.5, y),
                         arrowprops=dict(arrowstyle="-|>", color=cor,
-                                        lw=lw, mutation_scale=14), zorder=5)
-
-        # ── Rede (três linhas de alimentação) ─────────────────────────────
-        rede_ys = [4.5, 3.8, 3.1]
-        rede_cors = [AZ, VD, LR]
-        for (y, cor, lbl) in zip(rede_ys, rede_cors, ["L1","L2","L3"]):
-            ax.plot([0.2, 1.5], [y, y], color=cor, lw=2.2)
-            ax.text(0.0, y, lbl, fontsize=10, color=cor,
+                                        lw=2.0, mutation_scale=14))
+            ax.text(0.2, y, lbl, fontsize=11, color=cor,
                     fontweight="bold", va="center", ha="center")
 
-        # ── Autotransformador ──────────────────────────────────────────────
-        AT_CX, AT_CY, AT_W, AT_H = 3.2, 3.8, 3.0, 3.2
-        box(AT_CX, AT_CY, AT_W, AT_H, "Auto-\ntransformador\n(3φ)", AZ, fs=10)
-        arr(1.5, 3.8, AT_CX - AT_W/2, 3.8)   # rede → AT
-
-        # ── Taps: saem da borda direita do AT, vão para x=7.0 ─────────────
-        AT_RIGHT = AT_CX + AT_W/2   # = 4.7
-        TAP_END_X = 6.6
-        # Contator left edge = 8.0 - 0.9 = 7.1
-        # Taps end at x=6.5 with labels at x=6.5 above each line
-        TAP_END_X = 6.5
-        tap_data = [
-            (0.80, 4.5, LR),
-            (0.65, 3.8, VD),
-            (0.50, 3.1, AZ),
-        ]
-        for (alpha, ty, cor) in tap_data:
-            # Linha tracejada: da borda direita do AT até TAP_END_X
-            ax.plot([AT_RIGHT, TAP_END_X], [ty, ty],
-                    color=cor, lw=1.8, ls="--", zorder=2)
-            # Label ABOVE the line, well to the left of the Contator
-            ax.text((AT_RIGHT + TAP_END_X) / 2, ty + 0.22,
-                    f"{int(alpha*100)}%", fontsize=9.5,
-                    color=cor, ha="center", va="bottom")
-
-        # Seta do tap 65% (selecionado) → borda esquerda do Contator
-        arr(TAP_END_X, 3.8, 8.0 - 0.9, 3.8, cor=VD)
-
-        # ── Contator ───────────────────────────────────────────────────────
-        CT_CX, CT_CY, CT_W, CT_H = 8.0, 3.8, 1.8, 1.2
-        box(CT_CX, CT_CY, CT_W, CT_H, "Contator\n(K)", VD, fs=9.5)
-
-        # ── Seta Contator → MIT, com α·V₁ acima ─────────────────────────
-        arr(CT_CX + CT_W/2, CT_CY, 10.3 - 0.85, CT_CY)
-        ax.text(9.2, CT_CY + 0.52, "α·V₁",
-                fontsize=12, color=VM, ha="center", fontweight="bold")
-
-        # ── MIT (elipse) ──────────────────────────────────────────────────
-        ax.add_patch(mpatches.Ellipse(
-            (10.3, CT_CY), 1.6, 1.5,
-            fc="#dce4f0", ec=TX, lw=2.0, zorder=3))
-        ax.text(10.3, CT_CY, "MIT", ha="center", va="center",
-                fontsize=11, fontweight="bold", color=TX, zorder=4)
-
-        # ── Caixa de fórmulas (abaixo, sem sobreposição) ─────────────────
+        # ── AT block (x:1.2→3.2, y:2.0→4.0) ─────────────────────────────────
         ax.add_patch(mpatches.FancyBboxPatch(
-            (2.8, -0.55), 7.6, 2.05,
-            boxstyle="round,pad=0.18",
-            fc="white", ec=CZ, lw=1.2, ls="--", alpha=0.88, zorder=2))
-        ax.text(6.6, 1.12,
-                r"$I_{linha} = \alpha^2 \cdot I_{DOL}$",
-                ha="center", va="center", fontsize=12, color=TX, zorder=3)
-        ax.text(6.6, 0.48,
-                r"$T_{partida} = \alpha^2 \cdot T_{DOL}$",
-                ha="center", va="center", fontsize=12, color=TX, zorder=3)
-        ax.text(6.6, -0.16,
-                r"$\alpha \in \{0{,}50\ ;\ 0{,}65\ ;\ 0{,}80\}$",
+            (1.2, 2.0), 2.0, 2.0,
+            boxstyle="round,pad=0.08", fc="#e8f0ff", ec=AZ, lw=2.2))
+        ax.text(2.2, 3.0, "Auto-\ntransformador\n(3φ)",
+                ha="center", va="center", fontsize=10.5, color=TX, fontweight="bold")
+
+        # ── Taps: saem de x=3.2, chegam a x=5.2 ─────────────────────────────
+        for tap, y, cor in [(0.80, 3.5, LR), (0.65, 3.0, VD), (0.50, 2.5, AZ)]:
+            ax.plot([3.2, 5.2], [y, y], color=cor, lw=1.8, ls="--", zorder=3)
+            ax.text(4.2, y + 0.18, f"{int(tap*100)}%",
+                    fontsize=10, color=cor, ha="center", va="bottom",
+                    fontweight="bold")
+
+        # Seta no tap de 65% (principal, entra no K)
+        ax.annotate("", xy=(5.2, 3.0), xytext=(4.8, 3.0),
+                    arrowprops=dict(arrowstyle="-|>", color=VD,
+                                    lw=2.0, mutation_scale=14))
+
+        # ── Contator K (x:5.2→6.8, y:2.3→3.7) ───────────────────────────────
+        ax.add_patch(mpatches.FancyBboxPatch(
+            (5.2, 2.3), 1.6, 1.4,
+            boxstyle="round,pad=0.08", fc="#e8fff0", ec=VD, lw=2.2))
+        ax.text(6.0, 3.0, "Contator\n(K)",
+                ha="center", va="center", fontsize=10.5, color=TX, fontweight="bold")
+
+        # ── K → MIT (seta + label α·V₁ bem acima da seta) ───────────────────
+        ax.annotate("", xy=(7.6, 3.0), xytext=(6.8, 3.0),
+                    arrowprops=dict(arrowstyle="-|>", color=TX,
+                                    lw=2.0, mutation_scale=14))
+        ax.text(7.2, 3.38, "α·V₁",
+                fontsize=12, color=VM, ha="center", va="bottom", fontweight="bold")
+
+        # ── MIT (elipse, cx=8.7, cy=3.0) ─────────────────────────────────────
+        ax.add_patch(mpatches.Ellipse(
+            (8.7, 3.0), 2.0, 1.6, fc="#dce4f0", ec=TX, lw=2.0))
+        ax.text(8.7, 3.0, "MIT",
+                ha="center", va="center", fontsize=12, fontweight="bold", color=TX)
+
+        # ── Fórmulas (caixa tracejada no rodapé) ─────────────────────────────
+        ax.add_patch(mpatches.FancyBboxPatch(
+            (1.5, 0.15), 9.0, 1.55,
+            boxstyle="round,pad=0.12", fc="white", ec=CZ, lw=1.2, ls="--"))
+        ax.text(6.0, 1.40, r"$I_{linha} = \alpha^2 \cdot I_{DOL}$",
+                ha="center", va="center", fontsize=12, color=TX)
+        ax.text(6.0, 0.88, r"$T_{partida} = \alpha^2 \cdot T_{DOL}$",
+                ha="center", va="center", fontsize=12, color=TX)
+        ax.text(6.0, 0.38,
+                r"$\alpha \in \{0{,}50\;;\;0{,}65\;;\;0{,}80\}$",
                 ha="center", va="center", fontsize=10.5,
-                color=CZ, style="italic", zorder=3)
+                color=CZ, style="italic")
 
         ax.set_title("Partida com Autotransformador (Compensadora)",
                      fontsize=13, fontweight="bold", color=TX, pad=10)
@@ -1895,119 +1872,95 @@ def run():
         return fig
 
     def fig_malha_fechada_velocidade():
-        """Diagrama de blocos — malha fechada. Geometria absoluta calculada."""
-        fig, ax = plt.subplots(figsize=(14, 4.5))
-        fig.patch.set_alpha(0)
-        ax.set_facecolor("none"); ax.axis("off")
-        ax.set_xlim(0, 14); ax.set_ylim(0, 5.0)
+        """Diagrama de blocos em malha fechada — todas as linhas com início/fim nos blocos."""
+        # ── Coordinate constants ──────────────────────────────────────────────
+        CY  = 3.5    # y da linha de sinal principal
+        FBY = 1.2    # y da linha de realimentação
+        R   = 0.38   # raio do somador
+        BW  = 1.1    # meia-largura dos blocos
+        BH  = 0.7    # meia-altura dos blocos
 
-        CY  = 2.8    # centro vertical único de todos os elementos
-        R   = 0.32   # raio do círculo somador
+        REF_CX  = 1.1
+        SUM_CX  = 3.5
+        CTRL_CX = 6.2
+        INV_CX  = 9.5
+        MIT_CX  = 12.8
+        OUT_X   = 14.4   # ponta da seta de saída / ponto de coleta da realimentação
 
-        # ── Funções auxiliares locais ───────────────────────────────────────
-        def draw_box(x_left, x_right, cy, h, txt, ec):
-            cx = (x_left + x_right) / 2
-            cw = (x_right - x_left) / 2
+        fig, ax = plt.subplots(figsize=(14, 5.5), facecolor='white')
+        ax.set_facecolor('white'); ax.axis('off')
+        ax.set_xlim(0, 16); ax.set_ylim(0, 6)
+
+        def box(cx, hw, hh, label, cor):
             ax.add_patch(mpatches.FancyBboxPatch(
-                (x_left, cy - h/2), x_right - x_left, h,
-                boxstyle="round,pad=0.10",
-                fc="white", ec=ec, lw=2.2, zorder=3))
-            ax.text(cx, cy, txt, ha="center", va="center",
+                (cx - hw, CY - hh), 2*hw, 2*hh,
+                boxstyle="round,pad=0.10", fc="white", ec=cor, lw=2.3, zorder=3))
+            ax.text(cx, CY, label, ha="center", va="center",
                     fontsize=10.5, color=TX, zorder=4)
 
-        def draw_arrow(x1, y1, x2, y2, cor=TX):
-            ax.annotate("",
-                xy=(x2, y2), xytext=(x1, y1),
-                arrowprops=dict(
-                    arrowstyle="-|>", color=cor,
-                    lw=2.0, mutation_scale=18),
-                zorder=5)
+        def fwd(x1, x2, cor=TX):
+            """Seta horizontal no caminho direto (y=CY)."""
+            ax.annotate("", xy=(x2, CY), xytext=(x1, CY),
+                        arrowprops=dict(arrowstyle="-|>", color=cor,
+                                        lw=2.0, mutation_scale=16), zorder=5)
 
-        def draw_line(xs, ys, cor=TX, lw=2.0):
-            ax.plot(xs, ys, color=cor, lw=lw, zorder=4)
+        def seg(x1, y1, x2, y2, cor=TX, lw=2.0):
+            ax.plot([x1, x2], [y1, y2], color=cor, lw=lw, zorder=4)
 
-        # ── Bloco REF ────────────────────────────────────────────────────────
-        # x: 0.3 → 1.8
-        draw_box(0.3, 1.8, CY, 1.2, "$n^*$\nRef.", CZ)
+        # ── Blocos ────────────────────────────────────────────────────────────
+        box(REF_CX,  BW, BH, "$n^*$\nRef.",        CZ)
+        box(CTRL_CX, BW, BH, "Controlador\nPI/PID", AZ)
+        box(INV_CX,  BW, BH, "Inversor\n(VFD)",     VD)
+        box(MIT_CX,  BW, BH, "MIT",                  LR)
 
-        # ── Seta REF → círculo ────────────────────────────────────────────
-        # REF right edge: 1.8  |  circle left edge: 2.85 - 0.32 = 2.53
-        draw_arrow(1.8, CY, 2.53, CY)
-
-        # ── Somador (círculo) ─────────────────────────────────────────────
-        SX = 2.85
+        # ── Somador: círculo sem texto interno ────────────────────────────────
         ax.add_patch(mpatches.Circle(
-            (SX, CY), R, fc="white", ec=TX, lw=2.2, zorder=5))
-        # Sinais +  − posicionados claramente fora do círculo
-        ax.text(SX - 0.02, CY + R + 0.26, "+",
-                fontsize=12, color=TX, ha="center", va="bottom",
+            (SUM_CX, CY), R, fc="white", ec=TX, lw=2.3, zorder=5))
+        # + acima do círculo
+        ax.text(SUM_CX, CY + R + 0.13, "+",
+                fontsize=13, color=TX, ha="center", va="bottom",
                 fontweight="bold", zorder=6)
-        ax.text(SX - R - 0.18, CY,       "−",
-                fontsize=13, color=VM, ha="right", va="center",
+        # − abaixo do círculo (ponto de chegada da realimentação)
+        ax.text(SUM_CX, CY - R - 0.15, "−",
+                fontsize=15, color=VM, ha="center", va="top",
                 fontweight="bold", zorder=6)
 
-        # ── Seta círculo → CTRL ───────────────────────────────────────────
-        # Circle right edge: 2.85 + 0.32 = 3.17  |  CTRL left: 4.0
-        draw_arrow(SX + R, CY, 4.0, CY)
+        # ── Setas do caminho direto ───────────────────────────────────────────
+        fwd(REF_CX + BW,    SUM_CX - R)       # REF → Σ
+        fwd(SUM_CX + R,     CTRL_CX - BW)     # Σ → CTRL
+        fwd(CTRL_CX + BW,   INV_CX - BW)      # CTRL → INV
+        fwd(INV_CX + BW,    MIT_CX - BW)      # INV → MIT
+        fwd(MIT_CX + BW,    OUT_X)             # MIT → saída
 
-        # ── Bloco CONTROLADOR ─────────────────────────────────────────────
-        # x: 4.0 → 6.4
-        draw_box(4.0, 6.4, CY, 1.4, "Controlador\nPI/PID", AZ)
+        # Label de saída
+        ax.text(OUT_X + 0.25, CY, "$n$",
+                fontsize=14, color=TX, fontweight="bold", va="center")
 
-        # ── Seta CTRL → INV ───────────────────────────────────────────────
-        # CTRL right: 6.4  |  INV left: 7.2
-        draw_arrow(6.4, CY, 7.2, CY)
+        # ── Labels dos sinais (acima dos conectores) ──────────────────────────
+        def sig(x, txt, cor):
+            ax.text(x, CY + 0.52, txt, fontsize=9.5, color=cor,
+                    ha="center", va="bottom", style="italic")
 
-        # ── Bloco INVERSOR ────────────────────────────────────────────────
-        # x: 7.2 → 9.6
-        draw_box(7.2, 9.6, CY, 1.4, "Inversor\n(VFD)", VD)
+        sig((SUM_CX + R + CTRL_CX - BW) / 2,  "e = n* − n", AZ)
+        sig((CTRL_CX + BW + INV_CX - BW) / 2, "$f,\\ V_1$", VD)
+        sig((INV_CX + BW + MIT_CX - BW) / 2,  "$i_{abc}$",  LR)
 
-        # ── Seta INV → MIT ────────────────────────────────────────────────
-        # INV right: 9.6  |  MIT left: 10.4
-        draw_arrow(9.6, CY, 10.4, CY)
+        # ── Realimentação (percorre por baixo dos blocos) ─────────────────────
+        seg(OUT_X,   CY,   OUT_X,   FBY,   cor=VM)   # desce
+        seg(OUT_X,   FBY,  SUM_CX,  FBY,   cor=VM)   # vai para a esquerda
+        # sobe até a borda inferior do círculo com seta
+        ax.annotate("", xy=(SUM_CX, CY - R), xytext=(SUM_CX, FBY),
+                    arrowprops=dict(arrowstyle="-|>", color=VM,
+                                    lw=2.0, mutation_scale=16), zorder=5)
 
-        # ── Bloco MIT ─────────────────────────────────────────────────────
-        # x: 10.4 → 12.4
-        draw_box(10.4, 12.4, CY, 1.4, "MIT", LR)
-
-        # ── Seta MIT → saída n ────────────────────────────────────────────
-        # MIT right: 12.4  |  arrow end: 13.2
-        draw_arrow(12.4, CY, 13.2, CY)
-        ax.text(13.35, CY, "$n$",
-                fontsize=13, color=TX, fontweight="bold",
-                ha="left", va="center")
-
-        # ── Labels dos sinais (acima dos conectores, centrados) ───────────
-        # e = n*-n: between REF.right(1.8) and circle.left(2.53), midpoint=2.165
-        # e label: center between arrow start (1.8) and circle left (2.53)
-        ax.text(2.165, CY + 0.55, "$e$",
-                fontsize=10, color=AZ, ha="center", va="bottom",
-                style="italic")
-        # f,V₁: between CTRL.right(6.4) and INV.left(7.2), midpoint=6.8
-        ax.text(6.8, CY + 0.58, "$f,\\,V_1$",
-                fontsize=9, color=VD, ha="center", va="bottom")
-        # i_abc: between INV.right(9.6) and MIT.left(10.4), midpoint=10.0
-        ax.text(10.0, CY + 0.58, "$i_{abc}$",
-                fontsize=9, color=LR, ha="center", va="bottom")
-
-        # ── Realimentação (fora de qualquer bloco, abaixo de tudo) ────────
-        FB_Y  = 0.80    # y da linha horizontal de realimentação
-        COL_X = 13.2    # x de coleta = ponto de saída da seta MIT→n
-        # 1. Linha vertical: (COL_X, CY) → (COL_X, FB_Y)
-        draw_line([COL_X, COL_X], [CY, FB_Y], VM)
-        # 2. Linha horizontal: (COL_X, FB_Y) → (SX, FB_Y)
-        draw_line([COL_X, SX],    [FB_Y, FB_Y], VM)
-        # 3. Seta vertical: (SX, FB_Y) → (SX, CY-R)
-        draw_arrow(SX, FB_Y, SX, CY - R, cor=VM)
         # Label da realimentação
-        ax.text((COL_X + SX) / 2, FB_Y - 0.28,
+        ax.text((OUT_X + SUM_CX) / 2, FBY - 0.30,
                 "Sensor de velocidade  (encoder / tacômetro)",
-                ha="center", va="top", fontsize=10,
-                color=VM, style="italic")
+                ha="center", fontsize=10, color=VM, style="italic")
 
         ax.set_title("Controle em Malha Fechada de Velocidade",
                      fontsize=13, fontweight="bold", color=TX, pad=10)
-        fig.tight_layout()
+        fig.tight_layout(pad=0.5)
         return fig
 
     def fig_escorregamento_constante():
