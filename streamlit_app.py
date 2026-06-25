@@ -39,7 +39,7 @@ PG_INTRO = st.Page(pagina_intro,     title="Introdução à Conversão Eletromec
 PG_TRANSF= st.Page(pagina_transf,    title="Transformadores",                        icon="🔄", url_path="transformadores")
 PG_CC    = st.Page(pagina_cc,        title="Máquinas de Corrente Contínua",          icon="⚙️", url_path="corrente-continua")
 PG_IND   = st.Page(pagina_inducao,   title="Máquinas de Indução (CA Polifásica)",    icon="🌀", url_path="inducao")
-PG_SINC  = st.Page(pagina_sincrona,  title="Máquinas Síncronas (CA Polifásica)",     icon="🔁", url_path="sincrona")
+PG_SINC  = st.Page(pagina_sincrona,  title="Máquinas Síncronas (CA Polifásica)",     icon="〰️​", url_path="sincrona")
 PG_PP    = st.Page(pagina_pp,        title="Máquinas de Pequeno Porte",              icon="🔌", url_path="pequeno-porte")
 PG_ESP   = st.Page(pagina_esp,       title="Máquinas Especiais",                     icon="🔬", url_path="especiais")
 
@@ -51,7 +51,7 @@ _nav = st.navigation(
         "🔄 Transformadores":               [PG_TRANSF],
         "⚙️ Máquinas CC":                   [PG_CC],
         "🌀 Máquinas CA — Indução":         [PG_IND],
-        "🔁 Máquinas CA — Síncronas":       [PG_SINC],
+        "〰️​ Máquinas CA — Síncronas":       [PG_SINC],
         "🔌 Máquinas de Pequeno Porte":     [PG_PP],
         "🔬 Máquinas Especiais":            [PG_ESP],
     },
