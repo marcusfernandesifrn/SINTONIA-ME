@@ -1919,7 +1919,7 @@ def run():
         ax.text(SUM_CX, CY + R + 0.13, "+",
                 fontsize=13, color=TX, ha="center", va="bottom",
                 fontweight="bold", zorder=6)
-        ax.text(SUM_CX, CY - R - 0.15, "−",
+        ax.text(SUM_CX - 0.15, CY - R - 0.15, "−",
                 fontsize=15, color=VM, ha="center", va="top",
                 fontweight="bold", zorder=6)
 
