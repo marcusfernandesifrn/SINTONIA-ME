@@ -401,7 +401,8 @@ def run():
         return fig
 
     def fig_circuito_equivalente_gerador_mes():
-        """Schemdraw: circuito equivalente por fase — modo GERADOR."""
+        """Schemdraw: circuito equivalente por fase — modo GERADOR.
+        Labels +/− adicionados via matplotlib com fontsize uniforme."""
         import tempfile, os
         with schemdraw.Drawing(show=False) as d:
             d.config(unit=3.2, fontsize=12)
@@ -417,13 +418,25 @@ def run():
             elm.Inductor().right().label(r"$jX_s$", loc="top")
             elm.Resistor().right().label(r"$R_a$")
             Ia_elm = elm.Line().right(d.unit * 0.5).dot(open=True)
-            elm.Gap().down(d.unit * 2.0).label(("−", r"$V_t$", "+"))
+            elm.Gap().down(d.unit * 2.0)   # sem label — adicionado abaixo
 
             elm.CurrentLabel(top=True, length=1, ofst=0.3).at(Ia_elm).label(r"$I_a$")
 
             tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
             tmp.close()
             d.save(tmp.name, dpi=160)
+
+            # Pós-anotação: +/− e Vt com tamanho uniforme via matplotlib
+            mpl_fig = d.fig.getfig()
+            ax = mpl_fig.get_axes()[0]
+            xl = ax.get_xlim(); yl = ax.get_ylim()
+            xs = xl[1] - xl[0]; ys = yl[1] - yl[0]
+            xp = xl[1] - xs * 0.05
+            ax.text(xp, yl[1] - ys*0.20, "−",       ha="center", va="center", fontsize=13)
+            ax.text(xp, (yl[0]+yl[1])/2,  r"$V_t$",  ha="center", va="center", fontsize=13)
+            ax.text(xp, yl[0] + ys*0.20,  "+",       ha="center", va="center", fontsize=13)
+            mpl_fig.savefig(tmp.name, dpi=160, bbox_inches="tight")
+            plt.close(mpl_fig)
 
         with open(tmp.name, "rb") as fh:
             buf = io.BytesIO(fh.read())
@@ -432,7 +445,8 @@ def run():
         return buf
 
     def fig_circuito_equivalente_motor_mes():
-        """Schemdraw: circuito equivalente por fase — modo MOTOR."""
+        """Schemdraw: circuito equivalente por fase — modo MOTOR.
+        Labels +/− adicionados via matplotlib com fontsize uniforme."""
         import tempfile, os
         with schemdraw.Drawing(show=False) as d:
             d.config(unit=3.2, fontsize=12)
@@ -448,13 +462,25 @@ def run():
             elm.Inductor().right().label(r"$jX_s$", loc="top")
             elm.Resistor().right().label(r"$R_a$")
             Ia_elm = elm.Line().right(d.unit * 0.5).dot(open=True)
-            elm.Gap().down(d.unit * 2.0).label(("−", r"$V_t$", "+"))
+            elm.Gap().down(d.unit * 2.0)   # sem label — adicionado abaixo
 
             elm.CurrentLabel(top=True, length=1, ofst=0.3).at(Ia_elm).label(r"$I_a$").reverse()
 
             tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
             tmp.close()
             d.save(tmp.name, dpi=160)
+
+            # Pós-anotação: +/− e Vt com tamanho uniforme via matplotlib
+            mpl_fig = d.fig.getfig()
+            ax = mpl_fig.get_axes()[0]
+            xl = ax.get_xlim(); yl = ax.get_ylim()
+            xs = xl[1] - xl[0]; ys = yl[1] - yl[0]
+            xp = xl[1] - xs * 0.05
+            ax.text(xp, yl[1] - ys*0.20, "+",       ha="center", va="center", fontsize=13)
+            ax.text(xp, (yl[0]+yl[1])/2,  r"$V_t$",  ha="center", va="center", fontsize=13)
+            ax.text(xp, yl[0] + ys*0.20,  "−",       ha="center", va="center", fontsize=13)
+            mpl_fig.savefig(tmp.name, dpi=160, bbox_inches="tight")
+            plt.close(mpl_fig)
 
         with open(tmp.name, "rb") as fh:
             buf = io.BytesIO(fh.read())
@@ -1134,10 +1160,12 @@ pois o fluxo de entreferro é pequeno).
 $$X_{s,nsat} = \frac{E_{f,AGL}(I_{f0})/\sqrt{3}}{I_{a,SCC}(I_{f0})} \qquad
 X_{s,sat} = \frac{E_{f,OCC}(I_{f0})/\sqrt{3}}{I_{a,SCC}(I_{f0})}$$
 
-onde $E_{f,AGL}$ é o valor lido na linha do entreferro (AGL) e $E_{f,OCC}$ é o valor
-lido na curva OCC — ambos para o mesmo ponto de corrente de campo $I_{f0}$.
-Na prática, usa-se $X_{s,sat}$ (valor saturado) para análises mais realistas,
-pois reflete a operação com núcleo saturado.
+onde $E_{f,AGL}(I_{f0})$ é a tensão de linha lida na **linha do entreferro (AGL)**
+para a corrente de campo $I_{f0}$, e $E_{f,OCC}(I_{f0})$ é a tensão de linha lida
+na **curva OCC** para o mesmo $I_{f0}$. Como a OCC satura e fica abaixo da AGL,
+tem-se $E_{f,OCC} \leq E_{f,AGL}$, portanto $X_{s,sat} \leq X_{s,nsat}$.
+Na prática, usa-se $X_{s,sat}$ para análises de curto-circuito e
+$X_{s,nsat}$ como limite superior não-saturado.
 """)
 
     show_plot(fig_occ_scc_mes(), key="fig_10_occ_scc")
