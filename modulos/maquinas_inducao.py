@@ -1947,8 +1947,8 @@ def run():
         sig((INV_CX + BW + MIT_CX - BW) / 2,  "$i_{abc}$",  LR)
 
         # ── Realimentação: desce de OUT_TIP, percorre por baixo ──────────────
-        seg(OUT_TIP, CY,   OUT_TIP, FBY,   cor=VM)
-        seg(OUT_TIP, FBY,  SUM_CX,  FBY,   cor=VM)
+        seg(OUT_TIP - 0.5, CY,   OUT_TIP, FBY,   cor=VM)
+        seg(OUT_TIP - 0.5, FBY,  SUM_CX,  FBY,   cor=VM)
         ax.annotate("", xy=(SUM_CX, CY - R), xytext=(SUM_CX, FBY),
                     arrowprops=dict(arrowstyle="-|>", color=VM,
                                     lw=2.0, mutation_scale=16), zorder=5)
