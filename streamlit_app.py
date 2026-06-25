@@ -39,7 +39,7 @@ PG_INTRO = st.Page(pagina_intro,     title="Introdução à Conversão Eletromec
 PG_TRANSF= st.Page(pagina_transf,    title="Transformadores",                        icon="🔄", url_path="transformadores")
 PG_CC    = st.Page(pagina_cc,        title="Máquinas de Corrente Contínua",          icon="⚙️", url_path="corrente-continua")
 PG_IND   = st.Page(pagina_inducao,   title="Máquinas de Indução (CA Polifásica)",    icon="🌀", url_path="inducao")
-PG_SINC  = st.Page(pagina_sincrona,  title="Máquinas Síncronas (CA Polifásica)",     icon="🌐​", url_path="sincrona")
+PG_SINC  = st.Page(pagina_sincrona,  title="Máquinas Síncronas (CA Polifásica)",     icon="🌐", url_path="sincrona")
 PG_PP    = st.Page(pagina_pp,        title="Máquinas de Pequeno Porte",              icon="🔌", url_path="pequeno-porte")
 PG_ESP   = st.Page(pagina_esp,       title="Máquinas Especiais",                     icon="🔬", url_path="especiais")
 
@@ -51,7 +51,7 @@ _nav = st.navigation(
         "🔄 Transformadores":               [PG_TRANSF],
         "⚙️ Máquinas CC":                   [PG_CC],
         "🌀 Máquinas CA — Indução":         [PG_IND],
-        "🌐​ Máquinas CA — Síncronas":       [PG_SINC],
+        "🌐 Máquinas CA — Síncronas":       [PG_SINC],
         "🔌 Máquinas de Pequeno Porte":     [PG_PP],
         "🔬 Máquinas Especiais":            [PG_ESP],
     },
@@ -245,8 +245,8 @@ para observar o efeito de parâmetros em tempo real, sem necessidade de reexecu�
 """)
         st.markdown("---")
 
-        st.markdown("#### 🔁 5 · Máquinas Elétricas Polifásicas de Corrente Alternada: Síncrona")
-        st.page_link(PG_SINC, label="Ir para o módulo →", icon="🔁")
+        st.markdown("#### 🌐 5 · Máquinas Elétricas Polifásicas de Corrente Alternada: Síncrona")
+        st.page_link(PG_SINC, label="Ir para o módulo →", icon="🌐")
         st.markdown("""
 - **5.1** Construção: pólos salientes vs. pólos lisos, excitação e enrolamentos
 - **5.2** Gerador síncrono: FEM interna $E_A$, reatância síncrona $X_s$ e resistência $R_A$
@@ -320,7 +320,7 @@ para observar o efeito de parâmetros em tempo real, sem necessidade de reexecu�
          "de torque. Partida, controle de velocidade e operação como gerador.",
          ["Escorregamento", "Torque", "Partida", "Inversor"], PG_IND),
 
-        ("MOD 05", "🔁", "Máquinas Síncronas", "CA Polifásica",
+        ("MOD 05", "🌐", "Máquinas Síncronas", "CA Polifásica",
          "Gerador e motor síncrono: circuito equivalente, diagrama fasorial, "
          "operação em paralelo, pólos salientes e estabilidade de estado estacionário.",
          ["Reatância $X_s$", "Diagrama fasorial", "Paralelo", "Ângulo $\\delta$"], PG_SINC),
@@ -379,7 +379,7 @@ para observar o efeito de parâmetros em tempo real, sem necessidade de reexecu�
             "Curva de torque — efeito de $R_2'$, $X_1$, $X_2'$",
             "Partida e transiente de corrente",
         ]),
-        ("🔁 Máquinas Síncronas", PG_SINC, [
+        ("🌐 Máquinas Síncronas", PG_SINC, [
             "Diagrama fasorial — $I_F$, $P$ e $fp$",
             "Curva $P-\\delta$ e limite de estabilidade",
             "Operação em paralelo — despacho $P$ e $Q$",
