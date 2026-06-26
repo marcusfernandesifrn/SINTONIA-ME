@@ -1597,7 +1597,7 @@ def run():
     st.markdown("---")
 
     # ── Índice ────────────────────────────────────────────────────────────────
-    with st.expander("📑 Índice do Módulo — clique em qualquer item para navegar", expanded=True):
+    with st.expander("📑 Índice do Módulo", expanded=False):
         st.markdown("""
 <style>
 .idx-group { font-size:0.78rem; font-weight:700; color:#6b7280;
@@ -1617,14 +1617,14 @@ def run():
                  border-radius:0 4px 4px 0; }
 </style>
 
-<div class="idx-group">🔵 Fundamentos (PPTX-01)</div>
+<div class="idx-group">Fundamentos e Circuito Equivalente</div>
 <a class="idx-link" href="#1-conceitos-elementares-e-aplicações">1. Conceitos Elementares e Aplicações</a>
 <a class="idx-link" href="#2-estrutura-construtiva">2. Estrutura Construtiva</a>
 <a class="idx-sub"  href="#2-estrutura-construtiva">↳ Rotor cilíndrico · Polos salientes</a>
 <a class="idx-link" href="#3-geração-de-tensão-modo-gerador">3. Geração de Tensão — Modo Gerador</a>
 <a class="idx-sub"  href="#3-geração-de-tensão-modo-gerador">↳ nₛ = 120f/p · Ef = kf·nₛ·Φf</a>
 <a class="idx-link" href="#4-curva-de-magnetização-occ">4. Curva de Magnetização (OCC)</a>
-<a class="idx-sub"  href="#4-curva-de-magnetização-occ">↳ AGL · Saturação · Magnetismo residual</a>
+<a class="idx-sub"  href="#4-curva-de-magnetização-occ">↳ AGL · Saturação magnética</a>
 <a class="idx-link" href="#5-reação-da-armadura">5. Reação da Armadura</a>
 <a class="idx-sub"  href="#5-reação-da-armadura">↳ Φr = Φf + Φa · Efeito do fator de potência</a>
 <a class="idx-link" href="#6-circuito-equivalente-por-fase">6. Circuito Equivalente por Fase</a>
@@ -1636,27 +1636,27 @@ def run():
 <a class="idx-link" href="#9-modo-motor-partida">9. Modo Motor — Partida</a>
 <a class="idx-sub"  href="#9-modo-motor-partida">↳ VFD · Enrolamento amortecedor</a>
 <a class="idx-link" href="#10-ensaios-occ-scc-determinação-dos-parâmetros">10. Ensaios OCC + SCC — Parâmetros</a>
-<a class="idx-sub"  href="#10-ensaios-occ-scc-determinação-dos-parâmetros">↳ Xs_sat · Xs_nsat · Ensaio de escorregamento</a>
+<a class="idx-sub"  href="#10-ensaios-occ-scc-determinação-dos-parâmetros">↳ Xs_sat · Xs_nsat</a>
 
-<div class="idx-group">⚡ Características de Operação (PPTX-02)</div>
+<div class="idx-group">Características de Operação</div>
 <a class="idx-link" href="#11-potência-ativa-reativa-e-torque">11. Potência Ativa, Reativa e Torque</a>
-<a class="idx-sub"  href="#11-potência-ativa-reativa-e-torque">↳ P = (3VtEf/Xs)sinδ · Q · Pmax · δ_max = 90°</a>
+<a class="idx-sub"  href="#11-potência-ativa-reativa-e-torque">↳ P = (3VtEf/Xs)sinδ · Q · Pmax · δmax = 90°</a>
 <a class="idx-link" href="#12-curva-de-capacidade-capability-curve">12. Curva de Capacidade</a>
 <a class="idx-sub"  href="#12-curva-de-capacidade-capability-curve">↳ Limites de armadura, campo e estabilidade</a>
 <a class="idx-link" href="#13-controle-de-fator-de-potência-condensador-síncrono">13. Controle de Fator de Potência</a>
 <a class="idx-sub"  href="#13-controle-de-fator-de-potência-condensador-síncrono">↳ Condensador síncrono · Curvas V</a>
 
-<div class="idx-group">🔴 Polos Salientes e Transitórios (PPTX-03)</div>
+<div class="idx-group">Polos Salientes e Dinâmica</div>
 <a class="idx-link" href="#14-máquina-síncrona-com-polos-salientes">14. Máquina com Polos Salientes</a>
 <a class="idx-sub"  href="#14-máquina-síncrona-com-polos-salientes">↳ Eixos d-q · Xd > Xq · Ensaio de escorregamento</a>
 <a class="idx-link" href="#15-potência-e-torque-em-máquinas-de-polos-salientes">15. Potência e Torque em Polos Salientes</a>
-<a class="idx-sub"  href="#15-potência-e-torque-em-máquinas-de-polos-salientes">↳ Parcela de excitação + relutância · δ_max &lt; 90°</a>
+<a class="idx-sub"  href="#15-potência-e-torque-em-máquinas-de-polos-salientes">↳ Excitação + relutância · δmax &lt; 90°</a>
 <a class="idx-link" href="#16-dinâmicas-de-transitório">16. Dinâmicas de Transitório</a>
-<a class="idx-sub"  href="#16-dinâmicas-de-transitório">↳ Xd″ · Xd′ · Xd · Áreas equivalentes</a>
+<a class="idx-sub"  href="#16-dinâmicas-de-transitório">↳ Xd″ · Xd′ · Xd · Estabilidade dinâmica</a>
 
-<div class="idx-group">🎛️ Ferramentas Interativas</div>
-<a class="idx-link" href="#exploradores-interativos">Exploradores Interativos</a>
-<a class="idx-sub"  href="#exploradores-interativos">↳ Fasorial cilíndrico · Curva V · P×δ · Polos salientes</a>
+<div class="idx-group">Ferramentas</div>
+<a class="idx-link" href="#exploradores-interativos">🎛️ Exploradores Interativos</a>
+<a class="idx-sub"  href="#exploradores-interativos">↳ Fasorial · Curva V · P×δ · Polos salientes</a>
 """, unsafe_allow_html=True)
 
     # ═══════════════════════════════════════════════════════════════════════════
