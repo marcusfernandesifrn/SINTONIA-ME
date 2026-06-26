@@ -411,7 +411,7 @@ def run():
             elm.Line().down(d.unit * 0.5)
             elm.SourceSin().down().label(r"$E_f$", loc="bottom")
             elm.Line().down(d.unit * 0.5)
-            elm.Line().right(d.unit * 4.0).dot(open=True)
+            elm.Line().right(d.unit * 3.0).dot(open=True)
             d.pop()
 
             elm.Line().right(d.unit * 0.5)
@@ -429,9 +429,9 @@ def run():
             # Labels com coordenadas numéricas fixas (Gap em x=9.6, y: 0→-6.4)
             mpl_fig = d.fig.getfig()
             ax = mpl_fig.get_axes()[0]
-            ax.text(10.15, -0.35, "−",     ha="left", va="center", fontsize=13)
+            ax.text(10.15, -0.35, "+",     ha="left", va="center", fontsize=13)
             ax.text(10.15, -3.2,  r"$V_t$", ha="left", va="center", fontsize=13)
-            ax.text(10.15, -6.05, "+",     ha="left", va="center", fontsize=13)
+            ax.text(10.15, -6.05, "−",     ha="left", va="center", fontsize=13)
             mpl_fig.savefig(tmp.name, dpi=160, bbox_inches="tight")
             plt.close(mpl_fig)
 
@@ -1111,7 +1111,7 @@ def run():
     # ═══════════════════════════════════════════════════════════════════════════
     st.title("🌐 Máquinas Síncronas Polifásicas")
     st.caption(
-        "🌐 SINTONIA · Conversão Eletromecânica de Energia I · "
+        "⚡ SINTONIA · Máquinas Elétricas · "
         "👤 Marcus V A Fernandes · ✉️ marcus.fernandes@ifrn.edu.br"
     )
     st.markdown("---")
@@ -1535,15 +1535,17 @@ e $X_{s,nsat}$ como limite teórico superior (máquina não saturada).
     st.header("11. Potência Ativa, Reativa e Torque")
 
     st.markdown(r"""
-**Potência ativa entregue à rede** (por fase, $R_a \approx 0$):
+**Potência ativa entregue à rede** (por fase e trifásica, $R_a \approx 0$):
 
-$$P_{1\phi} = \frac{V_t E_f}{X_s} \sin\delta \quad \Rightarrow \quad
-P_{3\phi} = \frac{3\,V_t E_f}{X_s} \sin\delta$$
+$$P_{1\phi} = \frac{V_t E_f}{X_s} \sin\delta$$
 
-**Potência reativa** (por fase):
+$$P_{3\phi} = \frac{3\,V_t E_f}{X_s} \sin\delta$$
 
-$$Q_{1\phi} = \frac{V_t E_f \cos\delta - V_t^2}{X_s} \quad \Rightarrow \quad
-Q_{3\phi} = \frac{3\,V_t(E_f \cos\delta - V_t)}{X_s}$$
+**Potência reativa** (por fase e trifásica):
+
+$$Q_{1\phi} = \frac{V_t E_f \cos\delta - V_t^2}{X_s}$$
+
+$$Q_{3\phi} = \frac{3\,V_t(E_f \cos\delta - V_t)}{X_s}$$
 
 **Torque eletromagnético:**
 
@@ -1551,8 +1553,9 @@ $$T_{ind} = \frac{P_{3\phi}}{\omega_s} = \frac{3\,V_t E_f}{X_s\,\omega_s} \sin\d
 
 **Limites de estabilidade estática** ($R_a = 0$):
 
-$$P_{max} = \frac{3\,V_t E_f}{X_s} \quad \text{(em } \delta = 90°\text{)} \qquad
-T_{max} = \frac{3\,V_t E_f}{X_s\,\omega_s}$$
+$$P_{max} = \frac{3\,V_t E_f}{X_s} \quad \text{(em } \delta = 90°\text{)}$$
+
+$$T_{max} = \frac{3\,V_t E_f}{X_s\,\omega_s}$$
 
 Para $|\delta| > 90°$ a máquina **perde sincronismo** — o rotor não consegue
 acompanhar o campo girante. A operação estável é restrita a $0 < \delta < 90°$
@@ -1798,7 +1801,7 @@ para diferentes $P$ forma a **família de curvas V** da máquina.
     # ── Rodapé ────────────────────────────────────────────────────────────────
     st.markdown("""
 <div style="text-align:center; color:#6b7280; font-size:0.82em; margin-top:2rem;">
-🌐 SINTONIA — Sistema Interativo de Apoio à Aprendizagem em Máquinas Elétricas<br>
+⚡ SINTONIA — Máquinas Elétricas<br>
 Prof. Marcus V A Fernandes · IFRN-CNAT · marcus.fernandes@ifrn.edu.br<br>
 🌐 Módulo 5 — Máquinas Síncronas Polifásicas · v1.0
 </div>
