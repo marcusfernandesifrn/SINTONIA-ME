@@ -2130,40 +2130,88 @@ $$X_d = \frac{V_{max}}{I_{min}} \qquad X_q = \frac{V_{min}}{I_{max}}$$
     st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════════
+    # ═══════════════════════════════════════════════════════════════════════════
     # SEÇÃO 15 — Potência em Polos Salientes
     # ═══════════════════════════════════════════════════════════════════════════
-    st.header("15. Potência em Máquinas de Polos Salientes")
+    st.header("15. Potência e Torque em Máquinas de Polos Salientes")
 
     st.markdown(r"""
-Com $R_a = 0$, a potência ativa em polos salientes tem **duas componentes**:
+### 15.1 Derivação pelo modelo d-q
 
-$$P_{3\phi} = \frac{3\,V_t E_f}{X_d} \sin\delta + \frac{3\,V_t^2(X_d - X_q)}{2\,X_d X_q} \sin 2\delta$$
+Partindo da decomposição de $I_a$ em componentes de eixo direto ($I_d$) e
+quadratura ($I_q$), e desprezando $R_a$, a potência ativa por fase é:
 
+$$P_{1\phi} = V_t I_q \cos\delta - V_t I_d \sin\delta$$
+
+Substituindo $I_d = \dfrac{V_t \sin\delta}{X_d}$ e
+$I_q = \dfrac{E_f - V_t \cos\delta}{X_q}$, e expandindo para 3 fases:
+
+$$\boxed{P_{3\phi} = \underbrace{\frac{3\,V_t E_f}{X_d} \sin\delta}_{\text{Excitação}} +
+\underbrace{\frac{3\,V_t^2 (X_d - X_q)}{2\,X_d X_q} \sin 2\delta}_{\text{Relutância}}}$$
+
+### 15.2 Potência Reativa
+
+A potência reativa trifásica ($R_a = 0$) em polos salientes é:
+
+$$Q_{3\phi} = \frac{3\,V_t E_f}{X_d} \cos\delta - 3\,V_t^2 \left(\frac{\cos^2\delta}{X_d} + \frac{\sin^2\delta}{X_q}\right)$$
+
+Para $X_d = X_q = X_s$ (cilíndrica), simplifica para $Q = \dfrac{3V_t(E_f\cos\delta - V_t)}{X_s}$.
+
+### 15.3 Torque Eletromagnético
+
+$$T_{ind} = \frac{P_{3\phi}}{\omega_s} =
+\frac{3\,V_t E_f}{X_d\,\omega_s} \sin\delta +
+\frac{3\,V_t^2(X_d - X_q)}{2\,X_d X_q\,\omega_s} \sin 2\delta$$
+""")
+
+    # ── Tabela comparativa P e Q ──────────────────────────────────────────────
+    col_p, col_q = st.columns(2)
+    with col_p:
+        st.markdown(r"""
+**Potência Ativa $P_{3\phi}$**
+
+| Parcela | Expressão |
+|---|---|
+| Excitação | $\dfrac{3V_tE_f}{X_d}\sin\delta$ |
+| Relutância | $\dfrac{3V_t^2(X_d-X_q)}{2X_dX_q}\sin 2\delta$ |
+
+- Máxima para $|\delta| < 90°$
+- Relutância ativa mesmo com $E_f = 0$
+""")
+    with col_q:
+        st.markdown(r"""
+**Potência Reativa $Q_{3\phi}$**
+
+| Condição | Comportamento |
+|---|---|
+| Super-excitado ($E_f\cos\delta > V_t$) | Fornece Q à rede |
+| Sub-excitado ($E_f\cos\delta < V_t$) | Absorve Q da rede |
+
+- Controlada pelo ajuste de $I_f$ (e portanto $E_f$)
+- Independente da salência para $Q$ em regime nominal
+""")
+
+    st.markdown(r"""
+### 15.4 Comparação com a Máquina Cilíndrica
+
+| Grandeza | Cilíndrica ($X_d = X_q$) | Polos Salientes ($X_d > X_q$) |
 |---|---|---|
-| **Excitação** | $\dfrac{3V_tE_f}{X_d}\sin\delta$ | Igual à máquina cilíndrica |
-| **Relutância** | $\dfrac{3V_t^2(X_d-X_q)}{2X_dX_q}\sin2\delta$ | Exclusiva dos polos salientes |
-
-**Consequências importantes:**
-
-- A componente de relutância depende apenas de $V_t$, $X_d$, $X_q$ — não de $E_f$.
-  Isso significa que a máquina de polos salientes pode desenvolver torque **mesmo
-  sem excitação** ($E_f = 0$), pelo simples efeito da anisotropia magnética.
-- O ângulo de máxima potência é **menor que 90°** (tipicamente entre 65° e 80°),
-  o que torna a máquina de polos salientes **mais estável** que a cilíndrica.
-- Para $X_d = X_q$ (cilíndrica), a componente de relutância é zero e recupera-se
-  a expressão $P = \frac{3V_tE_f}{X_s}\sin\delta$.
+| $P_{max}$ | $\dfrac{3V_tE_f}{X_s}$ em $\delta=90°$ | $> \dfrac{3V_tE_f}{X_d}$ em $\delta < 90°$ |
+| $T$ com $E_f=0$ | Zero | $\neq 0$ (relutância) |
+| Estabilidade | Menor margem | Maior margem |
+| Análise | Simples (1 reatância) | Requer eixos d-q |
 """)
 
     show_plot(fig_potencia_saliente_mes(), key="fig_15_psal")
     st.caption(
-        r"**Figura 15.1** — Curva P×δ para polos salientes (vermelho) decomposta em "
-        r"componente de excitação (azul tracejado) e componente de relutância (laranja). "
-        r"A estrela marca o ângulo de potência máxima, que é menor que 90°."
+        r"**Figura 15.1** — Curva $P \times \delta$ para polos salientes (vermelho) "
+        r"decomposta em componente de excitação (azul tracejado) e "
+        r"componente de relutância (laranja pontilhado). "
+        r"A máxima potência ocorre em $\delta < 90°$ — maior margem de estabilidade que a cilíndrica."
     )
 
     st.divider()
 
-    # ═══════════════════════════════════════════════════════════════════════════
     # SEÇÃO 16 — Dinâmicas de Transitório
     # ═══════════════════════════════════════════════════════════════════════════
     st.header("16. Dinâmicas de Transitório")
