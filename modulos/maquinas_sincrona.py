@@ -411,7 +411,7 @@ def run():
             elm.Line().down(d.unit * 0.5)
             elm.SourceSin().down().label(r"$E_f$", loc="bottom")
             elm.Line().down(d.unit * 0.5)
-            elm.Line().right(d.unit * 4.0).dot(open=True)
+            elm.Line().right(d.unit * 3.0).dot(open=True)
             d.pop()
 
             elm.Line().right(d.unit * 0.5)
@@ -429,9 +429,9 @@ def run():
             # Labels com coordenadas numéricas fixas (Gap em x=9.6, y: 0→-6.4)
             mpl_fig = d.fig.getfig()
             ax = mpl_fig.get_axes()[0]
-            ax.text(10.15, -0.35, "−",     ha="left", va="center", fontsize=13)
+            ax.text(10.15, -0.35, "+",     ha="left", va="center", fontsize=13)
             ax.text(10.15, -3.2,  r"$V_t$", ha="left", va="center", fontsize=13)
-            ax.text(10.15, -6.05, "+",     ha="left", va="center", fontsize=13)
+            ax.text(10.15, -6.05, "-",     ha="left", va="center", fontsize=13)
             mpl_fig.savefig(tmp.name, dpi=160, bbox_inches="tight")
             plt.close(mpl_fig)
 
@@ -452,7 +452,7 @@ def run():
             elm.Line().down(d.unit * 0.5)
             elm.SourceSin().down().label(r"$E_f$", loc="bottom")
             elm.Line().down(d.unit * 0.5)
-            elm.Line().right(d.unit * 4.0).dot(open=True)
+            elm.Line().right(d.unit * 3.0).dot(open=True)
             d.pop()
 
             elm.Line().right(d.unit * 0.5)
