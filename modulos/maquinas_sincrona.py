@@ -1106,6 +1106,384 @@ def run():
         )
         return fig
 
+
+    def fig_dq_decomposition_mes():
+        """Matplotlib: decomposição Id/Iq no plano fasorial de polos salientes."""
+        fig, ax = plt.subplots(figsize=(6.5, 6.5))
+        fig.patch.set_alpha(0); ax.set_facecolor("none")
+        ax.set_aspect("equal"); ax.axis("off")
+        ax.set_xlim(-0.3, 2.0); ax.set_ylim(-1.0, 1.8)
+
+        def arrow(ox, oy, dx, dy, cor, lbl, lx=0.06, ly=0.06, lw=2.2):
+            ax.annotate("", xy=(ox+dx, oy+dy), xytext=(ox, oy),
+                arrowprops=dict(arrowstyle="-|>", color=cor, lw=lw, mutation_scale=14))
+            ax.text(ox+dx/2+lx, oy+dy/2+ly, lbl,
+                    fontsize=12, color=cor, fontweight="bold")
+
+        delta = math.radians(25); phi = math.radians(30)
+        psi   = phi + delta          # angle of Ia from q-axis
+
+        Vt = 1.0; Ef = 1.35; Ia = 0.72
+
+        # Vt (horizontal reference)
+        arrow(0, 0, Vt, 0, AZ, r"$V_t$", -0.12, 0.06)
+        # Ef (at angle delta)
+        arrow(0, 0, Ef*math.cos(delta), Ef*math.sin(delta), VM, r"$E_f$", 0.05, 0.05)
+        # Ia (at angle -phi from Vt, i.e. lagging)
+        Ia_x = Ia * math.cos(-phi); Ia_y = Ia * math.sin(-phi)
+        arrow(0, 0, Ia_x, Ia_y, VD, r"$I_a$", 0.06, -0.12)
+
+        # q-axis (along Ef direction)
+        q_x = math.cos(delta); q_y = math.sin(delta)
+        ax.annotate("", xy=(1.75*q_x, 1.75*q_y), xytext=(0,0),
+            arrowprops=dict(arrowstyle="-", color=CZ, lw=1.0, linestyle="dashed"))
+        ax.text(1.78*q_x, 1.78*q_y, "q", fontsize=11, color=CZ)
+
+        # d-axis (perpendicular to q)
+        d_x = -math.sin(delta); d_y = math.cos(delta)
+        ax.annotate("", xy=(0.5*d_x, 0.5*d_y), xytext=(0,0),
+            arrowprops=dict(arrowstyle="-", color=CZ, lw=1.0, linestyle="dashed"))
+        ax.text(0.52*d_x, 0.52*d_y, "d", fontsize=11, color=CZ)
+
+        # Id projection (onto d-axis)
+        Id = Ia * math.sin(psi)
+        Iq = Ia * math.cos(psi)
+        Id_x = Id * d_x; Id_y = Id * d_y
+        Iq_x = Iq * q_x; Iq_y = Iq * q_y
+
+        # Iq component
+        arrow(0, 0, Iq_x, Iq_y, LR, r"$I_q$", 0.06, 0.06, lw=1.8)
+        # Id component  
+        arrow(Iq_x, Iq_y, Id_x, Id_y, CI, r"$I_d$", 0.05, -0.10, lw=1.8)
+
+        # Angle arcs
+        # δ angle
+        arc_d = np.linspace(0, delta, 30)
+        ax.plot(0.25*np.cos(arc_d), 0.25*np.sin(arc_d), color=VM, lw=1.2)
+        ax.text(0.30, 0.08, r"$\delta$", fontsize=11, color=VM)
+        # φ angle
+        arc_p = np.linspace(-phi, 0, 30)
+        ax.plot(0.18*np.cos(arc_p), 0.18*np.sin(arc_p), color=VD, lw=1.2)
+        ax.text(0.20, -0.10, r"$\phi$", fontsize=11, color=VD)
+        # ψ angle
+        arc_ps = np.linspace(-phi, delta, 30)
+        ax.plot(0.12*np.cos(arc_ps), 0.12*np.sin(arc_ps), color=TX, lw=1.0, ls="--")
+        ax.text(0.16, 0.02, r"$\psi$", fontsize=9, color=TX)
+
+        ax.axhline(0, color=CZ, lw=0.5, alpha=0.4)
+        ax.axvline(0, color=CZ, lw=0.5, alpha=0.4)
+        ax.set_title(r"Decomposição $I_d$/$I_q$ — Máquina de Polos Salientes",
+                     fontsize=12, fontweight="bold", color=TX, pad=8)
+        return fig
+
+    def fig_potencia_saliente_mes():
+        """Plotly: P×δ com e sem componente de relutância (polos salientes)."""
+        delta_arr = np.linspace(-180, 180, 500)
+        delta_rad = np.radians(delta_arr)
+
+        Vt = 1.0; Ef = 1.2; Xd = 1.0; Xq = 0.6
+
+        P_cil    = (3*Vt*Ef / Xd) * np.sin(delta_rad)
+        P_rel    = (3*Vt**2*(Xd-Xq) / (2*Xd*Xq)) * np.sin(2*delta_rad)
+        P_sal    = P_cil + P_rel
+        P_max_sal = float(np.max(P_sal[:250]))  # max in generator region
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=delta_arr, y=P_cil, mode="lines",
+            line=dict(color=AZ, width=2.2, dash="dash"),
+            name="Cilíndrica (Xd=Xq)  P = (VtEf/Xd)sinδ"))
+        fig.add_trace(go.Scatter(x=delta_arr, y=P_rel, mode="lines",
+            line=dict(color=LR, width=1.8, dash="dot"),
+            name="Relutância  P_rel = (Vt²(Xd−Xq)/2XdXq)sin2δ"))
+        fig.add_trace(go.Scatter(x=delta_arr, y=P_sal, mode="lines",
+            line=dict(color=VM, width=3.0),
+            name="Polos Salientes  P_total = P_cil + P_rel"))
+
+        # Mark maximum of salient pole
+        idx_max = int(np.argmax(P_sal[:250]))
+        fig.add_trace(go.Scatter(x=[delta_arr[idx_max]], y=[P_sal[idx_max]],
+            mode="markers", marker=dict(color=VM, size=12, symbol="star"),
+            name=f"P_max ≈ {P_sal[idx_max]:.2f} pu (δ ≈ {delta_arr[idx_max]:.0f}°)"))
+
+        fig.add_vline(x=90,  line=dict(color=CZ, width=1, dash="dot"))
+        fig.add_vline(x=-90, line=dict(color=CZ, width=1, dash="dot"))
+        fig.add_hline(y=0,   line=dict(color=CZ, width=0.8))
+        fig.add_annotation(x=50, y=P_sal[idx_max]+0.06,
+            text=f"δ_max ≈ {delta_arr[idx_max]:.0f}° < 90°<br>(saliente mais estável)",
+            showarrow=False, font=dict(size=11, color=VM),
+            bgcolor="rgba(255,255,255,0.85)")
+
+        fig.update_layout(
+            title=dict(text="Potência × δ — Cilíndrica vs Polos Salientes (Vt=1, Ef=1,2, Xd=1, Xq=0,6)",
+                       font=dict(size=14, color=TX)),
+            xaxis=dict(title=dict(text="Ângulo de carga δ (°)", font=dict(size=14, color=TX)),
+                       tickvals=[-180,-135,-90,-45,0,45,90,135,180],
+                       tickfont=dict(size=12), range=[-185,185],
+                       gridcolor="rgba(128,128,128,.15)"),
+            yaxis=dict(title=dict(text="Potência P (pu)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=12),
+                       gridcolor="rgba(128,128,128,.15)"),
+            legend=dict(font=dict(size=12), bgcolor="rgba(0,0,0,0)",
+                        orientation="h", y=-0.24),
+            height=460, margin=dict(l=70, r=30, t=60, b=110),
+        )
+        return fig
+
+    def fig_curto_circuito_mes():
+        """Plotly: envelope da corrente de curto-circuito (3 períodos)."""
+        t = np.linspace(0, 1.5, 1000)
+
+        # Typical values (pu): Xd''=0.2, Xd'=0.3, Xd=1.0, Ef=1.0
+        Ef  = 1.0
+        Icc  = Ef / 1.0   # steady-state
+        Itr  = Ef / 0.3   # transient amplitude
+        Isub = Ef / 0.2   # subtransient amplitude
+
+        # Time constants
+        td0pp = 0.06   # subtransient (s)
+        td0p  = 6.0    # transient (s) — use 0.8 for display
+        td0p_display = 0.8
+        ta    = 0.15   # DC offset
+
+        # Envelope (upper)
+        env_upper = (Isub - Itr)*np.exp(-t/td0pp) + (Itr - Icc)*np.exp(-t/td0p_display) + Icc
+        env_dc    = np.sqrt(2) * Isub * np.exp(-t/ta)  # DC offset component
+        env_total_upper = env_upper + env_dc
+
+        # Actual current (sinusoidal × envelope)
+        f_el = 60
+        i_ac  = env_upper * np.sin(2*np.pi*f_el*t)
+        i_dc  = np.sqrt(2)*Isub*np.exp(-t/ta)
+        i_tot = i_ac - i_dc
+
+        fig = go.Figure()
+        # Envelopes
+        fig.add_trace(go.Scatter(x=t, y=env_upper, mode="lines",
+            line=dict(color=CZ, width=1.5, dash="dash"),
+            name="Envoltória AC (sem DC)"))
+        fig.add_trace(go.Scatter(x=t, y=-env_upper, mode="lines",
+            line=dict(color=CZ, width=1.5, dash="dash"),
+            showlegend=False))
+        fig.add_trace(go.Scatter(x=t, y=env_total_upper, mode="lines",
+            line=dict(color=LR, width=1.5, dash="dot"),
+            name="Envoltória total (com DC)"))
+
+        # Corrente total
+        fig.add_trace(go.Scatter(x=t, y=i_tot, mode="lines",
+            line=dict(color=AZ, width=1.8),
+            name="Corrente total i(t)"))
+
+        # Reference lines for each period
+        t_sub = 3/f_el  # ~3 cycles
+        t_tr  = 0.4
+        for tv, lbl, cor in [(t_sub,"Subtransiente→Transiente",LR),(t_tr,"Transiente→Permanente",VD)]:
+            fig.add_vline(x=tv, line=dict(color=cor, width=1.2, dash="dash"))
+            fig.add_annotation(x=tv+0.01, y=4.2, text=f"<b>{lbl}</b>",
+                showarrow=False, font=dict(size=9.5, color=cor), xanchor="left")
+
+        # Icc steady state
+        fig.add_hline(y=Icc*math.sqrt(2), line=dict(color=VM, width=1.2, dash="dot"))
+        fig.add_annotation(x=1.3, y=Icc*math.sqrt(2)+0.15,
+            text=f"I_cc (regime) = {Icc*math.sqrt(2):.2f} pu",
+            showarrow=False, font=dict(size=10, color=VM))
+
+        # Labels de região
+        for xc, yc, lbl in [
+            (t_sub/2,       5.0, "Subtransiente\n(X_d'')"),
+            ((t_sub+t_tr)/2, 3.5, "Transiente\n(X_d')"),
+            (1.1,            1.8, "Regime\n(X_d)"),
+        ]:
+            fig.add_annotation(x=xc, y=yc, text=f"<b>{lbl}</b>",
+                showarrow=False, font=dict(size=10, color=TX),
+                bgcolor="rgba(255,255,255,0.8)", borderpad=3)
+
+        fig.update_layout(
+            title=dict(text="Corrente de Curto-Circuito — 3 Períodos (Subtransiente, Transiente, Regime)",
+                       font=dict(size=14, color=TX)),
+            xaxis=dict(title=dict(text="Tempo (s)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=12), range=[-0.02, 1.52],
+                       gridcolor="rgba(128,128,128,.15)"),
+            yaxis=dict(title=dict(text="Corrente (pu)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=12),
+                       gridcolor="rgba(128,128,128,.15)"),
+            legend=dict(font=dict(size=12), bgcolor="rgba(0,0,0,0)",
+                        orientation="h", y=-0.22),
+            height=460, margin=dict(l=70, r=30, t=65, b=110),
+        )
+        return fig
+
+    def fig_area_equivalente_mes():
+        """Plotly: método das áreas equivalentes (estabilidade dinâmica)."""
+        delta_arr = np.linspace(0, np.pi, 400)
+        Vt = 1.0; Ef = 1.2; Xs = 1.0
+        P_arr = (3*Vt*Ef/Xs) * np.sin(delta_arr)
+        P_max = 3*Vt*Ef/Xs
+
+        # Operating point before fault
+        Pm = 0.6  # mechanical power
+        delta0 = math.asin(Pm / P_max)          # initial angle
+        delta1 = np.pi - delta0                  # unstable equilibrium
+        delta_cc = math.radians(70)              # fault clearing angle
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=np.degrees(delta_arr), y=P_arr, mode="lines",
+            line=dict(color=AZ, width=2.8),
+            name="P_e = (VtEf/Xs)sinδ"))
+
+        # Pm line
+        fig.add_hline(y=Pm, line=dict(color=VD, width=2.0, dash="dash"))
+        fig.add_annotation(x=170, y=Pm+0.05, text="<b>P_m</b>",
+            showarrow=False, font=dict(size=12, color=VD))
+
+        # Area A1 (accelerating — under Pm, above Pe curve, from delta0 to delta_cc)
+        mask_a1 = (delta_arr >= delta0) & (delta_arr <= delta_cc)
+        d_a1 = delta_arr[mask_a1]
+        p_a1 = P_arr[mask_a1]
+        fig.add_trace(go.Scatter(
+            x=np.concatenate([np.degrees(d_a1), np.degrees(d_a1[::-1])]),
+            y=np.concatenate([np.full_like(d_a1, Pm), p_a1[::-1]]),
+            fill="toself", fillcolor="rgba(224,123,0,0.30)",
+            line=dict(color="rgba(0,0,0,0)"),
+            name="Área A₁ (acelerante)"))
+
+        # Area A2 (decelerating — above Pm, under Pe curve, from delta_cc to delta_max)
+        delta_max = np.pi - delta_cc  # conservative estimate
+        mask_a2 = (delta_arr >= delta_cc) & (delta_arr <= delta_max)
+        d_a2 = delta_arr[mask_a2]
+        p_a2 = P_arr[mask_a2]
+        fig.add_trace(go.Scatter(
+            x=np.concatenate([np.degrees(d_a2), np.degrees(d_a2[::-1])]),
+            y=np.concatenate([p_a2, np.full_like(d_a2, Pm)[::-1]]),
+            fill="toself", fillcolor="rgba(61,142,240,0.30)",
+            line=dict(color="rgba(0,0,0,0)"),
+            name="Área A₂ (desacelerante)"))
+
+        # Key angles
+        for ang, lbl, cor in [
+            (math.degrees(delta0),  "δ₀", VD),
+            (math.degrees(delta_cc),"δ_cc",LR),
+            (math.degrees(delta_max),"δ_max",AZ),
+            (math.degrees(delta1),  "δ₁",CZ),
+        ]:
+            fig.add_vline(x=ang, line=dict(color=cor, width=1.2, dash="dot"))
+            fig.add_annotation(x=ang+1, y=P_max+0.08, text=f"<b>{lbl}</b>",
+                showarrow=False, font=dict(size=11, color=cor), xanchor="left")
+
+        fig.add_annotation(x=55, y=0.25, text="<b>A₁</b>",
+            showarrow=False, font=dict(size=14, color=LR))
+        fig.add_annotation(x=100, y=0.95, text="<b>A₂</b>",
+            showarrow=False, font=dict(size=14, color=AZ))
+        fig.add_annotation(x=20, y=P_max*0.9,
+            text="Estável se A₂ ≥ A₁",
+            showarrow=False, font=dict(size=11, color=TX),
+            bgcolor="rgba(255,255,255,0.85)")
+
+        fig.update_layout(
+            title=dict(text="Método das Áreas Equivalentes — Limite de Estabilidade Dinâmica",
+                       font=dict(size=14, color=TX)),
+            xaxis=dict(title=dict(text="Ângulo de carga δ (°)", font=dict(size=14, color=TX)),
+                       tickvals=[0,30,60,90,120,150,180],
+                       tickfont=dict(size=12), range=[0, 185],
+                       gridcolor="rgba(128,128,128,.15)"),
+            yaxis=dict(title=dict(text="Potência (pu)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=12), range=[-0.1, P_max+0.3],
+                       gridcolor="rgba(128,128,128,.15)"),
+            legend=dict(font=dict(size=12), bgcolor="rgba(0,0,0,0)",
+                        orientation="h", y=-0.22),
+            height=460, margin=dict(l=70, r=30, t=60, b=110),
+        )
+        return fig
+
+    def fig_fasorial_saliente_mes(Vt=1.0, Ef=1.2, delta_deg=25.0,
+                                   Xd=1.0, Xq=0.6):
+        """Plotly: diagrama fasorial de polos salientes com Id/Iq."""
+        delta = math.radians(delta_deg)
+        Vt_c  = complex(Vt, 0)
+        Ef_c  = complex(Ef*math.cos(delta), Ef*math.sin(delta))
+
+        # Id e Iq (Ra=0, gerador)
+        # Vt + jXq*Iq + jXd*Id = Ef  (decomposed)
+        # delta obtido pela relação: tan(delta) = XqIacos(phi)/(Vt+XqIasin(phi))
+        # Here we compute Ia from the salient pole equations
+        # Use the standard approach: find Iq, Id from geometry
+        # Since Ra=0:  Ef = Vt + jXd*Id + jXq*Iq
+        # Iq = (Ef - Vt*cos(delta)) / Xq  (only approximate — use direct formula)
+        Iq = (Ef - Vt*math.cos(delta)) / Xq
+        Id = Vt * math.sin(delta) / Xd
+
+        phi = math.atan2(Xq*Iq - 0, Vt + Xd*Id)   # power factor angle approx
+
+        Ia_mag = math.sqrt(Id**2 + Iq**2)
+        psi    = math.atan2(Id, Iq)  # angle from q-axis to Ia
+        phi_ia = delta - psi          # lag angle from Vt
+
+        Ia_c  = complex(Ia_mag*math.cos(-phi_ia), Ia_mag*math.sin(-phi_ia))
+        jXdId_c = complex(0, Xd) * complex(Id*(-math.sin(delta)),
+                                             Id*math.cos(delta))
+        jXqIq_c = complex(0, Xq) * complex(Iq*math.cos(delta),
+                                             Iq*math.sin(delta))
+
+        fig = go.Figure()
+
+        def arrow_trace(ox, oy, dx, dy, cor, nome, dash="solid", w=2.8):
+            fig.add_trace(go.Scatter(
+                x=[ox, ox+dx], y=[oy, oy+dy], mode="lines",
+                line=dict(color=cor, width=w, dash=dash),
+                name=nome, showlegend=True,
+                hovertemplate=f"{nome}: {math.hypot(dx,dy):.3f} pu<extra></extra>"))
+            fig.add_annotation(x=ox+dx, y=oy+dy, ax=ox, ay=oy,
+                xref="x", yref="y", axref="x", ayref="y",
+                arrowhead=2, arrowsize=1.4, arrowwidth=2.5,
+                arrowcolor=cor, showarrow=True, text="")
+            fig.add_annotation(x=ox+dx/2+0.03, y=oy+dy/2+0.04,
+                text=f"<b>{nome}</b>", showarrow=False,
+                font=dict(size=12, color=cor),
+                bgcolor="rgba(255,255,255,0.75)", borderpad=2)
+
+        arrow_trace(0, 0, Vt_c.real, Vt_c.imag, AZ,  "Vₜ", w=3.0)
+        arrow_trace(0, 0, Ef_c.real, Ef_c.imag, VM,  "Eƒ", w=3.0)
+        arrow_trace(0, 0, Ia_c.real*0.7, Ia_c.imag*0.7, VD, "Iₐ", dash="dot", w=2.0)
+        arrow_trace(0, 0,
+                    Iq*math.cos(delta)*0.7, Iq*math.sin(delta)*0.7,
+                    LR, "Iᵩ", dash="dot", w=1.8)
+        arrow_trace(0, 0,
+                    Id*(-math.sin(delta))*0.7, Id*math.cos(delta)*0.7,
+                    CI, "I_d", dash="dot", w=1.8)
+        arrow_trace(Vt_c.real, Vt_c.imag,
+                    jXqIq_c.real, jXqIq_c.imag, LR, "jXᵩIᵩ", w=2.0)
+        arrow_trace(Vt_c.real + jXqIq_c.real, Vt_c.imag + jXqIq_c.imag,
+                    jXdId_c.real, jXdId_c.imag, CI, "jX_dI_d", w=2.0)
+
+        # delta arc
+        arc_t = np.linspace(0, delta, 30)
+        fig.add_trace(go.Scatter(x=0.25*np.cos(arc_t), y=0.25*np.sin(arc_t),
+            mode="lines", line=dict(color=TX, width=1.5, dash="dash"),
+            showlegend=False, hoverinfo="skip"))
+        fig.add_annotation(x=0.32*math.cos(delta/2), y=0.32*math.sin(delta/2),
+            text="<b>δ</b>", showarrow=False, font=dict(size=13, color=TX))
+
+        fig.add_hline(y=0, line=dict(color=CZ, width=0.7, dash="dot"))
+        fig.add_vline(x=0, line=dict(color=CZ, width=0.7, dash="dot"))
+
+        lim = max(Vt, Ef) * 1.3
+        fig.update_layout(
+            title=dict(text=f"Fasorial — Polos Salientes (δ={delta_deg:.0f}°, Xd={Xd}, Xq={Xq})",
+                       font=dict(size=15, color=TX)),
+            xaxis=dict(range=[-0.3, lim*1.1], scaleanchor="y",
+                       showgrid=True, gridcolor="rgba(128,128,128,.15)",
+                       zeroline=False, tickfont=dict(size=12),
+                       title=dict(text="Real (pu)", font=dict(size=12, color=CZ))),
+            yaxis=dict(range=[-lim*0.5, lim*0.9],
+                       showgrid=True, gridcolor="rgba(128,128,128,.15)",
+                       zeroline=False, tickfont=dict(size=12),
+                       title=dict(text="Imaginário (pu)", font=dict(size=12, color=CZ))),
+            legend=dict(font=dict(size=11), bgcolor="rgba(255,255,255,0.85)",
+                        x=0.01, y=0.99, xanchor="left", yanchor="top"),
+            height=500, margin=dict(l=65, r=30, t=60, b=60),
+        )
+        return fig
+
     # ═══════════════════════════════════════════════════════════════════════════
     # CABEÇALHO
     # ═══════════════════════════════════════════════════════════════════════════
@@ -1132,7 +1510,10 @@ def run():
 **11. Potência Ativa, Reativa e Torque**
 **12. Curva de Capacidade**
 **13. Controle de Fator de Potência — Condensador Síncrono**
-🎛️ **Exploradores Interativos**
+**14. Máquina Síncrona com Polos Salientes**
+**15. Potência em Máquinas de Polos Salientes**
+**16. Dinâmicas de Transitório**
+🎛️ **Exploradores Interativos** (cilíndrica + polos salientes)
 """)
 
     # ═══════════════════════════════════════════════════════════════════════════
@@ -1662,18 +2043,17 @@ para diferentes $P$ forma a **família de curvas V** da máquina.
 
     st.divider()
 
-
-    st.divider()
-
     # ═══════════════════════════════════════════════════════════════════════════
     # EXPLORADORES INTERATIVOS
     # ═══════════════════════════════════════════════════════════════════════════
     st.header("🎛️ Exploradores Interativos")
 
-    tab1, tab2, tab3 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "📐 Diagrama Fasorial",
         "📊 Curva V (Ia × If)",
         "📐 Potência × Ângulo δ",
+        "🔵 Polos Salientes — Fasorial",
+        "⚡ Polos Salientes — P×δ",
     ])
 
     # ── Aba 1: Diagrama Fasorial ──────────────────────────────────────────────
@@ -1783,6 +2163,162 @@ para diferentes $P$ forma a **família de curvas V** da máquina.
             height=380, margin=dict(l=65, r=20, t=55, b=65),
         )
         show_plot(fig_pd, key="exp_pd_plot")
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 14 — Polos Salientes
+    # ═══════════════════════════════════════════════════════════════════════════
+    st.header("14. Máquina Síncrona com Polos Salientes")
+
+    st.markdown(r"""
+Em máquinas com **polos salientes**, o entreferro é **não uniforme**: menor ao longo
+dos polos (eixo direto **d**) e maior entre os polos (eixo em quadratura **q**).
+Isso cria relutâncias diferentes nos dois eixos, tornando a análise fasorial mais complexa.
+
+**Eixos d e q:**
+- **Eixo direto (d)** — alinhado com o polo (fluxo de campo $\Phi_f$); relutância baixa → $X_d$ alto
+- **Eixo em quadratura (q)** — interpolar; relutância alta → $X_q$ baixo
+
+Relação típica: $X_d > X_q$, com $X_q \approx 50\text{--}80\%\,X_d$
+
+**Reatâncias síncronas:**
+
+$$X_d = X_{ad} + X_{al} \quad \text{(eixo direto)}$$
+
+$$X_q = X_{aq} + X_{al} \quad \text{(eixo em quadratura)}$$
+
+onde $X_{al}$ é a reatância de dispersão (igual nos dois eixos) e
+$X_{ad} > X_{aq}$ pela diferença de relutância.
+
+**Decomposição de $I_a$ em componentes d-q:**
+
+$$I_d = I_a \sin\psi \qquad I_q = I_a \cos\psi \qquad \psi = \phi + \delta$$
+
+onde $\phi$ é o ângulo de defasagem de $I_a$ em relação a $V_t$ e
+$\delta$ é o ângulo de carga.
+
+**Ensaio de escorregamento** — determina $X_d$ e $X_q$:
+o rotor gira em velocidade próxima à síncrona com campo em aberto. A corrente
+de estator oscila entre $I_{min}$ (eixo d, baixa relutância) e $I_{max}$ (eixo q, alta relutância):
+
+$$X_d = \frac{V_{max}}{I_{min}} \qquad X_q = \frac{V_{min}}{I_{max}}$$
+""")
+
+    show_fig(fig_dq_decomposition_mes(), width_frac=0.52)
+    st.caption(
+        r"**Figura 14.1** — Decomposição fasorial de $I_a$ em componentes "
+        r"$I_d$ (eixo direto) e $I_q$ (eixo em quadratura). "
+        r"$\psi = \phi + \delta$ é o ângulo de $I_a$ em relação ao eixo q."
+    )
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 15 — Potência em Polos Salientes
+    # ═══════════════════════════════════════════════════════════════════════════
+    st.header("15. Potência em Máquinas de Polos Salientes")
+
+    st.markdown(r"""
+Com $R_a = 0$, a potência ativa em polos salientes tem **duas componentes**:
+
+$$\boxed{P_{3\phi} = \frac{3\,V_t E_f}{X_d} \sin\delta
++ \frac{3\,V_t^2(X_d - X_q)}{2\,X_d X_q} \sin 2\delta}$$
+
+| Parcela | Expressão | Origem |
+|---|---|---|
+| **Excitação** | $\dfrac{3V_tE_f}{X_d}\sin\delta$ | Igual à máquina cilíndrica |
+| **Relutância** | $\dfrac{3V_t^2(X_d-X_q)}{2X_dX_q}\sin2\delta$ | Exclusiva dos polos salientes |
+
+**Consequências importantes:**
+
+- A componente de relutância depende apenas de $V_t$, $X_d$, $X_q$ — não de $E_f$.
+  Isso significa que a máquina de polos salientes pode desenvolver torque **mesmo
+  sem excitação** ($E_f = 0$), pelo simples efeito da anisotropia magnética.
+- O ângulo de máxima potência é **menor que 90°** (tipicamente entre 65° e 80°),
+  o que torna a máquina de polos salientes **mais estável** que a cilíndrica.
+- Para $X_d = X_q$ (cilíndrica), a componente de relutância é zero e recupera-se
+  a expressão $P = \frac{3V_tE_f}{X_s}\sin\delta$.
+""")
+
+    show_plot(fig_potencia_saliente_mes(), key="fig_15_psal")
+    st.caption(
+        r"**Figura 15.1** — Curva P×δ para polos salientes (vermelho) decomposta em "
+        r"componente de excitação (azul tracejado) e componente de relutância (laranja). "
+        r"A estrela marca o ângulo de potência máxima, que é menor que 90°."
+    )
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 16 — Dinâmicas de Transitório
+    # ═══════════════════════════════════════════════════════════════════════════
+    st.header("16. Dinâmicas de Transitório")
+
+    st.markdown(r"""
+### 16.1 Curto-Circuito Trifásico — Três Períodos
+
+Ao aplicar um curto-circuito súbito nos terminais de um gerador em operação,
+a corrente passa por **três períodos distintos** antes de atingir o regime permanente:
+
+| Período | Duração | Reatância | Constante de tempo |
+|---|---|---|---|
+| **Subtransiente** | Alguns ciclos (ms) | $X_d''$ | $\tau_d'' \approx 0{,}06$ s |
+| **Transiente** | Décimos de segundo | $X_d'$ | $\tau_d' \approx 6$ s |
+| **Regime permanente** | Contínuo | $X_d$ | — |
+
+Relação típica: $X_d'' < X_d' < X_d$ (ex.: 0,2 / 0,3 / 1,0 pu)
+
+A corrente de curto-circuito máxima no instante $t = 0^+$:
+
+$$I''_{cc} = \frac{E_f}{X_d''} \quad \text{(subtransiente)}$$
+
+**Componente DC:** ao fechar o curto, pode existir componente DC que decai com
+$\tau_a \approx 0{,}15$ s. A corrente total máxima instantânea é:
+
+$$i_{total}(0^+) = \sqrt{2}\,I''_{cc} + \sqrt{2}\,I''_{cc} = 2\sqrt{2}\,I''_{cc}$$
+
+(quando a componente DC é máxima — depende do ângulo de fechamento do curto).
+
+**Valores típicos** em geradores de polos salientes:
+$X_d = 1$ pu · $X_d' = 0{,}3$ pu · $X_d'' = 0{,}2$ pu ·
+$\tau_d' = 6$ s · $\tau_d'' = 0{,}06$ s · $\tau_a = 0{,}15$ s
+""")
+
+    show_plot(fig_curto_circuito_mes(), key="fig_16_icc")
+    st.caption(
+        "**Figura 16.1** — Corrente de curto-circuito trifásico: envoltória AC (cinza), "
+        "envoltória total com componente DC (laranja) e corrente instantânea (azul). "
+        "Regiões subtransiente, transiente e regime permanente marcadas."
+    )
+
+    st.markdown(r"""
+### 16.2 Estabilidade Dinâmica — Método das Áreas Equivalentes
+
+Após uma perturbação (ex.: curto-circuito seguido de abertura da linha),
+o gerador pode permanecer em sincronismo ou perder o sincronismo.
+
+O **método das áreas equivalentes** determina graficamente o limite de estabilidade:
+
+- **Área A₁** (acelerante): durante a falta, $P_e < P_m$ → o rotor acelera, $\delta$ aumenta.
+- **Área A₂** (desacelerante): após o isolamento da falta, $P_e > P_m$ → o rotor desacelera.
+
+**Critério de estabilidade:**
+
+$$A_2 \geq A_1 \quad \Rightarrow \quad \text{sistema permanece em sincronismo}$$
+
+O **ângulo crítico de abertura** $\delta_{cc}$ é o maior ângulo em que é possível
+abrir o disjuntor e ainda manter $A_2 = A_1$ (limite de estabilidade).
+""")
+
+    show_plot(fig_area_equivalente_mes(), key="fig_16_area")
+    st.caption(
+        r"**Figura 16.2** — Método das áreas equivalentes: "
+        r"área A₁ (acelerante, laranja) e A₂ (desacelerante, azul) na curva P×δ. "
+        r"O sistema é estável enquanto $A_2 \geq A_1$. "
+        r"$\delta_0$: pré-falta; $\delta_{cc}$: abertura do disjuntor; "
+        r"$\delta_{max}$: máximo atingido; $\delta_1$: equilíbrio instável."
+    )
+
+    st.divider()
 
     # ═══════════════════════════════════════════════════════════════════════════
     # REFERÊNCIAS
