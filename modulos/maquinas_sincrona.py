@@ -426,15 +426,12 @@ def run():
             tmp.close()
             d.save(tmp.name, dpi=160)
 
-            # Pós-anotação: +/− e Vt com tamanho uniforme via matplotlib
+            # Labels com coordenadas numéricas fixas (Gap em x=9.6, y: 0→-6.4)
             mpl_fig = d.fig.getfig()
             ax = mpl_fig.get_axes()[0]
-            xl = ax.get_xlim(); yl = ax.get_ylim()
-            xs = xl[1] - xl[0]; ys = yl[1] - yl[0]
-            xp = xl[1] - xs * 0.05
-            ax.text(xp, yl[1] - ys*0.20, "−",       ha="center", va="center", fontsize=13)
-            ax.text(xp, (yl[0]+yl[1])/2,  r"$V_t$",  ha="center", va="center", fontsize=13)
-            ax.text(xp, yl[0] + ys*0.20,  "+",       ha="center", va="center", fontsize=13)
+            ax.text(10.15, -0.35, "−",     ha="left", va="center", fontsize=13)
+            ax.text(10.15, -3.2,  r"$V_t$", ha="left", va="center", fontsize=13)
+            ax.text(10.15, -6.05, "+",     ha="left", va="center", fontsize=13)
             mpl_fig.savefig(tmp.name, dpi=160, bbox_inches="tight")
             plt.close(mpl_fig)
 
@@ -470,15 +467,12 @@ def run():
             tmp.close()
             d.save(tmp.name, dpi=160)
 
-            # Pós-anotação: +/− e Vt com tamanho uniforme via matplotlib
+            # Labels com coordenadas numéricas fixas (Gap em x=9.6, y: 0→-6.4)
             mpl_fig = d.fig.getfig()
             ax = mpl_fig.get_axes()[0]
-            xl = ax.get_xlim(); yl = ax.get_ylim()
-            xs = xl[1] - xl[0]; ys = yl[1] - yl[0]
-            xp = xl[1] - xs * 0.05
-            ax.text(xp, yl[1] - ys*0.20, "+",       ha="center", va="center", fontsize=13)
-            ax.text(xp, (yl[0]+yl[1])/2,  r"$V_t$",  ha="center", va="center", fontsize=13)
-            ax.text(xp, yl[0] + ys*0.20,  "−",       ha="center", va="center", fontsize=13)
+            ax.text(10.15, -0.35, "+",     ha="left", va="center", fontsize=13)
+            ax.text(10.15, -3.2,  r"$V_t$", ha="left", va="center", fontsize=13)
+            ax.text(10.15, -6.05, "−",     ha="left", va="center", fontsize=13)
             mpl_fig.savefig(tmp.name, dpi=160, bbox_inches="tight")
             plt.close(mpl_fig)
 
@@ -1157,15 +1151,17 @@ pois o fluxo de entreferro é pequeno).
 
 **Cálculo de $X_s$:**
 
-$$X_{s,nsat} = \frac{E_{f,AGL}(I_{f0})/\sqrt{3}}{I_{a,SCC}(I_{f0})} \qquad
-X_{s,sat} = \frac{E_{f,OCC}(I_{f0})/\sqrt{3}}{I_{a,SCC}(I_{f0})}$$
+$$X_{s,nsat} = \frac{E_{f,AGL}(I_{f0})/\sqrt{3}}{I_{a,SCC}(I_{f0})}$$
+
+$$X_{s,sat} = \frac{E_{f,OCC}(I_{f0})/\sqrt{3}}{I_{a,SCC}(I_{f0})}$$
 
 onde $E_{f,AGL}(I_{f0})$ é a tensão de linha lida na **linha do entreferro (AGL)**
-para a corrente de campo $I_{f0}$, e $E_{f,OCC}(I_{f0})$ é a tensão de linha lida
-na **curva OCC** para o mesmo $I_{f0}$. Como a OCC satura e fica abaixo da AGL,
-tem-se $E_{f,OCC} \leq E_{f,AGL}$, portanto $X_{s,sat} \leq X_{s,nsat}$.
-Na prática, usa-se $X_{s,sat}$ para análises de curto-circuito e
-$X_{s,nsat}$ como limite superior não-saturado.
+e $E_{f,OCC}(I_{f0})$ é a tensão de linha lida na **curva OCC saturada** — ambas
+avaliadas na mesma corrente de campo $I_{f0}$.
+Na região saturada, a OCC dá tensão menor que a AGL para o mesmo $I_f$,
+portanto $E_{f,OCC} \leq E_{f,AGL}$ e consequentemente $X_{s,sat} \leq X_{s,nsat}$.
+Na prática, usa-se $X_{s,sat}$ para estudos de curto-circuito (condição saturada)
+e $X_{s,nsat}$ como limite teórico superior (máquina não saturada).
 """)
 
     show_plot(fig_occ_scc_mes(), key="fig_10_occ_scc")
