@@ -2137,8 +2137,8 @@ $$X_d = \frac{V_{max}}{I_{min}} \qquad X_q = \frac{V_{min}}{I_{max}}$$
     st.markdown(r"""
 Com $R_a = 0$, a potência ativa em polos salientes tem **duas componentes**:
 
-$$P_{3\phi} = \frac{3\,V_t E_f}{X_d} \sin\delta\n+ \frac{3\,V_t^2(X_d - X_q)}{2\,X_d X_q} \sin 2\delta$$\n
-| Parcela | Expressão | Origem |
+$$P_{3\phi} = \frac{3\,V_t E_f}{X_d} \sin\delta + \frac{3\,V_t^2(X_d - X_q)}{2\,X_d X_q} \sin 2\delta$$
+
 |---|---|---|
 | **Excitação** | $\dfrac{3V_tE_f}{X_d}\sin\delta$ | Igual à máquina cilíndrica |
 | **Relutância** | $\dfrac{3V_t^2(X_d-X_q)}{2X_dX_q}\sin2\delta$ | Exclusiva dos polos salientes |
