@@ -1332,85 +1332,112 @@ def run():
         return fig
 
     def fig_curto_circuito_mes():
-        """Plotly: envelope da corrente de curto-circuito (3 períodos)."""
+        """Plotly: envelope da corrente de curto-circuito (3 períodos) — sem sobreposições."""
         t = np.linspace(0, 1.5, 1000)
-
-        # Typical values (pu): Xd''=0.2, Xd'=0.3, Xd=1.0, Ef=1.0
-        Ef  = 1.0
-        Icc  = Ef / 1.0   # steady-state
-        Itr  = Ef / 0.3   # transient amplitude
-        Isub = Ef / 0.2   # subtransient amplitude
-
-        # Time constants
-        td0pp = 0.06   # subtransient (s)
-        td0p  = 6.0    # transient (s) — use 0.8 for display
-        td0p_display = 0.8
-        ta    = 0.15   # DC offset
-
-        # Envelope (upper)
-        env_upper = (Isub - Itr)*np.exp(-t/td0pp) + (Itr - Icc)*np.exp(-t/td0p_display) + Icc
-        env_dc    = np.sqrt(2) * Isub * np.exp(-t/ta)  # DC offset component
-        env_total_upper = env_upper + env_dc
-
-        # Actual current (sinusoidal × envelope)
         f_el = 60
-        i_ac  = env_upper * np.sin(2*np.pi*f_el*t)
-        i_dc  = np.sqrt(2)*Isub*np.exp(-t/ta)
-        i_tot = i_ac - i_dc
+
+        Ef   = 1.0
+        Icc  = Ef / 1.0    # regime permanente
+        Itr  = Ef / 0.3    # transiente
+        Isub = Ef / 0.2    # subtransiente
+
+        td_pp = 0.06        # τ subtransiente
+        td_p  = 0.80        # τ transiente (exibição)
+        ta    = 0.15        # τ componente DC
+
+        env_ac  = (Isub - Itr)*np.exp(-t/td_pp) + (Itr - Icc)*np.exp(-t/td_p) + Icc
+        env_tot = env_ac + np.sqrt(2)*Isub*np.exp(-t/ta)
+        i_ac    = env_ac * np.sin(2*np.pi*f_el*t)
+        i_dc    = np.sqrt(2)*Isub*np.exp(-t/ta)
+        i_tot   = i_ac - i_dc
 
         fig = go.Figure()
-        # Envelopes
-        fig.add_trace(go.Scatter(x=t, y=env_upper, mode="lines",
-            line=dict(color=CZ, width=1.5, dash="dash"),
-            name="Envoltória AC (sem DC)"))
-        fig.add_trace(go.Scatter(x=t, y=-env_upper, mode="lines",
-            line=dict(color=CZ, width=1.5, dash="dash"),
-            showlegend=False))
-        fig.add_trace(go.Scatter(x=t, y=env_total_upper, mode="lines",
-            line=dict(color=LR, width=1.5, dash="dot"),
-            name="Envoltória total (com DC)"))
 
-        # Corrente total
+        # Envoltórias
+        fig.add_trace(go.Scatter(x=t, y=env_ac, mode="lines",
+            line=dict(color=CZ, width=1.8, dash="dash"),
+            name="Envoltória AC (sem DC)"))
+        fig.add_trace(go.Scatter(x=t, y=-env_ac, mode="lines",
+            line=dict(color=CZ, width=1.8, dash="dash"),
+            showlegend=False))
+        fig.add_trace(go.Scatter(x=t, y=env_tot, mode="lines",
+            line=dict(color=LR, width=1.8, dash="dot"),
+            name="Envoltória total (com DC)"))
         fig.add_trace(go.Scatter(x=t, y=i_tot, mode="lines",
-            line=dict(color=AZ, width=1.8),
+            line=dict(color=AZ, width=1.6),
             name="Corrente total i(t)"))
 
-        # Reference lines for each period
-        t_sub = 3/f_el  # ~3 cycles
-        t_tr  = 0.4
-        for tv, lbl, cor in [(t_sub,"Subtransiente→Transiente",LR),(t_tr,"Transiente→Permanente",VD)]:
-            fig.add_vline(x=tv, line=dict(color=cor, width=1.2, dash="dash"))
-            fig.add_annotation(x=tv+0.01, y=4.2, text=f"<b>{lbl}</b>",
-                showarrow=False, font=dict(size=9.5, color=cor), xanchor="left")
+        # ── Linhas verticais de transição ────────────────────────────────────
+        t_sub = 3 / f_el   # ~0.05 s (3 ciclos)
+        t_tr  = 0.40
 
-        # Icc steady state
-        fig.add_hline(y=Icc*math.sqrt(2), line=dict(color=VM, width=1.2, dash="dot"))
-        fig.add_annotation(x=1.3, y=Icc*math.sqrt(2)+0.15,
-            text=f"I_cc (regime) = {Icc*math.sqrt(2):.2f} pu",
-            showarrow=False, font=dict(size=10, color=VM))
+        fig.add_vline(x=t_sub, line=dict(color=LR, width=1.5, dash="dash"))
+        fig.add_vline(x=t_tr,  line=dict(color=VD, width=1.5, dash="dash"))
 
-        # Labels de região
-        for xc, yc, lbl in [
-            (t_sub/2,       5.0, "Subtransiente\n(X_d'')"),
-            ((t_sub+t_tr)/2, 3.5, "Transiente\n(X_d')"),
-            (1.1,            1.8, "Regime\n(X_d)"),
-        ]:
-            fig.add_annotation(x=xc, y=yc, text=f"<b>{lbl}</b>",
-                showarrow=False, font=dict(size=10, color=TX),
-                bgcolor="rgba(255,255,255,0.8)", borderpad=3)
+        # Rótulos das transições — abaixo do eixo para não colidir com as curvas
+        fig.add_annotation(
+            x=t_sub, y=-12.5, text="<b>Sub→Transiente</b>",
+            showarrow=False, font=dict(size=10, color=LR),
+            xanchor="left", yanchor="top",
+            bgcolor="rgba(255,255,255,0.85)", borderpad=3)
+        fig.add_annotation(
+            x=t_tr, y=-12.5, text="<b>Trans→Regime</b>",
+            showarrow=False, font=dict(size=10, color=VD),
+            xanchor="left", yanchor="top",
+            bgcolor="rgba(255,255,255,0.85)", borderpad=3)
+
+        # ── Rótulos de período — acima da envoltória, bem separados ──────────
+        # Subtransiente: entre t=0 e t_sub — texto no topo da envoltória nessa região
+        fig.add_annotation(
+            x=(0 + t_sub)/2, y=float(env_tot[0]) * 0.82,
+            text="<b>Subtransiente</b><br>(X_d'')",
+            showarrow=False, font=dict(size=11, color=TX),
+            bgcolor="rgba(255,255,255,0.88)", borderpad=4,
+            xanchor="center", yanchor="middle")
+
+        # Transiente: entre t_sub e t_tr
+        idx_sub = int(t_sub / 1.5 * 1000)
+        fig.add_annotation(
+            x=(t_sub + t_tr)/2, y=float(env_ac[min(idx_sub, 999)]) * 0.75,
+            text="<b>Transiente</b><br>(X_d')",
+            showarrow=False, font=dict(size=11, color=TX),
+            bgcolor="rgba(255,255,255,0.88)", borderpad=4,
+            xanchor="center", yanchor="middle")
+
+        # Regime: na segunda metade do gráfico, bem à direita
+        fig.add_annotation(
+            x=1.1, y=Icc * math.sqrt(2) + 1.2,
+            text="<b>Regime Permanente</b><br>(X_d)",
+            showarrow=False, font=dict(size=11, color=TX),
+            bgcolor="rgba(255,255,255,0.88)", borderpad=4,
+            xanchor="center", yanchor="bottom")
+
+        # ── Icc regime — linha e rótulo separados ────────────────────────────
+        fig.add_hline(y=Icc*math.sqrt(2),
+                      line=dict(color=VM, width=1.3, dash="dot"))
+        fig.add_annotation(
+            x=0.75, y=Icc*math.sqrt(2),
+            text=f"I_cc(regime) = {Icc*math.sqrt(2):.2f} pu",
+            showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=1.2,
+            arrowcolor=VM, ax=0, ay=-35,
+            font=dict(size=10, color=VM),
+            bgcolor="rgba(255,255,255,0.88)", borderpad=3)
 
         fig.update_layout(
-            title=dict(text="Corrente de Curto-Circuito — 3 Períodos (Subtransiente, Transiente, Regime)",
-                       font=dict(size=14, color=TX)),
-            xaxis=dict(title=dict(text="Tempo (s)", font=dict(size=14, color=TX)),
-                       tickfont=dict(size=12), range=[-0.02, 1.52],
-                       gridcolor="rgba(128,128,128,.15)"),
-            yaxis=dict(title=dict(text="Corrente (pu)", font=dict(size=14, color=TX)),
-                       tickfont=dict(size=12),
-                       gridcolor="rgba(128,128,128,.15)"),
+            title=dict(
+                text="Corrente de Curto-Circuito — 3 Períodos (Subtransiente, Transiente, Regime)",
+                font=dict(size=14, color=TX)),
+            xaxis=dict(
+                title=dict(text="Tempo (s)", font=dict(size=14, color=TX)),
+                tickfont=dict(size=12), range=[-0.02, 1.52],
+                gridcolor="rgba(128,128,128,.15)"),
+            yaxis=dict(
+                title=dict(text="Corrente (pu)", font=dict(size=14, color=TX)),
+                tickfont=dict(size=12), range=[-14, 17],
+                gridcolor="rgba(128,128,128,.15)"),
             legend=dict(font=dict(size=12), bgcolor="rgba(0,0,0,0)",
                         orientation="h", y=-0.22),
-            height=460, margin=dict(l=70, r=30, t=65, b=110),
+            height=500, margin=dict(l=70, r=30, t=65, b=110),
         )
         return fig
 
