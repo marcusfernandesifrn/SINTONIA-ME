@@ -1746,9 +1746,9 @@ da armadura** $X_{ar}$, que junto com a reatância de dispersão $X_l$ forma a
     st.markdown(r"""
 O circuito equivalente monofásico da máquina síncrona cilíndrica por fase é:
 
-$$\boxed{E_f = V_t + I_a\,(R_a + jX_s)} \quad \text{(Gerador)}$$
+$$E_f = V_t + I_a\,(R_a + jX_s) \quad \text{(Gerador)}$$
 
-$$\boxed{V_t = E_f + I_a\,(R_a + jX_s)} \quad \text{(Motor)}$$
+$$V_t = E_f + I_a\,(R_a + jX_s) \quad \text{(Motor)}$$
 
 onde:
 - $E_f$ — tensão de excitação (proporcional a $I_f$ e $n_s$)
@@ -2136,70 +2136,52 @@ $$X_d = \frac{V_{max}}{I_{min}} \qquad X_q = \frac{V_{min}}{I_{max}}$$
     st.header("15. Potência e Torque em Máquinas de Polos Salientes")
 
     st.markdown(r"""
-### 15.1 Derivação pelo modelo d-q
+### 15.1 Modelo d-q e Componentes de Corrente
 
-Partindo da decomposição de $I_a$ em componentes de eixo direto ($I_d$) e
-quadratura ($I_q$), e desprezando $R_a$, a potência ativa por fase é:
+Com $R_a = 0$, decompõe-se $I_a$ em:
 
-$$P_{1\phi} = V_t I_q \cos\delta - V_t I_d \sin\delta$$
+- **Componente de eixo direto (d):** $I_d = I_a \sin\psi$,  onde $\psi = \phi + \delta$
+- **Componente de eixo em quadratura (q):** $I_q = I_a \cos\psi$
 
-Substituindo $I_d = \dfrac{V_t \sin\delta}{X_d}$ e
-$I_q = \dfrac{E_f - V_t \cos\delta}{X_q}$, e expandindo para 3 fases:
+Do diagrama fasorial obtém-se:
 
-$$\boxed{P_{3\phi} = \underbrace{\frac{3\,V_t E_f}{X_d} \sin\delta}_{\text{Excitação}} +
-\underbrace{\frac{3\,V_t^2 (X_d - X_q)}{2\,X_d X_q} \sin 2\delta}_{\text{Relutância}}}$$
+$$I_d = \frac{V_t \sin\delta}{X_d} \qquad I_q = \frac{E_f - V_t \cos\delta}{X_q}$$
 
-### 15.2 Potência Reativa
+### 15.2 Potência Ativa
 
-A potência reativa trifásica ($R_a = 0$) em polos salientes é:
+A potência ativa trifásica ($R_a = 0$) resulta em **duas parcelas**:
 
-$$Q_{3\phi} = \frac{3\,V_t E_f}{X_d} \cos\delta - 3\,V_t^2 \left(\frac{\cos^2\delta}{X_d} + \frac{\sin^2\delta}{X_q}\right)$$
+$$P_{3\phi} = \frac{3\,V_t E_f}{X_d} \sin\delta + \frac{3\,V_t^2\,(X_d - X_q)}{2\,X_d\,X_q} \sin 2\delta$$
 
-Para $X_d = X_q = X_s$ (cilíndrica), simplifica para $Q = \dfrac{3V_t(E_f\cos\delta - V_t)}{X_s}$.
-
-### 15.3 Torque Eletromagnético
-
-$$T_{ind} = \frac{P_{3\phi}}{\omega_s} =
-\frac{3\,V_t E_f}{X_d\,\omega_s} \sin\delta +
-\frac{3\,V_t^2(X_d - X_q)}{2\,X_d X_q\,\omega_s} \sin 2\delta$$
-""")
-
-    # ── Tabela comparativa P e Q ──────────────────────────────────────────────
-    col_p, col_q = st.columns(2)
-    with col_p:
-        st.markdown(r"""
-**Potência Ativa $P_{3\phi}$**
-
-| Parcela | Expressão |
-|---|---|
-| Excitação | $\dfrac{3V_tE_f}{X_d}\sin\delta$ |
-| Relutância | $\dfrac{3V_t^2(X_d-X_q)}{2X_dX_q}\sin 2\delta$ |
-
-- Máxima para $|\delta| < 90°$
-- Relutância ativa mesmo com $E_f = 0$
-""")
-    with col_q:
-        st.markdown(r"""
-**Potência Reativa $Q_{3\phi}$**
-
-| Condição | Comportamento |
-|---|---|
-| Super-excitado ($E_f\cos\delta > V_t$) | Fornece Q à rede |
-| Sub-excitado ($E_f\cos\delta < V_t$) | Absorve Q da rede |
-
-- Controlada pelo ajuste de $I_f$ (e portanto $E_f$)
-- Independente da salência para $Q$ em regime nominal
-""")
-
-    st.markdown(r"""
-### 15.4 Comparação com a Máquina Cilíndrica
-
-| Grandeza | Cilíndrica ($X_d = X_q$) | Polos Salientes ($X_d > X_q$) |
+| Parcela | Expressão | Característica |
 |---|---|---|
-| $P_{max}$ | $\dfrac{3V_tE_f}{X_s}$ em $\delta=90°$ | $> \dfrac{3V_tE_f}{X_d}$ em $\delta < 90°$ |
-| $T$ com $E_f=0$ | Zero | $\neq 0$ (relutância) |
-| Estabilidade | Menor margem | Maior margem |
-| Análise | Simples (1 reatância) | Requer eixos d-q |
+| **Excitação** | $\dfrac{3V_tE_f}{X_d}\sin\delta$ | Proporcional a $E_f$; idêntica à cilíndrica com $X_d$ |
+| **Relutância** | $\dfrac{3V_t^2(X_d-X_q)}{2X_dX_q}\sin 2\delta$ | Independente de $E_f$; exclusiva dos polos salientes |
+
+### 15.3 Potência Reativa
+
+$$Q_{3\phi} = \frac{3\,V_t E_f}{X_d}\cos\delta - 3\,V_t^2\!\left(\frac{\cos^2\delta}{X_d} + \frac{\sin^2\delta}{X_q}\right)$$
+
+| Condição | Sinal de Q | Efeito na rede |
+|---|---|---|
+| Super-excitado ($E_f \cos\delta > V_t$) | $Q > 0$ | Fornece reativo (capacitivo) |
+| Excitação normal | $Q \approx 0$ | Neutro |
+| Sub-excitado ($E_f \cos\delta < V_t$) | $Q < 0$ | Absorve reativo (indutivo) |
+
+Para $X_d = X_q$ (cilíndrica), simplifica para $Q = \dfrac{3V_t(E_f\cos\delta - V_t)}{X_s}$.
+
+### 15.4 Torque Eletromagnético
+
+$$T_{ind} = \frac{P_{3\phi}}{\omega_s} = \frac{3\,V_t E_f}{X_d\,\omega_s}\sin\delta + \frac{3\,V_t^2(X_d-X_q)}{2\,X_d\,X_q\,\omega_s}\sin 2\delta$$
+
+### 15.5 Comparação com a Máquina Cilíndrica
+
+| Grandeza | Cilíndrica ($X_d = X_q = X_s$) | Polos Salientes ($X_d > X_q$) |
+|---|---|---|
+| $P_{max}$ | $\dfrac{3V_tE_f}{X_s}$ em $\delta = 90°$ | $> \dfrac{3V_tE_f}{X_d}$ em $\delta < 90°$ |
+| Torque com $E_f = 0$ | Zero | $\neq 0$ (relutância) |
+| Margem de estabilidade | Menor | Maior |
+| Análise | Uma reatância $X_s$ | Duas reatâncias $X_d$, $X_q$ |
 """)
 
     show_plot(fig_potencia_saliente_mes(), key="fig_15_psal")
