@@ -4,9 +4,6 @@ Disciplina: Conversão Eletromecânica de Energia I
 Curso: Engenharia de Energia
 Instituição: IFRN — Campus Natal-Central (CNAT)
 Autor: Marcus V A Fernandes · marcus.fernandes@ifrn.edu.br · v1.0
-
-Fonte: PPTX-fonte do Módulo 5 — "CEEI - MES - 01 - Conceitos"
-Exercícios resolvidos adaptados dos notebooks SEN6.ipynb, UMANS5.ipynb e MES-DESENHOS.ipynb.
 """
 
 import streamlit as st
@@ -371,33 +368,97 @@ def run():
         return fig
 
     def fig_reacao_armadura_mes():
-        """Matplotlib: composição vetorial Φf + Φa = Φr."""
-        fig, ax = _mpl_base_off((6.5, 5.0))
-        ax.set_xlim(-0.5, 5.0); ax.set_ylim(-0.5, 4.5)
+        """Plotly: composição vetorial Φf + Φa = Φr — reação da armadura."""
+        fig = go.Figure()
 
-        def vetor(ax, ox, oy, dx, dy, cor, lbl, lbl_off=(0.1, 0.1)):
-            ax.annotate("", xy=(ox+dx, oy+dy), xytext=(ox, oy),
-                        arrowprops=dict(arrowstyle="-|>", color=cor,
-                                        lw=2.2, mutation_scale=15))
-            ax.text(ox + dx/2 + lbl_off[0], oy + dy/2 + lbl_off[1],
-                    lbl, fontsize=12, color=cor, fontweight="bold")
+        # Vetores definidos como (ox, oy, dx, dy, cor, nome)
+        # Φf: do ponto P até o topo (campo do rotor)
+        # Φa: do topo de Φf
+        # Φr: de P até o topo de Φa (resultante)
+        ox, oy = 0.0, 0.0
 
-        # Φf (campo do rotor)
-        vetor(ax, 0.3, 0.5, 2.4, 2.2, VM, r"$\Phi_f$", (-0.45, 0.1))
-        # Φa (campo da armadura)
-        vetor(ax, 2.7, 2.7, 1.5, -1.0, VD, r"$\Phi_a$", (0.15, 0.1))
-        # Φr = Φf + Φa (resultante)
-        vetor(ax, 0.3, 0.5, 3.9, 1.2, AZ, r"$\Phi_r$", (0.1, -0.4))
+        # Coordenadas dos fasores
+        Pf_x, Pf_y = 2.4, 2.2    # Φf
+        Pa_x, Pa_y = 1.5, -1.0   # Φa (a partir da ponta de Φf)
+        Pr_x = Pf_x + Pa_x       # Φr = Φf + Φa
+        Pr_y = Pf_y + Pa_y
+
+        def arrow(ox, oy, dx, dy, cor, nome, dash="solid", w=3.0):
+            fig.add_trace(go.Scatter(
+                x=[ox, ox+dx], y=[oy, oy+dy], mode="lines",
+                line=dict(color=cor, width=w, dash=dash),
+                name=nome, showlegend=True,
+                hovertemplate=f"{nome}: |F|={math.hypot(dx,dy):.2f} pu<extra></extra>"))
+            fig.add_annotation(
+                x=ox+dx, y=oy+dy, ax=ox, ay=oy,
+                xref="x", yref="y", axref="x", ayref="y",
+                arrowhead=2, arrowsize=1.5, arrowwidth=3.0,
+                arrowcolor=cor, showarrow=True, text="")
+            # Label no meio do fasor
+            fig.add_annotation(
+                x=ox+dx*0.55, y=oy+dy*0.55,
+                text=f"<b>{nome}</b>", showarrow=False,
+                font=dict(size=14, color=cor),
+                bgcolor="rgba(255,255,255,0.80)", borderpad=3)
+
+        # Φf (origem → ponta)
+        arrow(ox, oy, Pf_x, Pf_y, VM, "Φ<sub>f</sub>")
+        # Φa (ponta de Φf → ponta de Φr)
+        arrow(ox+Pf_x, oy+Pf_y, Pa_x, Pa_y, VD, "Φ<sub>a</sub>")
+        # Φr (origem → ponta final, resultado)
+        arrow(ox, oy, Pr_x, Pr_y, AZ, "Φ<sub>r</sub>", dash="dot", w=2.5)
 
         # Ponto de fechamento
-        ax.plot(4.2, 1.7, "o", ms=8, color=TX, zorder=5)
-        ax.text(4.35, 1.55, "P", fontsize=10, color=TX)
+        fig.add_trace(go.Scatter(
+            x=[ox+Pr_x], y=[oy+Pr_y], mode="markers",
+            marker=dict(color=TX, size=10, symbol="circle"),
+            showlegend=False, hoverinfo="skip"))
 
-        ax.text(0.2, 3.8,
-                r"$\Phi_r = \Phi_f + \Phi_a$",
-                fontsize=13, color=TX)
-        ax.set_title("Reação da Armadura — Composição dos Fluxos",
-                     fontsize=12, fontweight="bold", color=TX, pad=8)
+        # Equação como anotação
+        fig.add_annotation(
+            x=0.05, y=0.97, xref="paper", yref="paper",
+            text="<b>Φ<sub>r</sub> = Φ<sub>f</sub> + Φ<sub>a</sub></b>",
+            showarrow=False,
+            font=dict(size=16, color=TX),
+            bgcolor="rgba(240,244,255,0.90)",
+            bordercolor=AZ, borderwidth=1.5, borderpad=6)
+
+        # Legenda dos efeitos por fp
+        fig.add_annotation(
+            x=1.02, y=0.95, xref="paper", yref="paper",
+            text=(
+                "<b>Efeito por fator de potência:</b><br>"
+                "fp=1 → Φ<sub>a</sub> ⊥ Φ<sub>f</sub> (distorção)<br>"
+                "fp atr. → Φ<sub>a</sub> opõe Φ<sub>f</sub> (desmagnetiza)<br>"
+                "fp adi. → Φ<sub>a</sub> reforça Φ<sub>f</sub> (magnetiza)"
+            ),
+            showarrow=False,
+            font=dict(size=11, color=TX),
+            bgcolor="rgba(255,255,255,0.90)",
+            bordercolor=CZ, borderwidth=1, borderpad=8,
+            align="left", xanchor="left", yanchor="top")
+
+        fig.add_hline(y=0, line=dict(color=CZ, width=0.6, dash="dot"))
+        fig.add_vline(x=0, line=dict(color=CZ, width=0.6, dash="dot"))
+
+        fig.update_layout(
+            title=dict(
+                text="Reação da Armadura — Composição Vetorial dos Fluxos",
+                font=dict(size=16, color=TX)),
+            xaxis=dict(
+                range=[-0.5, 4.5], scaleanchor="y",
+                showgrid=True, gridcolor="rgba(128,128,128,.15)",
+                zeroline=False, tickfont=dict(size=12),
+                title=dict(text="Componente horizontal (pu)", font=dict(size=12, color=CZ))),
+            yaxis=dict(
+                range=[-0.8, 3.2],
+                showgrid=True, gridcolor="rgba(128,128,128,.15)",
+                zeroline=False, tickfont=dict(size=12),
+                title=dict(text="Componente vertical (pu)", font=dict(size=12, color=CZ))),
+            legend=dict(font=dict(size=13), bgcolor="rgba(255,255,255,0.88)",
+                        x=0.01, y=0.01, xanchor="left", yanchor="bottom"),
+            height=480, margin=dict(l=65, r=220, t=65, b=60),
+        )
         return fig
 
     def fig_circuito_equivalente_gerador_mes():
@@ -1536,26 +1597,67 @@ def run():
     st.markdown("---")
 
     # ── Índice ────────────────────────────────────────────────────────────────
-    with st.expander("📑 Índice do Módulo", expanded=False):
+    with st.expander("📑 Índice do Módulo — clique em qualquer item para navegar", expanded=True):
         st.markdown("""
-**1. Conceitos Elementares e Aplicações**
-**2. Estrutura Construtiva**
-**3. Geração de Tensão — Modo Gerador**
-**4. Curva de Magnetização (OCC)**
-**5. Reação da Armadura**
-**6. Circuito Equivalente por Fase**
-**7. Diagrama Fasorial**
-**8. Barramento Infinito e Sincronismo**
-**9. Modo Motor — Partida**
-**10. Ensaios OCC + SCC — Parâmetros**
-**11. Potência Ativa, Reativa e Torque**
-**12. Curva de Capacidade**
-**13. Controle de Fator de Potência — Condensador Síncrono**
-**14. Máquina Síncrona com Polos Salientes**
-**15. Potência em Máquinas de Polos Salientes**
-**16. Dinâmicas de Transitório**
-🎛️ **Exploradores Interativos** (cilíndrica + polos salientes)
-""")
+<style>
+.idx-group { font-size:0.78rem; font-weight:700; color:#6b7280;
+             text-transform:uppercase; letter-spacing:.07em;
+             margin:0.9rem 0 0.25rem; }
+.idx-link  { display:block; font-size:0.93rem; color:#3d8ef0;
+             text-decoration:none; padding:0.18rem 0 0.18rem 0.6rem;
+             border-left:2px solid rgba(61,142,240,.25);
+             margin-bottom:0.1rem; }
+.idx-link:hover { border-left-color:#3d8ef0; background:rgba(61,142,240,.06);
+                  border-radius:0 4px 4px 0; }
+.idx-sub   { display:block; font-size:0.84rem; color:#1a1f2b;
+             text-decoration:none; padding:0.12rem 0 0.12rem 1.4rem;
+             border-left:2px solid rgba(108,71,255,.18);
+             margin-bottom:0.08rem; }
+.idx-sub:hover { border-left-color:#6c47ff; background:rgba(108,71,255,.05);
+                 border-radius:0 4px 4px 0; }
+</style>
+
+<div class="idx-group">🔵 Fundamentos (PPTX-01)</div>
+<a class="idx-link" href="#1-conceitos-elementares-e-aplicações">1. Conceitos Elementares e Aplicações</a>
+<a class="idx-link" href="#2-estrutura-construtiva">2. Estrutura Construtiva</a>
+<a class="idx-sub"  href="#2-estrutura-construtiva">↳ Rotor cilíndrico · Polos salientes</a>
+<a class="idx-link" href="#3-geração-de-tensão-modo-gerador">3. Geração de Tensão — Modo Gerador</a>
+<a class="idx-sub"  href="#3-geração-de-tensão-modo-gerador">↳ nₛ = 120f/p · Ef = kf·nₛ·Φf</a>
+<a class="idx-link" href="#4-curva-de-magnetização-occ">4. Curva de Magnetização (OCC)</a>
+<a class="idx-sub"  href="#4-curva-de-magnetização-occ">↳ AGL · Saturação · Magnetismo residual</a>
+<a class="idx-link" href="#5-reação-da-armadura">5. Reação da Armadura</a>
+<a class="idx-sub"  href="#5-reação-da-armadura">↳ Φr = Φf + Φa · Efeito do fator de potência</a>
+<a class="idx-link" href="#6-circuito-equivalente-por-fase">6. Circuito Equivalente por Fase</a>
+<a class="idx-sub"  href="#6-circuito-equivalente-por-fase">↳ Ef, Xs, Ra, Zs · Gerador e Motor</a>
+<a class="idx-link" href="#7-diagrama-fasorial">7. Diagrama Fasorial</a>
+<a class="idx-sub"  href="#7-diagrama-fasorial">↳ Ângulo de carga δ · Sub/super-excitação</a>
+<a class="idx-link" href="#8-barramento-infinito-e-sincronismo">8. Barramento Infinito e Sincronismo</a>
+<a class="idx-sub"  href="#8-barramento-infinito-e-sincronismo">↳ Condições de sincronismo · Controle P e Q</a>
+<a class="idx-link" href="#9-modo-motor-partida">9. Modo Motor — Partida</a>
+<a class="idx-sub"  href="#9-modo-motor-partida">↳ VFD · Enrolamento amortecedor</a>
+<a class="idx-link" href="#10-ensaios-occ-scc-determinação-dos-parâmetros">10. Ensaios OCC + SCC — Parâmetros</a>
+<a class="idx-sub"  href="#10-ensaios-occ-scc-determinação-dos-parâmetros">↳ Xs_sat · Xs_nsat · Ensaio de escorregamento</a>
+
+<div class="idx-group">⚡ Características de Operação (PPTX-02)</div>
+<a class="idx-link" href="#11-potência-ativa-reativa-e-torque">11. Potência Ativa, Reativa e Torque</a>
+<a class="idx-sub"  href="#11-potência-ativa-reativa-e-torque">↳ P = (3VtEf/Xs)sinδ · Q · Pmax · δ_max = 90°</a>
+<a class="idx-link" href="#12-curva-de-capacidade-capability-curve">12. Curva de Capacidade</a>
+<a class="idx-sub"  href="#12-curva-de-capacidade-capability-curve">↳ Limites de armadura, campo e estabilidade</a>
+<a class="idx-link" href="#13-controle-de-fator-de-potência-condensador-síncrono">13. Controle de Fator de Potência</a>
+<a class="idx-sub"  href="#13-controle-de-fator-de-potência-condensador-síncrono">↳ Condensador síncrono · Curvas V</a>
+
+<div class="idx-group">🔴 Polos Salientes e Transitórios (PPTX-03)</div>
+<a class="idx-link" href="#14-máquina-síncrona-com-polos-salientes">14. Máquina com Polos Salientes</a>
+<a class="idx-sub"  href="#14-máquina-síncrona-com-polos-salientes">↳ Eixos d-q · Xd > Xq · Ensaio de escorregamento</a>
+<a class="idx-link" href="#15-potência-e-torque-em-máquinas-de-polos-salientes">15. Potência e Torque em Polos Salientes</a>
+<a class="idx-sub"  href="#15-potência-e-torque-em-máquinas-de-polos-salientes">↳ Parcela de excitação + relutância · δ_max &lt; 90°</a>
+<a class="idx-link" href="#16-dinâmicas-de-transitório">16. Dinâmicas de Transitório</a>
+<a class="idx-sub"  href="#16-dinâmicas-de-transitório">↳ Xd″ · Xd′ · Xd · Áreas equivalentes</a>
+
+<div class="idx-group">🎛️ Ferramentas Interativas</div>
+<a class="idx-link" href="#exploradores-interativos">Exploradores Interativos</a>
+<a class="idx-sub"  href="#exploradores-interativos">↳ Fasorial cilíndrico · Curva V · P×δ · Polos salientes</a>
+""", unsafe_allow_html=True)
 
     # ═══════════════════════════════════════════════════════════════════════════
     # SEÇÃO 1 — Conceitos Elementares
@@ -1729,7 +1831,7 @@ da armadura** $X_{ar}$, que junto com a reatância de dispersão $X_l$ forma a
 **reatância síncrona** $X_s = X_{ar} + X_l$.
 """)
 
-    show_fig(fig_reacao_armadura_mes(), width_frac=0.55)
+    show_plot(fig_reacao_armadura_mes(), key="fig_5_1_reacao")
     st.caption(
         r"**Figura 5.1** — Composição vetorial dos fluxos: "
         r"$\Phi_f$ (campo do rotor), $\Phi_a$ (reação da armadura) "
@@ -2262,10 +2364,6 @@ abrir o disjuntor e ainda manter $A_2 = A_1$ (limite de estabilidade).
         r"$\delta_0$: pré-falta; $\delta_{cc}$: abertura do disjuntor; "
         r"$\delta_{max}$: máximo atingido; $\delta_1$: equilíbrio instável."
     )
-
-    st.divider()
-
-    # ═══════════════════════════════════════════════════════════════════════════
 
     st.divider()
 
