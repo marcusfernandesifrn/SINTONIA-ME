@@ -1528,126 +1528,6 @@ e $X_{s,nsat}$ como limite teórico superior (máquina não saturada).
         "corrente de campo nominal ($I_f = 750$ A)."
     )
 
-    st.divider()
-
-    # ═══════════════════════════════════════════════════════════════════════════
-    # EXPLORADORES INTERATIVOS
-    # ═══════════════════════════════════════════════════════════════════════════
-    st.header("🎛️ Exploradores Interativos")
-
-    tab1, tab2, tab3 = st.tabs([
-        "📐 Diagrama Fasorial",
-        "📊 Curva V (Ia × If)",
-        "📐 Potência × Ângulo δ",
-    ])
-
-    # ── Aba 1: Diagrama Fasorial ──────────────────────────────────────────────
-    with tab1:
-        st.markdown("**Explore o diagrama fasorial da máquina cilíndrica.**")
-        col_a, col_b = st.columns([1, 2])
-        with col_a:
-            modo_exp = st.radio("Modo:", ["Gerador", "Motor"], key="exp_ms_modo")
-            Vt_exp   = st.slider("Vt (pu)", 0.5, 1.5, 1.0, 0.05, key="exp_ms_vt")
-            Ef_exp   = st.slider("Ef (pu)", 0.3, 2.0, 1.25, 0.05, key="exp_ms_ef")
-            Xs_exp   = st.slider("Xs (pu)", 0.3, 2.0, 1.0, 0.05, key="exp_ms_xs")
-            Ra_exp   = st.slider("Ra (pu)", 0.0, 0.3, 0.0, 0.01, key="exp_ms_ra")
-            dl_exp   = st.slider("δ (°)", -60, 60, 20, 1, key="exp_ms_delta")
-
-        with col_b:
-            fig_exp1 = fig_diagrama_fasorial_mes(
-                Vt=Vt_exp, Ef=Ef_exp, delta_deg=dl_exp,
-                Xs=Xs_exp, Ra=Ra_exp, modo=modo_exp)
-            show_plot(fig_exp1, key="exp_fasorial_dyn")
-
-    # ── Aba 2: Curva V ────────────────────────────────────────────────────────
-    with tab2:
-        st.markdown(
-            r"**Curva V:** corrente de armadura $I_a$ em função da corrente de "
-            r"campo $I_f$ para diferentes cargas ativas (motor)."
-        )
-        P_cv = st.slider("Potência ativa P (pu)", 0.0, 1.0, 0.5, 0.1, key="exp_ms_P")
-        Xs_cv = st.slider("Xs (pu)", 0.5, 2.0, 1.0, 0.1, key="exp_ms_xs2")
-        Vt_cv = 1.0
-
-        If_range = np.linspace(0.2, 3.0, 200)
-        fig_cv = go.Figure()
-        for P_val, cor in [(P_cv, AZ)]:
-            Ia_list = []
-            for Ef_val in If_range:
-                try:
-                    Ef_c = complex(Ef_val * math.cos(0), Ef_val * math.sin(0))
-                    Vt_c = complex(Vt_cv, 0)
-                    # Motor: Ia = (Vt - Ef) / jXs
-                    Ia_c = (Vt_c - Ef_c) / complex(0, Xs_cv)
-                    Ia_list.append(abs(Ia_c))
-                except Exception:
-                    Ia_list.append(float('nan'))
-
-            fig_cv.add_trace(go.Scatter(
-                x=If_range, y=Ia_list,
-                mode="lines", line=dict(color=AZ, width=2.5),
-                name=f"P = {P_val:.1f} pu",
-                hovertemplate="If=%{x:.2f}<br>Ia=%{y:.3f} pu"))
-
-        fig_cv.add_vline(x=1.0, line=dict(color=VM, width=1.2, dash="dot"))
-        fig_cv.update_layout(
-            title=dict(text="Curva V — Ia × If (Motor Síncrono)",
-                       font=dict(size=15, color=TX)),
-            xaxis=dict(title=dict(text="Excitação de campo Ef/V_nom (pu)",
-                                  font=dict(size=13, color=TX)),
-                       tickfont=dict(size=12),
-                       gridcolor="rgba(128,128,128,.15)"),
-            yaxis=dict(title=dict(text="Corrente de armadura Ia (pu)",
-                                  font=dict(size=13, color=TX)),
-                       tickfont=dict(size=12), range=[0, 3],
-                       gridcolor="rgba(128,128,128,.15)"),
-            height=380, margin=dict(l=65, r=20, t=55, b=65),
-        )
-        show_plot(fig_cv, key="exp_cv_plot")
-
-    # ── Aba 3: Potência × Ângulo δ ────────────────────────────────────────────
-    with tab3:
-        st.markdown(
-            r"**Curva P×δ:** potência ativa em função do ângulo de carga $\delta$ "
-            r"(gerador). Limite de estabilidade em $\delta = 90°$."
-        )
-        Ef_pd = st.slider("Ef (pu)", 0.5, 2.0, 1.3, 0.1, key="exp_ms_ef3")
-        Xs_pd = st.slider("Xs (pu)", 0.3, 2.0, 1.0, 0.1, key="exp_ms_xs3")
-        Vt_pd = 1.0
-
-        delta_arr = np.linspace(-180, 180, 400)
-        P_arr = (Vt_pd * Ef_pd / Xs_pd) * np.sin(np.radians(delta_arr))
-
-        fig_pd = go.Figure()
-        fig_pd.add_trace(go.Scatter(
-            x=delta_arr, y=P_arr, mode="lines",
-            line=dict(color=AZ, width=2.8),
-            name=f"Ef={Ef_pd:.1f} pu, Xs={Xs_pd:.1f} pu",
-            hovertemplate="δ=%{x:.0f}°<br>P=%{y:.3f} pu"))
-
-        P_max = Vt_pd * Ef_pd / Xs_pd
-        fig_pd.add_hline(y=P_max, line=dict(color=VM, width=1.3, dash="dot"))
-        fig_pd.add_annotation(x=120, y=P_max + 0.05,
-            text=f"<b>P_max = {P_max:.2f} pu</b>",
-            showarrow=False, font=dict(size=12, color=VM))
-        fig_pd.add_vline(x=90, line=dict(color=CZ, width=1.0, dash="dot"))
-        fig_pd.add_vline(x=-90, line=dict(color=CZ, width=1.0, dash="dot"))
-
-        fig_pd.update_layout(
-            title=dict(text=r"Potência Ativa × Ângulo de Carga δ  —  P = (Vt·Ef/Xs)·sin δ",
-                       font=dict(size=14, color=TX)),
-            xaxis=dict(title=dict(text="Ângulo de carga δ (°)",
-                                  font=dict(size=13, color=TX)),
-                       tickfont=dict(size=12), range=[-180, 180],
-                       tickvals=[-180,-135,-90,-45,0,45,90,135,180],
-                       gridcolor="rgba(128,128,128,.15)"),
-            yaxis=dict(title=dict(text="Potência ativa P (pu)",
-                                  font=dict(size=13, color=TX)),
-                       tickfont=dict(size=12),
-                       gridcolor="rgba(128,128,128,.15)"),
-            height=380, margin=dict(l=65, r=20, t=55, b=65),
-        )
-        show_plot(fig_pd, key="exp_pd_plot")
 
     # ═══════════════════════════════════════════════════════════════════════════
     # SEÇÃO 11 — Potência e Torque
@@ -1778,6 +1658,128 @@ para diferentes $P$ forma a **família de curvas V** da máquina.
     )
 
     st.divider()
+
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # EXPLORADORES INTERATIVOS
+    # ═══════════════════════════════════════════════════════════════════════════
+    st.header("🎛️ Exploradores Interativos")
+
+    tab1, tab2, tab3 = st.tabs([
+        "📐 Diagrama Fasorial",
+        "📊 Curva V (Ia × If)",
+        "📐 Potência × Ângulo δ",
+    ])
+
+    # ── Aba 1: Diagrama Fasorial ──────────────────────────────────────────────
+    with tab1:
+        st.markdown("**Explore o diagrama fasorial da máquina cilíndrica.**")
+        col_a, col_b = st.columns([1, 2])
+        with col_a:
+            modo_exp = st.radio("Modo:", ["Gerador", "Motor"], key="exp_ms_modo")
+            Vt_exp   = st.slider("Vt (pu)", 0.5, 1.5, 1.0, 0.05, key="exp_ms_vt")
+            Ef_exp   = st.slider("Ef (pu)", 0.3, 2.0, 1.25, 0.05, key="exp_ms_ef")
+            Xs_exp   = st.slider("Xs (pu)", 0.3, 2.0, 1.0, 0.05, key="exp_ms_xs")
+            Ra_exp   = st.slider("Ra (pu)", 0.0, 0.3, 0.0, 0.01, key="exp_ms_ra")
+            dl_exp   = st.slider("δ (°)", -60, 60, 20, 1, key="exp_ms_delta")
+
+        with col_b:
+            fig_exp1 = fig_diagrama_fasorial_mes(
+                Vt=Vt_exp, Ef=Ef_exp, delta_deg=dl_exp,
+                Xs=Xs_exp, Ra=Ra_exp, modo=modo_exp)
+            show_plot(fig_exp1, key="exp_fasorial_dyn")
+
+    # ── Aba 2: Curva V ────────────────────────────────────────────────────────
+    with tab2:
+        st.markdown(
+            r"**Curva V:** corrente de armadura $I_a$ em função da corrente de "
+            r"campo $I_f$ para diferentes cargas ativas (motor)."
+        )
+        P_cv = st.slider("Potência ativa P (pu)", 0.0, 1.0, 0.5, 0.1, key="exp_ms_P")
+        Xs_cv = st.slider("Xs (pu)", 0.5, 2.0, 1.0, 0.1, key="exp_ms_xs2")
+        Vt_cv = 1.0
+
+        If_range = np.linspace(0.2, 3.0, 200)
+        fig_cv = go.Figure()
+        for P_val, cor in [(P_cv, AZ)]:
+            Ia_list = []
+            for Ef_val in If_range:
+                try:
+                    Ef_c = complex(Ef_val * math.cos(0), Ef_val * math.sin(0))
+                    Vt_c = complex(Vt_cv, 0)
+                    # Motor: Ia = (Vt - Ef) / jXs
+                    Ia_c = (Vt_c - Ef_c) / complex(0, Xs_cv)
+                    Ia_list.append(abs(Ia_c))
+                except Exception:
+                    Ia_list.append(float('nan'))
+
+            fig_cv.add_trace(go.Scatter(
+                x=If_range, y=Ia_list,
+                mode="lines", line=dict(color=AZ, width=2.5),
+                name=f"P = {P_val:.1f} pu",
+                hovertemplate="If=%{x:.2f}<br>Ia=%{y:.3f} pu"))
+
+        fig_cv.add_vline(x=1.0, line=dict(color=VM, width=1.2, dash="dot"))
+        fig_cv.update_layout(
+            title=dict(text="Curva V — Ia × If (Motor Síncrono)",
+                       font=dict(size=15, color=TX)),
+            xaxis=dict(title=dict(text="Excitação de campo Ef/V_nom (pu)",
+                                  font=dict(size=13, color=TX)),
+                       tickfont=dict(size=12),
+                       gridcolor="rgba(128,128,128,.15)"),
+            yaxis=dict(title=dict(text="Corrente de armadura Ia (pu)",
+                                  font=dict(size=13, color=TX)),
+                       tickfont=dict(size=12), range=[0, 3],
+                       gridcolor="rgba(128,128,128,.15)"),
+            height=380, margin=dict(l=65, r=20, t=55, b=65),
+        )
+        show_plot(fig_cv, key="exp_cv_plot")
+
+    # ── Aba 3: Potência × Ângulo δ ────────────────────────────────────────────
+    with tab3:
+        st.markdown(
+            r"**Curva P×δ:** potência ativa em função do ângulo de carga $\delta$ "
+            r"(gerador). Limite de estabilidade em $\delta = 90°$."
+        )
+        Ef_pd = st.slider("Ef (pu)", 0.5, 2.0, 1.3, 0.1, key="exp_ms_ef3")
+        Xs_pd = st.slider("Xs (pu)", 0.3, 2.0, 1.0, 0.1, key="exp_ms_xs3")
+        Vt_pd = 1.0
+
+        delta_arr = np.linspace(-180, 180, 400)
+        P_arr = (Vt_pd * Ef_pd / Xs_pd) * np.sin(np.radians(delta_arr))
+
+        fig_pd = go.Figure()
+        fig_pd.add_trace(go.Scatter(
+            x=delta_arr, y=P_arr, mode="lines",
+            line=dict(color=AZ, width=2.8),
+            name=f"Ef={Ef_pd:.1f} pu, Xs={Xs_pd:.1f} pu",
+            hovertemplate="δ=%{x:.0f}°<br>P=%{y:.3f} pu"))
+
+        P_max = Vt_pd * Ef_pd / Xs_pd
+        fig_pd.add_hline(y=P_max, line=dict(color=VM, width=1.3, dash="dot"))
+        fig_pd.add_annotation(x=120, y=P_max + 0.05,
+            text=f"<b>P_max = {P_max:.2f} pu</b>",
+            showarrow=False, font=dict(size=12, color=VM))
+        fig_pd.add_vline(x=90, line=dict(color=CZ, width=1.0, dash="dot"))
+        fig_pd.add_vline(x=-90, line=dict(color=CZ, width=1.0, dash="dot"))
+
+        fig_pd.update_layout(
+            title=dict(text=r"Potência Ativa × Ângulo de Carga δ  —  P = (Vt·Ef/Xs)·sin δ",
+                       font=dict(size=14, color=TX)),
+            xaxis=dict(title=dict(text="Ângulo de carga δ (°)",
+                                  font=dict(size=13, color=TX)),
+                       tickfont=dict(size=12), range=[-180, 180],
+                       tickvals=[-180,-135,-90,-45,0,45,90,135,180],
+                       gridcolor="rgba(128,128,128,.15)"),
+            yaxis=dict(title=dict(text="Potência ativa P (pu)",
+                                  font=dict(size=13, color=TX)),
+                       tickfont=dict(size=12),
+                       gridcolor="rgba(128,128,128,.15)"),
+            height=380, margin=dict(l=65, r=20, t=55, b=65),
+        )
+        show_plot(fig_pd, key="exp_pd_plot")
 
     # ═══════════════════════════════════════════════════════════════════════════
     # REFERÊNCIAS
