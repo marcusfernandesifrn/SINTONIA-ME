@@ -411,7 +411,7 @@ def run():
             elm.Line().down(d.unit * 0.5)
             elm.SourceSin().down().label(r"$E_f$", loc="bottom")
             elm.Line().down(d.unit * 0.5)
-            elm.Line().right(d.unit * 3.0).dot(open=True)
+            elm.Line().right(d.unit * 4.0).dot(open=True)
             d.pop()
 
             elm.Line().right(d.unit * 0.5)
@@ -429,9 +429,9 @@ def run():
             # Labels com coordenadas numéricas fixas (Gap em x=9.6, y: 0→-6.4)
             mpl_fig = d.fig.getfig()
             ax = mpl_fig.get_axes()[0]
-            ax.text(10.15, -0.35, "+",     ha="left", va="center", fontsize=13)
+            ax.text(10.15, -0.35, "−",     ha="left", va="center", fontsize=13)
             ax.text(10.15, -3.2,  r"$V_t$", ha="left", va="center", fontsize=13)
-            ax.text(10.15, -6.05, "-",     ha="left", va="center", fontsize=13)
+            ax.text(10.15, -6.05, "+",     ha="left", va="center", fontsize=13)
             mpl_fig.savefig(tmp.name, dpi=160, bbox_inches="tight")
             plt.close(mpl_fig)
 
@@ -467,12 +467,12 @@ def run():
             tmp.close()
             d.save(tmp.name, dpi=160)
 
-            # Labels com coordenadas numéricas fixas (Gap em x=9.6, y: 0→-6.4)
+            # Labels com coordenadas numéricas fixas
             mpl_fig = d.fig.getfig()
             ax = mpl_fig.get_axes()[0]
-            ax.text(10.15, -0.35, "+",     ha="left", va="center", fontsize=13)
+            ax.text(10.15, -0.35, "+",      ha="left", va="center", fontsize=13)
             ax.text(10.15, -3.2,  r"$V_t$", ha="left", va="center", fontsize=13)
-            ax.text(10.15, -6.05, "−",     ha="left", va="center", fontsize=13)
+            ax.text(10.15, -6.05, "−",      ha="left", va="center", fontsize=13)
             mpl_fig.savefig(tmp.name, dpi=160, bbox_inches="tight")
             plt.close(mpl_fig)
 
@@ -753,6 +753,359 @@ def run():
         fig.tight_layout(pad=0.6)
         return fig
 
+
+    def fig_potencia_delta_mes():
+        """Plotly: P×δ para gerador e motor, com Pmax e limites de estabilidade."""
+        delta_arr = np.linspace(-180, 180, 500)
+        delta_rad = np.radians(delta_arr)
+
+        # Parâmetros nominais (pu)
+        Vt, Ef, Xs = 1.0, 1.35, 1.0
+        P_arr = (3 * Vt * Ef / Xs) * np.sin(delta_rad)
+        P_max = 3 * Vt * Ef / Xs
+
+        fig = go.Figure()
+
+        # Curva P×δ
+        fig.add_trace(go.Scatter(
+            x=delta_arr, y=P_arr, mode="lines",
+            line=dict(color=AZ, width=3.0),
+            name=r"P = (3VtEf/Xs)·sin δ",
+            hovertemplate="δ=%{x:.1f}°<br>P=%{y:.3f} pu"))
+
+        # Pmax
+        fig.add_hline(y=P_max, line=dict(color=VM, width=1.4, dash="dot"))
+        fig.add_hline(y=-P_max, line=dict(color=VM, width=1.4, dash="dot"))
+        fig.add_annotation(x=130, y=P_max + 0.06,
+            text=f"<b>P_max = {P_max:.2f} pu</b>",
+            showarrow=False, font=dict(size=12, color=VM))
+
+        # Limites de estabilidade
+        for xv, label in [(90, "δ=+90°<br>(gerador)"), (-90, "δ=−90°<br>(motor)")]:
+            fig.add_vline(x=xv, line=dict(color=LR, width=1.5, dash="dash"))
+            fig.add_annotation(x=xv + (5 if xv > 0 else -5), y=0.25,
+                text=f"<b>{label}</b>", showarrow=False,
+                font=dict(size=10.5, color=LR),
+                xanchor="left" if xv > 0 else "right")
+
+        # Regiões
+        fig.add_vrect(x0=-90, x1=90,
+            fillcolor="rgba(61,142,240,0.06)", line_width=0,
+            annotation_text="<b>Zona estável</b>",
+            annotation_position="top right",
+            annotation_font_size=11)
+
+        fig.add_annotation(x=45, y=P_max * 0.55,
+            text="GERADOR<br>(δ > 0)", showarrow=False,
+            font=dict(size=11, color=AZ), bgcolor="rgba(255,255,255,0.7)")
+        fig.add_annotation(x=-45, y=-P_max * 0.55,
+            text="MOTOR<br>(δ < 0)", showarrow=False,
+            font=dict(size=11, color=VD), bgcolor="rgba(255,255,255,0.7)")
+
+        fig.update_layout(
+            title=dict(text="Potência Ativa × Ângulo de Carga δ  (Vt=1 pu, Ef=1,35 pu, Xs=1 pu)",
+                       font=dict(size=15, color=TX)),
+            xaxis=dict(title=dict(text="Ângulo de carga δ (°)", font=dict(size=14, color=TX)),
+                       tickvals=[-180,-135,-90,-45,0,45,90,135,180],
+                       tickfont=dict(size=12), range=[-185, 185],
+                       gridcolor="rgba(128,128,128,.15)"),
+            yaxis=dict(title=dict(text="Potência P (pu)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=12),
+                       gridcolor="rgba(128,128,128,.15)"),
+            legend=dict(font=dict(size=12), bgcolor="rgba(0,0,0,0)"),
+            height=440, margin=dict(l=70, r=30, t=65, b=70),
+        )
+        return fig
+
+    def fig_potencia_reativa_mes():
+        """Plotly: Q × Ef para diferentes P (gerador no barramento infinito)."""
+        Vt, Xs = 1.0, 1.0
+        Ef_arr = np.linspace(0.3, 2.5, 300)
+
+        fig = go.Figure()
+        for P_pu, cor, dash in [
+                (0.0, CZ, "dash"),
+                (0.3, AZ, "solid"),
+                (0.6, VD, "solid"),
+                (0.9, LR, "solid"),
+                (1.0, VM, "solid"),
+        ]:
+            Q_arr = []
+            for Ef in Ef_arr:
+                # delta from P = 3VtEf/Xs sin(delta)
+                sin_d = P_pu * Xs / (3 * Vt * Ef) if Ef > 0.01 else 0
+                if abs(sin_d) > 1:
+                    Q_arr.append(float('nan'))
+                    continue
+                delta = math.asin(np.clip(sin_d, -1, 1))
+                Q = (3 * Vt * (Ef * math.cos(delta) - Vt)) / Xs
+                Q_arr.append(Q)
+            fig.add_trace(go.Scatter(
+                x=Ef_arr, y=Q_arr, mode="lines",
+                line=dict(color=cor, width=2.5, dash=dash),
+                name=f"P = {P_pu:.1f} pu",
+                hovertemplate="Ef=%{x:.2f}<br>Q=%{y:.3f} pu"))
+
+        fig.add_hline(y=0, line=dict(color=TX, width=1.0, dash="dot"))
+        fig.add_vline(x=1.0, line=dict(color=CZ, width=1.0, dash="dot"))
+        fig.add_annotation(x=1.0, y=-1.2, text="Ef = Vt",
+            showarrow=False, font=dict(size=11, color=CZ))
+        fig.add_annotation(x=1.8, y=1.2, text="Super-excitado<br>Fornece Q →",
+            showarrow=False, font=dict(size=10, color=VM),
+            bgcolor="rgba(255,255,255,0.8)")
+        fig.add_annotation(x=0.55, y=-1.1, text="← Sub-excitado<br>Absorve Q",
+            showarrow=False, font=dict(size=10, color=AZ),
+            bgcolor="rgba(255,255,255,0.8)")
+
+        fig.update_layout(
+            title=dict(text="Potência Reativa Q × Excitação Ef  (barramento infinito, Vt=1 pu)",
+                       font=dict(size=15, color=TX)),
+            xaxis=dict(title=dict(text="Tensão de excitação Ef (pu)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=12), range=[0.2, 2.6],
+                       gridcolor="rgba(128,128,128,.15)"),
+            yaxis=dict(title=dict(text="Potência reativa Q (pu)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=12), range=[-2.0, 3.0],
+                       gridcolor="rgba(128,128,128,.15)"),
+            legend=dict(font=dict(size=12), bgcolor="rgba(0,0,0,0)",
+                        orientation="h", y=-0.22),
+            height=440, margin=dict(l=70, r=30, t=65, b=110),
+        )
+        return fig
+
+    def fig_curva_capacidade_mes():
+        """Plotly: Capability curve no plano P×Q (pu)."""
+        # Parâmetros nominais
+        Vt, Xs = 1.0, 1.0
+        Ia_nom, If_nom = 1.0, 1.5
+        S_nom = 3 * Vt * Ia_nom   # potência aparente nominal = 3 pu
+
+        theta = np.linspace(0, 2 * np.pi, 500)
+
+        # 1. Limite de armadura: círculo de raio S_nom centrado na origem
+        P_arm = S_nom * np.cos(theta)
+        Q_arm = S_nom * np.sin(theta)
+        # Somente o arco superior (Q ≥ limite)
+        mask_arm = (P_arm >= 0) & (P_arm <= S_nom)
+        P_arm = P_arm[mask_arm]; Q_arm = Q_arm[mask_arm]
+
+        # 2. Limite de campo: arco centrado em (0, -3Vt²/Xs)
+        Q_center = -3 * Vt**2 / Xs  # = -3 pu
+        R_field  =  3 * Vt * If_nom * Vt / Xs  # proporcional a If_nom·Ef_nom
+        # Para If_nom gerando Ef_nom=1.5 pu: R_field = 3*1*1.5/1 = 4.5 pu
+        # Simplificação pedagógica: raio = 3*Vt*Ef_max/Xs com Ef_max=1.5
+        Ef_max = 1.5
+        R_field = 3 * Vt * Ef_max / Xs
+        phi_field = np.linspace(-np.pi/2, np.pi/2, 300)
+        P_field = R_field * np.cos(phi_field)
+        Q_field = Q_center + R_field * np.sin(phi_field)
+        # Clip to valid region
+        mask_f = (P_field >= 0) & (Q_field >= -2.5)
+        P_field = P_field[mask_f]; Q_field = Q_field[mask_f]
+
+        # 3. Limite de estabilidade: P = Pmax = 3VtEf/Xs → vertical em P=Ef_max*3
+        P_stab = 3 * Vt * Ef_max / Xs  # 4.5 pu → clamp to S_nom
+        P_stab = min(P_stab, S_nom)
+
+        fig = go.Figure()
+
+        # Armadura
+        fig.add_trace(go.Scatter(
+            x=P_arm, y=Q_arm, mode="lines",
+            line=dict(color=AZ, width=3.0),
+            name=f"Limite de armadura (Ia = {Ia_nom} pu)",
+            fill=None))
+
+        # Campo
+        fig.add_trace(go.Scatter(
+            x=P_field, y=Q_field, mode="lines",
+            line=dict(color=VM, width=2.5),
+            name=f"Limite de campo (Ef_max = {Ef_max} pu)"))
+
+        # Estabilidade
+        Q_stab = np.linspace(-2.5, 3.2, 100)
+        fig.add_trace(go.Scatter(
+            x=[P_stab]*100, y=list(Q_stab), mode="lines",
+            line=dict(color=LR, width=2.0, dash="dash"),
+            name=f"Limite de estabilidade (δ = 90°)"))
+
+        # Ponto nominal (fp=0.8 atrasado por convenção)
+        fp_nom = 0.8
+        theta_nom = math.acos(fp_nom)
+        P_nom = S_nom * fp_nom
+        Q_nom = S_nom * math.sin(theta_nom)
+        fig.add_trace(go.Scatter(
+            x=[P_nom], y=[Q_nom], mode="markers",
+            marker=dict(color=TX, size=12, symbol="star"),
+            name=f"Ponto nominal (fp={fp_nom}, S={S_nom:.0f} pu)"))
+
+        # Eixos Q=0 e P=0
+        fig.add_hline(y=0, line=dict(color=CZ, width=0.8, dash="dot"))
+        fig.add_vline(x=0, line=dict(color=CZ, width=0.8, dash="dot"))
+
+        # Anotações de região
+        fig.add_annotation(x=1.5, y=2.2, text="Super-excitado<br>(fornece Q)",
+            showarrow=False, font=dict(size=11, color=VM),
+            bgcolor="rgba(255,255,255,0.8)")
+        fig.add_annotation(x=1.5, y=-1.5, text="Sub-excitado<br>(absorve Q)",
+            showarrow=False, font=dict(size=11, color=AZ),
+            bgcolor="rgba(255,255,255,0.8)")
+
+        fig.update_layout(
+            title=dict(text="Curva de Capacidade — Gerador Síncrono (plano P × Q, pu)",
+                       font=dict(size=15, color=TX)),
+            xaxis=dict(title=dict(text="Potência ativa P (pu)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=12), range=[-0.2, S_nom + 0.5],
+                       gridcolor="rgba(128,128,128,.15)"),
+            yaxis=dict(title=dict(text="Potência reativa Q (pu)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=12), range=[-2.8, 3.5],
+                       gridcolor="rgba(128,128,128,.15)", scaleanchor="x", scaleratio=1),
+            legend=dict(font=dict(size=12), bgcolor="rgba(0,0,0,0)"),
+            height=520, margin=dict(l=70, r=30, t=65, b=70),
+        )
+        return fig
+
+    def fig_curvas_v_mes():
+        """Plotly: família de curvas V — Ia × If para diferentes P."""
+        Vt, Xs = 1.0, 1.0
+        If_range = np.linspace(0.05, 3.0, 400)  # If em pu (= Ef/Vt)
+
+        fig = go.Figure()
+        fp1_x, fp1_y = [], []  # lugar geométrico fp=1
+
+        for P_pu, cor, dash in [
+                (0.0, CZ,  "dash"),
+                (0.25, AZ, "solid"),
+                (0.50, VD, "solid"),
+                (0.75, LR, "solid"),
+                (1.00, VM, "solid"),
+        ]:
+            Ia_list = []
+            for Ef in If_range:
+                sin_d = P_pu * Xs / (3 * Vt * Ef) if Ef > 0.01 else 0
+                if abs(sin_d) > 1:
+                    Ia_list.append(float('nan'))
+                    continue
+                delta = math.asin(np.clip(sin_d, -1, 1))
+                Ef_c  = complex(Ef * math.cos(delta), Ef * math.sin(delta))
+                Vt_c  = complex(Vt, 0)
+                Ia_c  = (Vt_c - Ef_c) / complex(0, Xs)  # motor convention
+                Ia_list.append(abs(Ia_c))
+
+            Ia_arr = np.array(Ia_list)
+            fig.add_trace(go.Scatter(
+                x=If_range, y=Ia_arr, mode="lines",
+                line=dict(color=cor, width=2.5, dash=dash),
+                name=f"P = {P_pu:.2f} pu",
+                hovertemplate="If=%{x:.2f}<br>Ia=%{y:.3f} pu"))
+
+            # Ponto fp=1: Ia mínimo (onde Q=0, i.e., Ef cosδ = Vt)
+            valid = ~np.isnan(Ia_arr)
+            if valid.any():
+                idx_min = np.nanargmin(Ia_arr)
+                fp1_x.append(If_range[idx_min])
+                fp1_y.append(Ia_arr[idx_min])
+
+        # Linha de fp=1
+        if fp1_x:
+            order = np.argsort(fp1_x)
+            fig.add_trace(go.Scatter(
+                x=np.array(fp1_x)[order], y=np.array(fp1_y)[order],
+                mode="lines+markers",
+                line=dict(color=TX, width=1.8, dash="longdash"),
+                marker=dict(size=8, color=TX),
+                name="fp = 1 (Ia mínimo)"))
+
+        fig.add_annotation(x=0.6, y=2.0, text="Sub-excitado<br>(Q absorvida)",
+            showarrow=False, font=dict(size=11, color=AZ),
+            bgcolor="rgba(255,255,255,0.8)")
+        fig.add_annotation(x=2.2, y=2.0, text="Super-excitado<br>(Q fornecida)",
+            showarrow=False, font=dict(size=11, color=VM),
+            bgcolor="rgba(255,255,255,0.8)")
+
+        fig.update_layout(
+            title=dict(text="Curvas V — Corrente de Armadura Ia × Excitação Ef (motor síncrono)",
+                       font=dict(size=15, color=TX)),
+            xaxis=dict(title=dict(text="Excitação Ef / Vt (pu)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=12), range=[0, 3.1],
+                       gridcolor="rgba(128,128,128,.15)"),
+            yaxis=dict(title=dict(text="Corrente de armadura Ia (pu)", font=dict(size=14, color=TX)),
+                       tickfont=dict(size=12), range=[0, 3.2],
+                       gridcolor="rgba(128,128,128,.15)"),
+            legend=dict(font=dict(size=12), bgcolor="rgba(0,0,0,0)"),
+            height=440, margin=dict(l=70, r=30, t=65, b=70),
+        )
+        return fig
+
+    def fig_condensador_sincrono_mes():
+        """Plotly: diagramas fasoriais do condensador síncrono (P≈0, 3 condições)."""
+        Vt, Xs = 1.0, 1.0
+        configs = [
+            ("Sub-excitado", 0.6, AZ),
+            ("Normal",       1.0, VD),
+            ("Super-excitado", 1.5, VM),
+        ]
+
+        fig = go.Figure()
+        x_offset = 0
+
+        for label, Ef, cor in configs:
+            # Condensador síncrono: P=0, δ≈0 → Ia puramente imaginário
+            Ia_c = (complex(Vt, 0) - complex(Ef, 0)) / complex(0, Xs)
+
+            def add_arrow(x1, y1, x2, y2, c, name, dash="solid", w=2.5, show=True):
+                fig.add_trace(go.Scatter(
+                    x=[x1+x_offset, x2+x_offset], y=[y1, y2],
+                    mode="lines", line=dict(color=c, width=w, dash=dash),
+                    showlegend=False, hoverinfo="skip"))
+                fig.add_annotation(
+                    x=x2+x_offset, y=y2, ax=x1+x_offset, ay=y1,
+                    xref="x", yref="y", axref="x", ayref="y",
+                    arrowhead=2, arrowsize=1.3, arrowwidth=2.5,
+                    arrowcolor=c, showarrow=True, text="")
+
+            # Vt (referência horizontal)
+            add_arrow(0, 0, Vt, 0, TX, "Vt")
+            fig.add_annotation(x=Vt*0.5+x_offset, y=0.08,
+                text="<b>Vₜ</b>", showarrow=False, font=dict(size=12, color=TX))
+
+            # Ef (mesma fase que Vt, magnitude diferente)
+            add_arrow(0, 0, Ef, 0, cor, label, dash="dot" if label=="Normal" else "solid")
+            fig.add_annotation(x=Ef*0.5+x_offset, y=-0.12,
+                text=f"<b>Eƒ</b>", showarrow=False, font=dict(size=12, color=cor))
+
+            # Ia (vertical — puramente reativa)
+            Ia_mag = abs(Ia_c)
+            Ia_sign = 1 if Ia_c.imag > 0 else -1
+            if Ia_mag > 0.01:
+                add_arrow(0, 0, 0, Ia_sign * Ia_mag, LR, "Ia")
+                fig.add_annotation(x=0.10+x_offset, y=Ia_sign*Ia_mag*0.5,
+                    text="<b>Iₐ</b>", showarrow=False, font=dict(size=12, color=LR))
+
+            # Label do modo
+            fig.add_annotation(x=x_offset + 0.5, y=-0.65,
+                text=f"<b>{label}</b><br><span style='font-size:10px;color:{cor}'>"
+                     f"Ef={Ef:.1f} pu</span>",
+                showarrow=False, font=dict(size=11, color=cor),
+                bgcolor="rgba(255,255,255,0.85)", borderpad=3)
+
+            x_offset += 2.5
+
+        fig.add_hline(y=0, line=dict(color=CZ, width=0.6, dash="dot"))
+        fig.update_layout(
+            title=dict(text="Condensador Síncrono — Diagramas Fasoriais (P ≈ 0)",
+                       font=dict(size=15, color=TX)),
+            xaxis=dict(range=[-0.3, 7.5], showgrid=True,
+                       gridcolor="rgba(128,128,128,.12)",
+                       tickfont=dict(size=12),
+                       title=dict(text="Real (pu)", font=dict(size=12, color=CZ))),
+            yaxis=dict(range=[-0.9, 1.1], showgrid=True,
+                       gridcolor="rgba(128,128,128,.12)",
+                       tickfont=dict(size=12), scaleanchor="x", scaleratio=1,
+                       title=dict(text="Imaginário (pu)", font=dict(size=12, color=CZ))),
+            height=380, margin=dict(l=65, r=30, t=60, b=60),
+        )
+        return fig
+
     # ═══════════════════════════════════════════════════════════════════════════
     # CABEÇALHO
     # ═══════════════════════════════════════════════════════════════════════════
@@ -776,6 +1129,9 @@ def run():
 **8. Barramento Infinito e Sincronismo**
 **9. Modo Motor — Partida**
 **10. Ensaios OCC + SCC — Parâmetros**
+**11. Potência Ativa, Reativa e Torque**
+**12. Curva de Capacidade**
+**13. Controle de Fator de Potência — Condensador Síncrono**
 🎛️ **Exploradores Interativos**
 """)
 
@@ -1292,6 +1648,134 @@ e $X_{s,nsat}$ como limite teórico superior (máquina não saturada).
             height=380, margin=dict(l=65, r=20, t=55, b=65),
         )
         show_plot(fig_pd, key="exp_pd_plot")
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 11 — Potência e Torque
+    # ═══════════════════════════════════════════════════════════════════════════
+    st.header("11. Potência Ativa, Reativa e Torque")
+
+    st.markdown(r"""
+**Potência ativa entregue à rede** (por fase, $R_a \approx 0$):
+
+$$P_{1\phi} = \frac{V_t E_f}{X_s} \sin\delta \quad \Rightarrow \quad
+P_{3\phi} = \frac{3\,V_t E_f}{X_s} \sin\delta$$
+
+**Potência reativa** (por fase):
+
+$$Q_{1\phi} = \frac{V_t E_f \cos\delta - V_t^2}{X_s} \quad \Rightarrow \quad
+Q_{3\phi} = \frac{3\,V_t(E_f \cos\delta - V_t)}{X_s}$$
+
+**Torque eletromagnético:**
+
+$$T_{ind} = \frac{P_{3\phi}}{\omega_s} = \frac{3\,V_t E_f}{X_s\,\omega_s} \sin\delta$$
+
+**Limites de estabilidade estática** ($R_a = 0$):
+
+$$P_{max} = \frac{3\,V_t E_f}{X_s} \quad \text{(em } \delta = 90°\text{)} \qquad
+T_{max} = \frac{3\,V_t E_f}{X_s\,\omega_s}$$
+
+Para $|\delta| > 90°$ a máquina **perde sincronismo** — o rotor não consegue
+acompanhar o campo girante. A operação estável é restrita a $0 < \delta < 90°$
+no modo gerador e $-90° < \delta < 0$ no modo motor.
+
+| Grandeza | Gerador | Motor |
+|---|---|---|
+| Sentido de $\delta$ | $\delta > 0$ ($E_f$ adianta $V_t$) | $\delta < 0$ ($E_f$ atrasa $V_t$) |
+| Controle de P | ↑ torque da turbina → ↑ $\delta$ | ↑ carga mecânica → ↑ $|\delta|$ |
+| Controle de Q | ↑ $I_f$ → ↑ $E_f$ → Q capacitivo | ↑ $I_f$ → corrige fp atrasado |
+""")
+
+    show_plot(fig_potencia_delta_mes(), key="fig_11_pdelta")
+    st.caption(
+        r"**Figura 11.1** — Curva $P \times \delta$ para gerador e motor: "
+        r"potência máxima em $|\delta| = 90°$, limites de estabilidade marcados. "
+        r"Região estável: $|\delta| < 90°$."
+    )
+
+    show_plot(fig_potencia_reativa_mes(), key="fig_11_qef")
+    st.caption(
+        r"**Figura 11.2** — Potência reativa $Q$ em função de $E_f$ (excitação) "
+        r"para diferentes cargas ativas $P$. Sub-excitação → $Q < 0$ (absorve Q); "
+        r"super-excitação → $Q > 0$ (fornece Q)."
+    )
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 12 — Curva de Capacidade
+    # ═══════════════════════════════════════════════════════════════════════════
+    st.header("12. Curva de Capacidade (Capability Curve)")
+
+    st.markdown(r"""
+A **curva de capacidade** (ou carta de capacidade) delimita a região de operação
+segura de um gerador síncrono no plano $P \times Q$, respeitando simultaneamente
+três limites físicos:
+
+| Limite | Restrição | Causa |
+|---|---|---|
+| **Corrente de armadura** $I_a \leq I_{a,nom}$ | Círculo de raio $S_{nom} = 3V_t I_{a,nom}$ | Aquecimento do estator |
+| **Corrente de campo** $I_f \leq I_{f,nom}$ | Arco de círculo com centro em $(0, -3V_t^2/X_s)$ | Aquecimento do rotor |
+| **Limite de estabilidade** $\delta < 90°$ | Reta vertical $P = 3V_tE_f/X_s$ | Perda de sincronismo |
+
+No plano $P \times Q$:
+- O eixo $P$ representa potência ativa (MW).
+- O eixo $Q$ positivo representa operação **capacitiva** (fornece Q à rede — super-excitado).
+- O eixo $Q$ negativo representa operação **indutiva** (absorve Q da rede — sub-excitado).
+
+O ponto de operação nominal está na interseção dos três limites.
+""")
+
+    show_plot(fig_curva_capacidade_mes(), key="fig_12_capability")
+    st.caption(
+        "**Figura 12.1** — Curva de capacidade (capability curve) de um gerador síncrono "
+        "no plano $P \\times Q$ (pu). Região de operação segura delimitada pelo limite de "
+        "armadura (arco externo), limite de campo (arco interno) e limite de estabilidade "
+        "(reta vertical). Ponto nominal marcado."
+    )
+
+    st.divider()
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SEÇÃO 13 — Controle de Fator de Potência
+    # ═══════════════════════════════════════════════════════════════════════════
+    st.header("13. Controle de Fator de Potência — Condensador Síncrono")
+
+    st.markdown(r"""
+Um motor síncrono operando **sem carga mecânica** — chamado **condensador síncrono**
+(ou *compensador síncrono*) — pode ser usado exclusivamente para controle de fator
+de potência em subestações e sistemas de transmissão.
+
+**Princípio:** a tensão de excitação $E_f$ varia linearmente com $I_f$.
+Com $V_t$ fixo (barramento infinito) e potência ativa $P \approx 0$:
+
+$$I_a \approx \frac{E_f - V_t}{jX_s} \quad \text{(puramente reativa)}$$
+
+| Excitação | $E_f$ vs $V_t$ | $I_a$ | Efeito na rede |
+|---|---|---|---|
+| **Sub-excitada** ($I_f$ baixo) | $E_f < V_t$ | Grande, **atrasada** | Absorve Q (reator) |
+| **Excitação normal** | $E_f = V_t$ | Mínima (fp ≈ 1) | Neutro |
+| **Super-excitada** ($I_f$ alto) | $E_f > V_t$ | Grande, **adiantada** | Fornece Q (capacitor) |
+
+**Curva V ($I_a \times I_f$):** para cada nível de potência ativa $P$, a curva
+$I_a \times I_f$ tem formato de "V" — corrente mínima no ponto de fp unitário
+e crescente nos dois sentidos (sub e super-excitação). O conjunto de curvas V
+para diferentes $P$ forma a **família de curvas V** da máquina.
+""")
+
+    show_plot(fig_curvas_v_mes(), key="fig_13_curvas_v")
+    st.caption(
+        r"**Figura 13.1** — Família de curvas V: corrente de armadura $I_a$ "
+        r"em função da corrente de campo $I_f$ (pu) para diferentes cargas $P$. "
+        r"Ponto de mínimo de cada curva corresponde ao fp unitário. "
+        r"Linha tracejada: lugar geométrico dos pontos de fp = 1."
+    )
+
+    show_plot(fig_condensador_sincrono_mes(), key="fig_13_cond")
+    st.caption(
+        r"**Figura 13.2** — Diagrama fasorial do condensador síncrono: "
+        r"sub-excitado (absorve Q, $I_a$ atrasado), normal e super-excitado "
+        r"(fornece Q, $I_a$ adiantado). Potência ativa $P \approx 0$ em todos os casos."
+    )
 
     st.divider()
 
