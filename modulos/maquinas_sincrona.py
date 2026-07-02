@@ -1547,12 +1547,11 @@ def run():
         return fig
 
     def fig_fasorial_saliente_mes(Vt=1.0, Ef=0.6, delta_deg=-20.0,
-                                   Xd=1.2, Xq=0.8):
+                                   Xd=1.2, Xq=0.8, Ra=0.0):
         """Plotly: fasorial de polos salientes — fiel ao Cell 8 do MES-DESENHOS.ipynb.
-        Gerador: δ>0 | Motor: δ<0
-        Cadeia: Vt → (+jXd·Id) → (+jXq·Iq) → Ef
+        Gerador: delta>0 | Motor: delta<0
+        Cadeia: Vt -> Ra.Ia (se Ra>0) -> jXd.Id -> jXq.Iq -> Ef
         """
-        ang = 0.0
         delta_rad = math.radians(delta_deg)
         tipo = "Gerador" if delta_deg >= 0 else "Motor"
 
@@ -1614,11 +1613,20 @@ def run():
         # Vt
         draw(0, 0, V_t.real, V_t.imag, AZ, "Vₜ", w=3.0)
 
-        # Cadeia: Vt → Vt+jXd·Id → Vt+jXd·Id+jXq·Iq = Ef
-        Ax = V_t.real + jXd_Id.real
-        Ay = V_t.imag + jXd_Id.imag
-        draw(V_t.real, V_t.imag, jXd_Id.real, jXd_Id.imag, VD, "jX_d·I_d", w=2.2)
-        draw(Ax, Ay, jXq_Iq.real, jXq_Iq.imag, LR, "jX_q·I_q", w=2.2)
+        # Cadeia: Vt -> [Ra.Ia] -> jXd.Id -> jXq.Iq = Ef
+        # Ra.Ia term (gerador: +Ra.Ia, motor: -Ra.Ia)
+        if Ra > 0.001:
+            q_Ra = Ra * Ia_pu if tipo == "Gerador" else -Ra * Ia_pu
+            draw(V_t.real, V_t.imag, q_Ra.real, q_Ra.imag, LR, "Rₐ.Iₐ", w=2.0)
+            orig_x = V_t.real + q_Ra.real
+            orig_y = V_t.imag + q_Ra.imag
+        else:
+            orig_x = V_t.real
+            orig_y = V_t.imag
+        Ax = orig_x + jXd_Id.real
+        Ay = orig_y + jXd_Id.imag
+        draw(orig_x, orig_y, jXd_Id.real, jXd_Id.imag, VD, "jX_d.I_d", w=2.2)
+        draw(Ax, Ay, jXq_Iq.real, jXq_Iq.imag, CI, "jX_q.I_q", w=2.2)
 
         # Ef
         draw(0, 0, E_f.real, E_f.imag, VM, "Eƒ", w=3.0)
@@ -1675,7 +1683,7 @@ def run():
             title=dict(
                 text=(f"Fasorial Polos Salientes — {tipo} (δ={delta_deg:.0f}°, "
                       f"Xd={Xd}, Xq={Xq})<br>"
-                      f"<sup>Eƒ = Vₜ + jX_d·I_d + jX_q·I_q   (err={err:.4f} pu)</sup>"),
+                      f"<sup>Eƒ = Vₜ + jX_d.I_d + jX_q.I_q   (err={err:.4f} pu)</sup>"),
                 font=dict(size=14, color=TX)),
             xaxis=dict(range=[-lim*0.4, lim*1.15], scaleanchor="y",
                        showgrid=True, gridcolor="rgba(128,128,128,.15)",
@@ -1923,13 +1931,27 @@ $$\Phi_r = \Phi_f + \Phi_a$$
 
 O efeito de $\Phi_a$ sobre $\Phi_f$ depende do ângulo de defasagem entre $E_f$ e $I_a$
 (ou seja, do fator de potência da carga):
-
-| Fator de potência | Efeito de $\Phi_a$ | Resultado |
-|---|---|---|
-| Unitário (fp = 1) | $\Phi_a \perp \Phi_f$ | Distorção (cruzado) |
-| Atrasado (indutivo) | $\Phi_a$ opõe $\Phi_f$ | **Desmagnetização** — $|\Phi_r| < |\Phi_f|$ |
-| Adiantado (capacitivo) | $\Phi_a$ reforça $\Phi_f$ | **Magnetização** — $|\Phi_r| > |\Phi_f|$ |
-
+""")
+    st.markdown("""
+<table style="width:100%;border-collapse:collapse;font-size:0.95rem;">
+<thead><tr style="background:#f0f4ff;">
+  <th style="padding:8px 12px;text-align:left;border:1px solid #d0d8e8;">Fator de potência</th>
+  <th style="padding:8px 12px;text-align:left;border:1px solid #d0d8e8;">Efeito de Φ<sub>a</sub></th>
+  <th style="padding:8px 12px;text-align:left;border:1px solid #d0d8e8;">Resultado</th>
+</tr></thead>
+<tbody>
+<tr><td style="padding:7px 12px;border:1px solid #d0d8e8;">Unitário (fp = 1)</td>
+    <td style="padding:7px 12px;border:1px solid #d0d8e8;">Φ<sub>a</sub> ⊥ Φ<sub>f</sub></td>
+    <td style="padding:7px 12px;border:1px solid #d0d8e8;">Distorção — campo cruzado</td></tr>
+<tr><td style="padding:7px 12px;border:1px solid #d0d8e8;">Atrasado (indutivo)</td>
+    <td style="padding:7px 12px;border:1px solid #d0d8e8;">Φ<sub>a</sub> opõe Φ<sub>f</sub></td>
+    <td style="padding:7px 12px;border:1px solid #d0d8e8;"><strong>Desmagnetização</strong> — |Φ<sub>r</sub>| &lt; |Φ<sub>f</sub>|</td></tr>
+<tr><td style="padding:7px 12px;border:1px solid #d0d8e8;">Adiantado (capacitivo)</td>
+    <td style="padding:7px 12px;border:1px solid #d0d8e8;">Φ<sub>a</sub> reforça Φ<sub>f</sub></td>
+    <td style="padding:7px 12px;border:1px solid #d0d8e8;"><strong>Magnetização</strong> — |Φ<sub>r</sub>| &gt; |Φ<sub>f</sub>|</td></tr>
+</tbody></table>
+""", unsafe_allow_html=True)
+    st.markdown(r"""
 No circuito equivalente, o efeito de $\Phi_a$ é modelado pela **reatância de reação
 da armadura** $X_{ar}$, que junto com a reatância de dispersão $X_l$ forma a
 **reatância síncrona** $X_s = X_{ar} + X_l$.
@@ -2609,6 +2631,7 @@ abrir o disjuntor e ainda manter $A_2 = A_1$ (limite de estabilidade).
             Ef_s  = st.slider("Ef (pu)", 0.1, 2.0, 0.6,  0.05, key="exp_sal_ef")
             Xd_s  = st.slider("Xd (pu)", 0.3, 2.5, 1.2,  0.05, key="exp_sal_xd")
             Xq_s  = st.slider("Xq (pu)", 0.1, 2.5, 0.8,  0.05, key="exp_sal_xq")
+            Ra_s  = st.slider("Ra (pu)", 0.0, 1.0, 0.0,  0.05, key="exp_sal_ra")
             dl_s  = st.slider("δ (°)  [+ gerador / − motor]",
                                -90, 90, -20, 1, key="exp_sal_delta")
             if Xq_s >= Xd_s:
@@ -2618,7 +2641,7 @@ abrir o disjuntor e ainda manter $A_2 = A_1$ (limite de estabilidade).
             st.caption(f"Modo: **{tipo_s}**")
         with col_b4:
             show_plot(fig_fasorial_saliente_mes(
-                Vt=Vt_s, Ef=Ef_s, delta_deg=dl_s, Xd=Xd_s, Xq=Xq_s),
+                Vt=Vt_s, Ef=Ef_s, delta_deg=dl_s, Xd=Xd_s, Xq=Xq_s, Ra=Ra_s),
                 key="exp_sal_fas")
 
     # ── Aba 5: Polos Salientes — P×δ ──────────────────────────────────────────
