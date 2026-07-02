@@ -4,9 +4,6 @@ Disciplina: Conversão Eletromecânica de Energia I
 Curso: Engenharia de Energia
 Instituição: IFRN — Campus Natal-Central (CNAT)
 Autor: Marcus V A Fernandes · marcus.fernandes@ifrn.edu.br · v1.0
-
-Fonte: PPTX-fonte do Módulo 5 — "CEEI - MES - 01 - Conceitos"
-Exercícios resolvidos adaptados dos notebooks SEN6.ipynb, UMANS5.ipynb e MES-DESENHOS.ipynb.
 """
 
 import streamlit as st
