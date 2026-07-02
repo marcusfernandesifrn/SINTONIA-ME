@@ -4,6 +4,9 @@ Disciplina: Conversão Eletromecânica de Energia I
 Curso: Engenharia de Energia
 Instituição: IFRN — Campus Natal-Central (CNAT)
 Autor: Marcus V A Fernandes · marcus.fernandes@ifrn.edu.br · v1.0
+
+Fonte: PPTX-fonte do Módulo 5 — "CEEI - MES - 01 - Conceitos"
+Exercícios resolvidos adaptados dos notebooks SEN6.ipynb, UMANS5.ipynb e MES-DESENHOS.ipynb.
 """
 
 import streamlit as st
@@ -2483,20 +2486,25 @@ abrir o disjuntor e ainda manter $A_2 = A_1$ (limite de estabilidade).
 
     # ── Aba 1: Diagrama Fasorial ──────────────────────────────────────────────
     with tab1:
-        st.markdown("**Explore o diagrama fasorial da máquina cilíndrica.**")
+        st.markdown(
+            r"**Diagrama fasorial — máquina cilíndrica.** "
+            r"$\delta > 0$: gerador &nbsp;|&nbsp; $\delta < 0$: motor."
+        )
         col_a, col_b = st.columns([1, 2])
         with col_a:
-            modo_exp = st.radio("Modo:", ["Gerador", "Motor"], key="exp_ms_modo")
-            Vt_exp   = st.slider("Vt (pu)", 0.5, 1.5, 1.0, 0.05, key="exp_ms_vt")
-            Ef_exp   = st.slider("Ef (pu)", 0.3, 2.0, 1.25, 0.05, key="exp_ms_ef")
-            Xs_exp   = st.slider("Xs (pu)", 0.3, 2.0, 1.0, 0.05, key="exp_ms_xs")
-            Ra_exp   = st.slider("Ra (pu)", 0.0, 0.3, 0.0, 0.01, key="exp_ms_ra")
-            dl_exp   = st.slider("δ (°)", -60, 60, 20, 1, key="exp_ms_delta")
+            Vt_exp = st.slider("Vt (pu)", 0.5, 2.0, 1.0,  0.05, key="exp_ms_vt")
+            Ef_exp = st.slider("Ef (pu)", 0.3, 2.0, 1.05, 0.05, key="exp_ms_ef")
+            Xs_exp = st.slider("Xs (pu)", 0.1, 2.5, 1.1,  0.05, key="exp_ms_xs")
+            Ra_exp = st.slider("Ra (pu)", 0.0, 1.0, 0.0,  0.05, key="exp_ms_ra")
+            dl_exp = st.slider("δ (°)  [+ gerador / − motor]",
+                               -90, 90, 20, 1, key="exp_ms_delta")
+            tipo_exp = "Gerador" if dl_exp > 0 else ("Motor" if dl_exp < 0 else "Neutro")
+            st.caption(f"Modo: **{tipo_exp}**")
 
         with col_b:
             fig_exp1 = fig_diagrama_fasorial_mes(
                 Vt=Vt_exp, Ef=Ef_exp, delta_deg=dl_exp,
-                Xs=Xs_exp, Ra=Ra_exp, modo=modo_exp)
+                Xs=Xs_exp, Ra=Ra_exp)
             show_plot(fig_exp1, key="exp_fasorial_dyn")
 
     # ── Aba 2: Curva V ────────────────────────────────────────────────────────
