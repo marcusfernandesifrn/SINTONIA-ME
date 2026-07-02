@@ -1548,25 +1548,22 @@ def run():
 
     def fig_fasorial_saliente_mes(Vt=1.0, Ef=0.6, delta_deg=-20.0,
                                    Xd=1.2, Xq=0.8, Ra=0.0):
-        """Fasorial de polos salientes.
-        Resolve o sistema linear exato para Id e Iq com Ra incluso.
+        """Fasorial de polos salientes com convenção Ia = |Iq| - j|Id| no referencial q.
+        Eixo d atrasa o eixo q por 90°  →  d_hat = -j * q_hat
         Cadeia fechada: Ef = Vt + Ra.Ia + jXd.Id_vec + jXq.Iq_vec
         Gerador: delta>0 | Motor: delta<0
         """
         delta_rad = math.radians(delta_deg)
         tipo = "Gerador" if delta_deg >= 0 else "Motor"
 
-        # Fasores terminais
         V_t = complex(Vt, 0)
         E_f = complex(Ef * math.cos(delta_rad), Ef * math.sin(delta_rad))
 
-        # Versores dos eixos d e q
-        q = complex( math.cos(delta_rad),  math.sin(delta_rad))   # dir. Ef
-        d = complex(-math.sin(delta_rad),  math.cos(delta_rad))   # perp. q
-
-        # j*d e j*q (rotação 90° CCW)
-        jd = complex(-d.imag, d.real)
-        jq = complex(-q.imag, q.real)
+        # Versores: d ATRASA q por 90°  (d = -j*q)
+        q   = complex( math.cos(delta_rad),  math.sin(delta_rad))  # q-axis // Ef
+        d   = complex( q.imag,              -q.real)               # d = -j*q (atrasa 90°)
+        jd  = complex(-d.imag,              d.real)                # j*d = q
+        jq  = complex(-q.imag,              q.real)                # j*q (90° CCW de q)
 
         # ── Sistema linear: [A B; C D][Id; Iq] = [rhs.re; rhs.im] ────────────
         # Ef - Vt = Id*(Ra*d + Xd*jd) + Iq*(Ra*q + Xq*jq)
@@ -1579,15 +1576,15 @@ def run():
         b_vec = np.array([rhs.real, rhs.imag])
         Id, Iq = np.linalg.solve(A_mat, b_vec)
 
-        # Fasores parciais
-        Id_vec = Id * d
-        Iq_vec = Iq * q
-        Ia_pu  = Id_vec + Iq_vec
+        # Fasores — Ia = (|Iq| - j|Id|)*q_hat  em referencial do eixo q
+        Id_vec = Id * d      # componente d de Ia
+        Iq_vec = Iq * q      # componente q de Ia
+        Ia_pu  = Id_vec + Iq_vec          # = (Iq - j*Id)*q (convenção correta)
         Ra_Ia  = Ra * Ia_pu
-        jXd_Id = Xd * Id * jd
-        jXq_Iq = Xq * Iq * jq
+        jXd_Id = Xd * Id * jd             # jXd * Id_vec
+        jXq_Iq = Xq * Iq * jq             # jXq * Iq_vec
 
-        # Verificação de fechamento
+        # Verificação
         Ef_calc = V_t + Ra_Ia + jXd_Id + jXq_Iq
         err     = abs(Ef_calc - E_f)
 
@@ -1629,30 +1626,31 @@ def run():
 
         draw(Bx, By, jXq_Iq.real, jXq_Iq.imag, CI, "jX_q·I_q", w=2.2)
 
-        # Ef (deve coincidir com B + jXq.Iq)
+        # Ef (do ponto final = Ef)
         draw(0, 0, E_f.real, E_f.imag, VM, "Eƒ", w=3.0)
 
-        # Ia e componentes (escalados para visualização)
+        # Ia e componentes (escalados)
         sc = 0.70
-        draw(0, 0, Ia_pu.real*sc, Ia_pu.imag*sc, CZ, "Iₐ", dash="dot",       w=2.0)
+        draw(0, 0, Ia_pu.real*sc, Ia_pu.imag*sc,  CZ, "Iₐ",  dash="dot",      w=2.0)
         draw(0, 0, Id_vec.real*sc, Id_vec.imag*sc, VD, "I_d", dash="longdash", w=1.5)
         draw(0, 0, Iq_vec.real*sc, Iq_vec.imag*sc, LR, "I_q", dash="longdash", w=1.5)
 
         # Eixos d e q
         L  = max(Vt, Ef) * 1.15
         Ld = 0.55
-        for (vx, vy, lbl) in [(q.real, q.imag, "q"), (d.real*Ld, d.imag*Ld, "d")]:
-            fig.add_trace(go.Scatter(
-                x=[0, L*vx if lbl=="q" else vx],
-                y=[0, L*vy if lbl=="q" else vy],
-                mode="lines",
-                line=dict(color=CZ, width=0.9, dash="dash"),
-                showlegend=False, hoverinfo="skip"))
-            fig.add_annotation(
-                x=(L*vx if lbl=="q" else vx) + 0.04,
-                y=(L*vy if lbl=="q" else vy),
-                text=f"<b>{lbl}</b>", showarrow=False,
-                font=dict(size=11, color=CZ))
+        fig.add_trace(go.Scatter(
+            x=[0, L*q.real], y=[0, L*q.imag], mode="lines",
+            line=dict(color=CZ, width=0.9, dash="dash"),
+            showlegend=False, hoverinfo="skip"))
+        fig.add_annotation(x=L*q.real+0.04, y=L*q.imag,
+            text="<b>q</b>", showarrow=False, font=dict(size=11, color=CZ))
+
+        fig.add_trace(go.Scatter(
+            x=[0, Ld*d.real], y=[0, Ld*d.imag], mode="lines",
+            line=dict(color=CZ, width=0.9, dash="dash"),
+            showlegend=False, hoverinfo="skip"))
+        fig.add_annotation(x=Ld*d.real+0.04, y=Ld*d.imag,
+            text="<b>d</b>", showarrow=False, font=dict(size=11, color=CZ))
 
         # Arco de δ
         if abs(delta_deg) > 1:
@@ -1662,10 +1660,8 @@ def run():
                 line=dict(color=TX, width=1.3, dash="dot"),
                 showlegend=False, hoverinfo="skip"))
             fig.add_annotation(
-                x=0.30*math.cos(delta_rad/2),
-                y=0.30*math.sin(delta_rad/2),
-                text="<b>δ</b>", showarrow=False,
-                font=dict(size=13, color=TX))
+                x=0.30*math.cos(delta_rad/2), y=0.30*math.sin(delta_rad/2),
+                text="<b>δ</b>", showarrow=False, font=dict(size=13, color=TX))
 
         fig.add_hline(y=0, line=dict(color=CZ, width=0.7, dash="dot"))
         fig.add_vline(x=0, line=dict(color=CZ, width=0.7, dash="dot"))
@@ -1675,9 +1671,10 @@ def run():
             title=dict(
                 text=(f"Fasorial Polos Salientes — {tipo}  "
                       f"(δ={delta_deg:.0f}°, Xd={Xd}, Xq={Xq}, Ra={Ra})<br>"
-                      f"<sup>Eƒ = Vₜ + Rₐ·Iₐ + jX_d·I_d + jX_q·I_q"
-                      f"   (err={err:.6f} pu)</sup>"),
-                font=dict(size=14, color=TX)),
+                      f"<sup>Iₐ = Iᵩ − j·I_d  |  "
+                      f"Eƒ = Vₜ + Rₐ·Iₐ + jX_d·I_d + jX_q·Iᵩ"
+                      f"   (err={err:.2e} pu)</sup>"),
+                font=dict(size=13, color=TX)),
             xaxis=dict(range=[-lim*0.4, lim*1.15], scaleanchor="y",
                        showgrid=True, gridcolor="rgba(128,128,128,.15)",
                        zeroline=False, tickfont=dict(size=12),
