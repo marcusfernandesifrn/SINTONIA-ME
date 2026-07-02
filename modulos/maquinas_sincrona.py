@@ -543,80 +543,99 @@ def run():
         buf.seek(0)
         return buf
 
-    def fig_diagrama_fasorial_mes(Vt=1.0, Ef=1.2, delta_deg=25.0,
-                                   Xs=1.0, Ra=0.0, modo="Gerador"):
-        """Plotly: diagrama fasorial cilíndrico interativo."""
-        delta = math.radians(delta_deg)
-        Vt_c  = complex(Vt, 0)
-        Ef_c  = complex(Ef * math.cos(delta), Ef * math.sin(delta))
+    def fig_diagrama_fasorial_mes(Vt=1.0, Ef=1.05, delta_deg=20.0,
+                                   Xs=1.1, Ra=0.0, modo="Gerador"):
+        """Plotly: diagrama fasorial cilíndrico — gerador (δ>0) ou motor (δ<0).
+        Lógica fiel ao Cell 4 do MES-DESENHOS.ipynb.
+        """
+        ang = 0.0   # Vt é a referência (ângulo 0)
 
-        if modo == "Gerador":
-            Ia_c  = (Ef_c - Vt_c) / complex(Ra, Xs)
-            RaIa  =  Ra * Ia_c
-            jXsIa =  complex(0, Xs) * Ia_c
+        # Fasores de entrada
+        V_t = complex(Vt * math.cos(math.radians(ang)),
+                      Vt * math.sin(math.radians(ang)))
+        E_f = complex(Ef * math.cos(math.radians(delta_deg)),
+                      Ef * math.sin(math.radians(delta_deg)))
+
+        # Corrente e quedas — convenção do notebook
+        if delta_deg <= 0:
+            tipo = "Motor"
+            Ia_pu = (V_t - E_f) / complex(Ra, Xs)
+            q_Ra  = -Ra * Ia_pu
+            q_Xs  = -1j * Xs * Ia_pu
         else:
-            Ia_c  = (Vt_c - Ef_c) / complex(Ra, Xs)
-            RaIa  = -Ra * Ia_c
-            jXsIa = -complex(0, Xs) * Ia_c
+            tipo = "Gerador"
+            Ia_pu = (E_f - V_t) / complex(Ra, Xs)
+            q_Ra  =  Ra * Ia_pu
+            q_Xs  =  1j * Xs * Ia_pu
+
+        # Lista de vetores: (origem, vetor, nome, cor, dash, width)
+        origem_Xs = V_t + q_Ra if Ra > 0 else V_t
+        plot_data = [
+            (0j,        V_t,   "Vₜ",              AZ,  "solid",    3.0),
+            (origem_Xs, q_Xs,  "jXₛ·Iₐ",         VD,  "solid",    2.2),
+            (0j,        E_f,   "Eƒ",              VM,  "solid",    3.0),
+            (0j,        Ia_pu*0.8, "Iₐ",         CZ,  "dot",      2.0),
+        ]
+        if Ra > 0.001:
+            plot_data.insert(1, (V_t, q_Ra, "Rₐ·Iₐ", LR, "solid", 2.2))
 
         fig = go.Figure()
 
-        def fasor(ox, oy, dx, dy, cor, nome, dash="solid", width=2.8):
+        def draw(ox, oy, dx, dy, cor, nome, dash, w):
+            if math.hypot(dx, dy) < 1e-6:
+                return
             fig.add_trace(go.Scatter(
                 x=[ox, ox+dx], y=[oy, oy+dy], mode="lines",
-                line=dict(color=cor, width=width, dash=dash),
-                showlegend=True, name=nome,
-                hovertemplate=f"{nome}: {math.hypot(dx,dy):.3f} pu<extra></extra>"))
+                line=dict(color=cor, width=w, dash=dash),
+                name=f"{nome}: {math.hypot(dx,dy):.3f} pu ∠{math.degrees(math.atan2(dy,dx)):.1f}°",
+                showlegend=True,
+                hovertemplate=f"{nome}<br>|F|={math.hypot(dx,dy):.3f} pu<extra></extra>"))
             fig.add_annotation(
                 x=ox+dx, y=oy+dy, ax=ox, ay=oy,
                 xref="x", yref="y", axref="x", ayref="y",
-                arrowhead=2, arrowsize=1.4, arrowwidth=2.5,
+                arrowhead=2, arrowsize=1.4, arrowwidth=max(1.5, w*0.8),
                 arrowcolor=cor, showarrow=True, text="")
-            mx = ox + dx*0.55; my = oy + dy*0.55
-            fig.add_annotation(x=mx, y=my, text=f"<b>{nome}</b>",
-                               showarrow=False,
-                               font=dict(size=13, color=cor),
-                               bgcolor="rgba(255,255,255,0.78)", borderpad=2)
+            fig.add_annotation(
+                x=ox+dx*0.5, y=oy+dy*0.5,
+                text=f"<b>{nome}</b>", showarrow=False,
+                font=dict(size=12, color=cor),
+                bgcolor="rgba(255,255,255,0.80)", borderpad=2)
 
-        fasor(0, 0, Vt_c.real, Vt_c.imag, AZ, "Vₜ", width=3.0)
-        Ia_sc = Ia_c * 0.75
-        fasor(0, 0, Ia_sc.real, Ia_sc.imag, VD, "Iₐ", dash="dot", width=2.2)
-        fasor(0, 0, Ef_c.real, Ef_c.imag, VM, "Eƒ", width=3.0)
-        if abs(RaIa) > 0.01:
-            fasor(Vt_c.real, Vt_c.imag, RaIa.real, RaIa.imag, LR, "Rₐ·Iₐ", width=2.2)
-        origin = Vt_c + RaIa
-        fasor(origin.real, origin.imag, jXsIa.real, jXsIa.imag, CZ, "jXₛ·Iₐ", width=2.2)
+        for orig, vec, nome, cor, dash, w in plot_data:
+            draw(orig.real, orig.imag, vec.real, vec.imag, cor, nome, dash, w)
 
-        # Arco do ângulo δ
-        arc_r = 0.22
-        arc_t = np.linspace(0, delta, 30)
-        fig.add_trace(go.Scatter(
-            x=arc_r*np.cos(arc_t), y=arc_r*np.sin(arc_t),
-            mode="lines", line=dict(color=TX, width=1.5, dash="dash"),
-            showlegend=False, hoverinfo="skip"))
-        fig.add_annotation(
-            x=arc_r*math.cos(delta/2)*1.6, y=arc_r*math.sin(delta/2)*1.6,
-            text="<b>δ</b>", showarrow=False, font=dict(size=14, color=TX))
+        # Arco de δ
+        if abs(delta_deg) > 1:
+            arc = np.linspace(0, math.radians(delta_deg), 40)
+            fig.add_trace(go.Scatter(
+                x=0.22*np.cos(arc), y=0.22*np.sin(arc), mode="lines",
+                line=dict(color=TX, width=1.3, dash="dot"),
+                showlegend=False, hoverinfo="skip"))
+            fig.add_annotation(
+                x=0.30*math.cos(math.radians(delta_deg)/2),
+                y=0.30*math.sin(math.radians(delta_deg)/2),
+                text="<b>δ</b>", showarrow=False,
+                font=dict(size=13, color=TX))
 
-        fig.add_hline(y=0, line=dict(color=CZ, width=0.8, dash="dot"))
-        fig.add_vline(x=0, line=dict(color=CZ, width=0.8, dash="dot"))
+        fig.add_hline(y=0, line=dict(color=CZ, width=0.7, dash="dot"))
+        fig.add_vline(x=0, line=dict(color=CZ, width=0.7, dash="dot"))
 
-        lim = max(Vt, Ef, abs(Ia_c)*0.75) * 1.35
+        lim = max(Vt, Ef, abs(Ia_pu)*0.8) * 1.35
         fig.update_layout(
             title=dict(
-                text=f"Diagrama Fasorial — {modo} Cilíndrico  (δ = {delta_deg:.0f}°)",
-                font=dict(size=16, color=TX)),
-            xaxis=dict(range=[-lim*0.4, lim*1.15], scaleanchor="y",
+                text=f"Diagrama Fasorial Cilíndrico — {tipo} (δ={delta_deg:.0f}°)",
+                font=dict(size=15, color=TX)),
+            xaxis=dict(range=[-lim*0.45, lim*1.15], scaleanchor="y",
                        showgrid=True, gridcolor="rgba(128,128,128,.15)",
                        zeroline=False, tickfont=dict(size=12),
                        title=dict(text="Real (pu)", font=dict(size=12, color=CZ))),
-            yaxis=dict(range=[-lim*0.55, lim*0.9],
+            yaxis=dict(range=[-lim*0.65, lim*0.85],
                        showgrid=True, gridcolor="rgba(128,128,128,.15)",
                        zeroline=False, tickfont=dict(size=12),
                        title=dict(text="Imaginário (pu)", font=dict(size=12, color=CZ))),
-            legend=dict(font=dict(size=12), bgcolor="rgba(255,255,255,0.85)",
+            legend=dict(font=dict(size=11), bgcolor="rgba(255,255,255,0.88)",
                         x=0.01, y=0.99, xanchor="left", yanchor="top"),
-            height=480, margin=dict(l=65, r=30, t=60, b=60),
+            height=500, margin=dict(l=65, r=30, t=60, b=60),
         )
         return fig
 
@@ -1524,119 +1543,142 @@ def run():
         )
         return fig
 
-    def fig_fasorial_saliente_mes(Vt=1.0, Ef=1.2, delta_deg=25.0,
-                                   Xd=1.0, Xq=0.6):
-        """Plotly: fasorial de polos salientes — funciona para gerador (δ>0) e motor (δ<0).
-        Cadeia: Ef = Vt + jXq·Iq + jXd·Id  (Ra=0)
+    def fig_fasorial_saliente_mes(Vt=1.0, Ef=0.6, delta_deg=-20.0,
+                                   Xd=1.2, Xq=0.8):
+        """Plotly: fasorial de polos salientes — fiel ao Cell 8 do MES-DESENHOS.ipynb.
+        Gerador: δ>0 | Motor: δ<0
+        Cadeia: Vt → (+jXd·Id) → (+jXq·Iq) → Ef
         """
-        delta = math.radians(delta_deg)
-        modo  = "Gerador" if delta_deg >= 0 else "Motor"
+        ang = 0.0
+        delta_rad = math.radians(delta_deg)
+        tipo = "Gerador" if delta_deg >= 0 else "Motor"
 
-        # Eixos d e q
-        q_cos, q_sin =  math.cos(delta),  math.sin(delta)   # eixo q ‖ Ef
-        d_cos, d_sin = -math.sin(delta),  math.cos(delta)   # eixo d ⊥ Ef
+        V_t = complex(Vt, 0)
+        E_f = complex(Ef * math.cos(delta_rad), Ef * math.sin(delta_rad))
 
-        Vt_c = complex(Vt, 0)
-        Ef_c = complex(Ef * q_cos, Ef * q_sin)
+        # Componentes d-q — fórmulas do notebook Cell 8
+        sinal = math.copysign(1, delta_deg) if delta_deg != 0 else 1
+        Id = sinal * (Ef - Vt * math.cos(delta_rad)) / Xd
+        Iq = Vt * math.sin(delta_rad) / Xq
+        Psi_rad = math.atan2(Id, Iq)
+        Ia_val = math.sqrt(Id**2 + Iq**2)
 
-        # Componentes d-q (válidas para δ positivo e negativo)
-        # Gerador: Ef adianta Vt  →  Iq>0, Id>0 (desmagnetizante)
-        # Motor:   Ef atrasa Vt   →  Iq>0, Id<0 (magnetizante)
-        Iq = (Ef - Vt * math.cos(delta)) / Xq   # positivo em ambos os modos
-        Id = Vt * math.sin(delta) / Xd           # positivo no gerador, neg. no motor
-
-        # Ia (soma das componentes)
-        Ia_cx = Iq * q_cos + Id * d_cos
-        Ia_cy = Iq * q_sin + Id * d_sin
-
-        # jXq·Iq (Iq·q_hat rotacionado 90° CCW)
-        jXqIq_cx = -Xq * Iq * q_sin
-        jXqIq_cy =  Xq * Iq * q_cos
-
-        # jXd·Id (Id·d_hat rotacionado 90° CCW)
-        jXdId_cx = -Xd * Id * d_sin
-        jXdId_cy =  Xd * Id * d_cos
+        if tipo == "Gerador":
+            Ia_ang = delta_deg - math.degrees(Psi_rad)
+            Ia_pu  = complex(Ia_val * math.cos(math.radians(Ia_ang)),
+                             Ia_val * math.sin(math.radians(Ia_ang)))
+            Id_vec  = complex(Id * math.cos(math.radians(delta_deg - 90)),
+                              Id * math.sin(math.radians(delta_deg - 90)))
+            Iq_vec  = complex(Iq * math.cos(delta_rad),
+                              Iq * math.sin(delta_rad))
+            jXd_Id  = 1j * Xd * Id_vec
+            jXq_Iq  = 1j * Xq * Iq_vec
+        else:
+            Ia_ang = delta_deg - math.degrees(Psi_rad)
+            Ia_pu  = complex(-Ia_val * math.cos(math.radians(Ia_ang)),
+                              -Ia_val * math.sin(math.radians(Ia_ang)))
+            Id_vec  = complex(-Id * math.cos(math.radians(delta_deg - 90)),
+                               -Id * math.sin(math.radians(delta_deg - 90)))
+            Iq_vec  = complex(-Iq * math.cos(delta_rad),
+                               -Iq * math.sin(delta_rad))
+            jXd_Id  = 1j * Xd * Id_vec
+            jXq_Iq  = -1j * Xq * Iq_vec
 
         fig = go.Figure()
 
-        def fasor(ox, oy, dx, dy, cor, nome, dash="solid", w=2.8):
-            if math.hypot(dx, dy) < 1e-5:
+        def draw(ox, oy, dx, dy, cor, nome, dash="solid", w=2.2):
+            if math.hypot(dx, dy) < 1e-6:
                 return
+            mag = math.hypot(dx, dy)
+            ang_v = math.degrees(math.atan2(dy, dx))
             fig.add_trace(go.Scatter(
                 x=[ox, ox+dx], y=[oy, oy+dy], mode="lines",
                 line=dict(color=cor, width=w, dash=dash),
-                name=nome, showlegend=True,
-                hovertemplate=f"{nome}: {math.hypot(dx,dy):.3f} pu<extra></extra>"))
+                name=f"{nome}: {mag:.3f} pu ∠{ang_v:.1f}°",
+                showlegend=True,
+                hovertemplate=f"{nome}<br>|F|={mag:.3f} pu<extra></extra>"))
             fig.add_annotation(
                 x=ox+dx, y=oy+dy, ax=ox, ay=oy,
                 xref="x", yref="y", axref="x", ayref="y",
-                arrowhead=2, arrowsize=1.4, arrowwidth=2.5,
+                arrowhead=2, arrowsize=1.4, arrowwidth=max(1.5, w*0.8),
                 arrowcolor=cor, showarrow=True, text="")
             fig.add_annotation(
-                x=ox + dx*0.50 + 0.03, y=oy + dy*0.50 + 0.03,
+                x=ox+dx*0.50, y=oy+dy*0.50,
                 text=f"<b>{nome}</b>", showarrow=False,
-                font=dict(size=12, color=cor),
-                bgcolor="rgba(255,255,255,0.78)", borderpad=2)
+                font=dict(size=11, color=cor),
+                bgcolor="rgba(255,255,255,0.80)", borderpad=2)
 
-        # 1. Vt (referência)
-        fasor(0, 0, Vt_c.real, Vt_c.imag, AZ, "Vₜ", w=3.0)
+        # Vt
+        draw(0, 0, V_t.real, V_t.imag, AZ, "Vₜ", w=3.0)
 
-        # 2. Cadeia vetorial: Vt → (+jXqIq) → (+jXdId) = Ef
-        Ax = Vt_c.real + jXqIq_cx
-        Ay = Vt_c.imag + jXqIq_cy
-        fasor(Vt_c.real, Vt_c.imag, jXqIq_cx, jXqIq_cy, LR, "jXᵩ·Iᵩ", w=2.2)
-        fasor(Ax, Ay, jXdId_cx, jXdId_cy, CI, "jX_d·I_d", w=2.2)
+        # Cadeia: Vt → Vt+jXd·Id → Vt+jXd·Id+jXq·Iq = Ef
+        Ax = V_t.real + jXd_Id.real
+        Ay = V_t.imag + jXd_Id.imag
+        draw(V_t.real, V_t.imag, jXd_Id.real, jXd_Id.imag, VD, "jX_d·I_d", w=2.2)
+        draw(Ax, Ay, jXq_Iq.real, jXq_Iq.imag, LR, "jX_q·I_q", w=2.2)
 
-        # 3. Ef (verificação visual — deve fechar a cadeia)
-        fasor(0, 0, Ef_c.real, Ef_c.imag, VM, "Eƒ", w=3.0)
+        # Ef
+        draw(0, 0, E_f.real, E_f.imag, VM, "Eƒ", w=3.0)
 
-        # 4. Ia e componentes (escaladas para visibilidade)
-        sc = 0.70
-        fasor(0, 0, Ia_cx*sc, Ia_cy*sc, VD, "Iₐ", dash="dot", w=2.0)
-        fasor(0, 0, Iq*q_cos*sc, Iq*q_sin*sc, LR, "Iᵩ", dash="longdash", w=1.5)
-        fasor(0, 0, Id*d_cos*sc, Id*d_sin*sc, CI, "I_d", dash="longdash", w=1.5)
+        # Ia, Id, Iq (escalados)
+        sc = 0.75
+        draw(0, 0, Ia_pu.real*sc, Ia_pu.imag*sc, CZ, "Iₐ", dash="dot", w=2.0)
+        draw(0, 0, Id_vec.real*sc, Id_vec.imag*sc, VD, "I_d", dash="longdash", w=1.5)
+        draw(0, 0, Iq_vec.real*sc, Iq_vec.imag*sc, LR, "I_q", dash="longdash", w=1.5)
 
-        # 5. Eixos d e q (tracejados)
+        # Eixo q (direção de Ef)
         L = max(Vt, Ef) * 1.1
-        for vx, vy, lbl in [(q_cos, q_sin, "q"), (d_cos*0.55, d_sin*0.55, "d")]:
-            fig.add_trace(go.Scatter(
-                x=[0, L*vx], y=[0, L*vy], mode="lines",
-                line=dict(color=CZ, width=1.0, dash="dash"),
-                showlegend=False, hoverinfo="skip"))
-            fig.add_annotation(x=L*vx+0.05, y=L*vy,
-                text=f"<b>{lbl}</b>", showarrow=False,
-                font=dict(size=12, color=CZ))
-
-        # 6. Arco de δ
-        arc = np.linspace(0, delta, 40)
+        q_cos, q_sin = math.cos(delta_rad), math.sin(delta_rad)
         fig.add_trace(go.Scatter(
-            x=0.26*np.cos(arc), y=0.26*np.sin(arc), mode="lines",
-            line=dict(color=TX, width=1.5, dash="dot"),
+            x=[0, L*q_cos], y=[0, L*q_sin], mode="lines",
+            line=dict(color=CZ, width=0.9, dash="dash"),
             showlegend=False, hoverinfo="skip"))
-        fig.add_annotation(
-            x=0.34*math.cos(delta/2), y=0.34*math.sin(delta/2),
-            text="<b>δ</b>", showarrow=False, font=dict(size=13, color=TX))
+        fig.add_annotation(x=L*q_cos+0.04, y=L*q_sin,
+            text="<b>q</b>", showarrow=False, font=dict(size=11, color=CZ))
 
-        # Erro de fechamento
+        # Eixo d (perpendicular a q)
+        Ld = 0.55
+        d_cos, d_sin = -math.sin(delta_rad), math.cos(delta_rad)
+        fig.add_trace(go.Scatter(
+            x=[0, Ld*d_cos], y=[0, Ld*d_sin], mode="lines",
+            line=dict(color=CZ, width=0.9, dash="dash"),
+            showlegend=False, hoverinfo="skip"))
+        fig.add_annotation(x=Ld*d_cos+0.04, y=Ld*d_sin,
+            text="<b>d</b>", showarrow=False, font=dict(size=11, color=CZ))
+
+        # Arco de δ
+        if abs(delta_deg) > 1:
+            arc = np.linspace(0, delta_rad, 40)
+            fig.add_trace(go.Scatter(
+                x=0.22*np.cos(arc), y=0.22*np.sin(arc), mode="lines",
+                line=dict(color=TX, width=1.3, dash="dot"),
+                showlegend=False, hoverinfo="skip"))
+            fig.add_annotation(
+                x=0.30*math.cos(delta_rad/2),
+                y=0.30*math.sin(delta_rad/2),
+                text="<b>δ</b>", showarrow=False,
+                font=dict(size=13, color=TX))
+
+        # Verificação
         err = math.hypot(
-            Vt_c.real + jXqIq_cx + jXdId_cx - Ef_c.real,
-            Vt_c.imag + jXqIq_cy + jXdId_cy - Ef_c.imag)
+            V_t.real + jXd_Id.real + jXq_Iq.real - E_f.real,
+            V_t.imag + jXd_Id.imag + jXq_Iq.imag - E_f.imag)
 
         fig.add_hline(y=0, line=dict(color=CZ, width=0.7, dash="dot"))
         fig.add_vline(x=0, line=dict(color=CZ, width=0.7, dash="dot"))
 
-        lim = max(Vt, Ef) * 1.4
+        lim = max(Vt, Ef, Ia_val*sc) * 1.45
         fig.update_layout(
             title=dict(
-                text=(f"Fasorial Polos Salientes — {modo}  "
-                      f"(δ={delta_deg:.0f}°, Xd={Xd}, Xq={Xq})<br>"
-                      f"<sup>Eƒ = Vₜ + jXᵩIᵩ + jX_dI_d   (Ra=0,  err={err:.4f} pu)</sup>"),
+                text=(f"Fasorial Polos Salientes — {tipo} (δ={delta_deg:.0f}°, "
+                      f"Xd={Xd}, Xq={Xq})<br>"
+                      f"<sup>Eƒ = Vₜ + jX_d·I_d + jX_q·I_q   (err={err:.4f} pu)</sup>"),
                 font=dict(size=14, color=TX)),
-            xaxis=dict(range=[-lim*0.4, lim*1.2], scaleanchor="y",
+            xaxis=dict(range=[-lim*0.4, lim*1.15], scaleanchor="y",
                        showgrid=True, gridcolor="rgba(128,128,128,.15)",
                        zeroline=False, tickfont=dict(size=12),
                        title=dict(text="Real (pu)", font=dict(size=12, color=CZ))),
-            yaxis=dict(range=[-lim*0.7, lim*0.8],
+            yaxis=dict(range=[-lim*0.7, lim*0.85],
                        showgrid=True, gridcolor="rgba(128,128,128,.15)",
                        zeroline=False, tickfont=dict(size=12),
                        title=dict(text="Imaginário (pu)", font=dict(size=12, color=CZ))),
@@ -2549,19 +2591,23 @@ abrir o disjuntor e ainda manter $A_2 = A_1$ (limite de estabilidade).
 
     # ── Aba 4: Polos Salientes — Fasorial ─────────────────────────────────────
     with tab4:
-        st.markdown("**Diagrama fasorial da máquina de polos salientes** com decomposição $I_d$/$I_q$.")
+        st.markdown(
+            r"**Fasorial — polos salientes.** "
+            r"$\delta > 0$: gerador &nbsp;|&nbsp; $\delta < 0$: motor."
+        )
         col_a4, col_b4 = st.columns([1, 2])
         with col_a4:
-            Vt_s  = st.slider("Vt (pu)", 0.5, 1.5, 1.0, 0.05, key="exp_sal_vt")
-            Ef_s  = st.slider("Ef (pu)", 0.3, 2.0, 1.2, 0.05, key="exp_sal_ef")
-            Xd_s  = st.slider("Xd (pu)", 0.5, 2.0, 1.0, 0.05, key="exp_sal_xd")
-            Xq_s  = st.slider("Xq (pu)", 0.2, 1.5, 0.6, 0.05, key="exp_sal_xq")
-            dl_s  = st.slider("δ (°)  [+ gerador / − motor]", -75, 75, 25, 1, key="exp_sal_delta")
-            modo_s = "Gerador" if dl_s >= 0 else "Motor"
-            st.caption(f"Modo: **{modo_s}**")
+            Vt_s  = st.slider("Vt (pu)", 0.5, 2.0, 1.0,  0.05, key="exp_sal_vt")
+            Ef_s  = st.slider("Ef (pu)", 0.1, 2.0, 0.6,  0.05, key="exp_sal_ef")
+            Xd_s  = st.slider("Xd (pu)", 0.3, 2.5, 1.2,  0.05, key="exp_sal_xd")
+            Xq_s  = st.slider("Xq (pu)", 0.1, 2.5, 0.8,  0.05, key="exp_sal_xq")
+            dl_s  = st.slider("δ (°)  [+ gerador / − motor]",
+                               -90, 90, -20, 1, key="exp_sal_delta")
             if Xq_s >= Xd_s:
-                st.warning("Xq deve ser < Xd para polos salientes.")
-                Xq_s = Xd_s * 0.65
+                st.warning("Xq deve ser menor que Xd para polos salientes.")
+                Xq_s = max(0.05, Xd_s - 0.1)
+            tipo_s = "Gerador" if dl_s > 0 else ("Motor" if dl_s < 0 else "Neutro")
+            st.caption(f"Modo: **{tipo_s}**")
         with col_b4:
             show_plot(fig_fasorial_saliente_mes(
                 Vt=Vt_s, Ef=Ef_s, delta_deg=dl_s, Xd=Xd_s, Xq=Xq_s),
