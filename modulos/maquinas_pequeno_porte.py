@@ -80,213 +80,246 @@ def run():
     # ═══════════════════════════════════════════════════════════════════════════
 
     def fig_estrutura_monofasico():
-        """Estrutura: seção transversal + polo sombreado."""
-        fig, axes = plt.subplots(1, 2, figsize=(11, 5.5), facecolor='white')
+        """Estrutura: motor monofásico (seção transversal) + polo sombreado."""
+        fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(11, 5.5),
+                                         gridspec_kw={'width_ratios':[1.1,0.9]},
+                                         facecolor='white')
         fig.patch.set_facecolor('white')
 
-        # ── Painel esquerdo: seção transversal ─────────────────────────────
-        ax0 = axes[0]; ax0.set_facecolor('white')
-        ax0.set_aspect('equal'); ax0.axis('off')
-        ax0.set_xlim(-3.8, 3.8); ax0.set_ylim(-3.8, 4.2)
+        # ── ESQUERDA: seção transversal ───────────────────────────────────
+        ax0.set_facecolor('white'); ax0.set_aspect('equal'); ax0.axis('off')
+        ax0.set_xlim(-4.0, 4.0); ax0.set_ylim(-4.2, 4.5)
 
-        ax0.add_patch(mpatches.Wedge((0,0), 3.5, 0, 360,
-            width=0.7, fc='#d0d8e8', ec=TX, lw=1.2))
-        for ang, lbl, cor in [(90,'M',AZ),(270,'M',AZ)]:
-            r=2.85; a=math.radians(ang)
-            ax0.add_patch(mpatches.Circle((r*math.cos(a),r*math.sin(a)),
-                0.38, fc=cor, ec='white', lw=1.0, zorder=4))
-            ax0.text(r*math.cos(a),r*math.sin(a),lbl,ha='center',va='center',
-                fontsize=8,color='white',fontweight='bold',zorder=5)
-        for ang, lbl, cor in [(0,'A',LR),(180,'A',LR)]:
-            r=2.85; a=math.radians(ang)
-            ax0.add_patch(mpatches.Circle((r*math.cos(a),r*math.sin(a)),
-                0.35, fc=cor, ec='white', lw=1.0, zorder=4))
-            ax0.text(r*math.cos(a),r*math.sin(a),lbl,ha='center',va='center',
-                fontsize=8,color='white',fontweight='bold',zorder=5)
-        ax0.add_patch(mpatches.Wedge((0,0), 2.8, 0, 360,
-            width=0.2, fc='#f0f4ff', ec=CZ, lw=0.5, alpha=0.6))
-        ax0.add_patch(mpatches.Circle((0,0), 2.6, fc='#c8d8f0', ec=TX, lw=1.3))
+        # Estator (anel cinza)
+        ax0.add_patch(mpatches.Wedge((0,0), 3.6, 0, 360,
+            width=0.75, fc='#d0d8e8', ec=TX, lw=1.3))
+        # Enrolamentos principais: N e S (topo e base)
+        for ang_deg, lbl in [(90,'M'), (270,'M')]:
+            a = math.radians(ang_deg)
+            r = 3.0
+            ax0.add_patch(mpatches.Circle((r*math.cos(a), r*math.sin(a)),
+                0.42, fc=AZ, ec='white', lw=1.2, zorder=4))
+            ax0.text(r*math.cos(a), r*math.sin(a), lbl,
+                ha='center', va='center', fontsize=9,
+                color='white', fontweight='bold', zorder=5)
+        # Enrolamentos auxiliares: E e W (laterais)
+        for ang_deg, lbl in [(0,'A'), (180,'A')]:
+            a = math.radians(ang_deg)
+            r = 3.0
+            ax0.add_patch(mpatches.Circle((r*math.cos(a), r*math.sin(a)),
+                0.38, fc=LR, ec='white', lw=1.2, zorder=4))
+            ax0.text(r*math.cos(a), r*math.sin(a), lbl,
+                ha='center', va='center', fontsize=9,
+                color='white', fontweight='bold', zorder=5)
+        # Entreferro
+        ax0.add_patch(mpatches.Wedge((0,0), 2.85, 0, 360,
+            width=0.18, fc='#f0f4ff', ec=CZ, lw=0.5, alpha=0.6))
+        # Rotor
+        ax0.add_patch(mpatches.Circle((0,0), 2.67, fc='#c8d8f0', ec=TX, lw=1.4))
+        # Barras do rotor
         for a in range(0, 360, 30):
             ax0.add_patch(mpatches.Circle(
-                (2.6*0.78*math.cos(math.radians(a)),
-                 2.6*0.78*math.sin(math.radians(a))),
-                0.16, fc=LR, ec='white', lw=0.7, alpha=0.9, zorder=4))
-        ax0.add_patch(mpatches.Circle((0,0), 0.40, fc=CZ, ec=TX, lw=1.0, zorder=5))
-        ax0.text(0, 3.72, 'Estator', ha='center', fontsize=9, color=TX, fontweight='bold')
-        ax0.text(-3.6, 2.85, '● M: enrol. principal', fontsize=7.5, color=AZ)
-        ax0.text(-3.6, 2.35, '● A: enrol. auxiliar',  fontsize=7.5, color=LR)
-        ax0.text(-3.6, 1.85, '● Rotor (gaiola)',       fontsize=7.5, color='#4a6080')
+                (2.67*0.80*math.cos(math.radians(a)),
+                 2.67*0.80*math.sin(math.radians(a))),
+                0.18, fc=LR, ec='white', lw=0.7, alpha=0.9, zorder=4))
+        # Eixo
+        ax0.add_patch(mpatches.Circle((0,0), 0.42, fc=CZ, ec=TX, lw=1.0, zorder=5))
+
+        # Legenda (fora do círculo, canto)
+        ax0.text(-3.9, 3.7, '● M — enrolamento principal', fontsize=8, color=AZ)
+        ax0.text(-3.9, 3.2, '● A — enrolamento auxiliar',  fontsize=8, color=LR)
+        ax0.text(-3.9, 2.7, '● Barras do rotor (gaiola)',   fontsize=8, color='#6040a0')
         ax0.set_title('Motor de Indução Monofásico\n(seção transversal)',
                       fontsize=10, fontweight='bold', color=TX, pad=6)
 
-        # ── Painel direito: polo sombreado ────────────────────────────────
-        ax1 = axes[1]; ax1.set_facecolor('white'); ax1.axis('off')
-        ax1.set_xlim(0, 10); ax1.set_ylim(0, 6)
+        # ── DIREITA: polo sombreado ───────────────────────────────────────
+        ax1.set_facecolor('white'); ax1.axis('off')
+        ax1.set_xlim(-0.5, 7.0); ax1.set_ylim(-1.2, 7.2)
 
-        polo_pts = [(1.5,0.5),(1.5,5.2),(4.5,5.2),(4.5,3.8),(2.8,3.8),(2.8,0.5)]
-        ax1.add_patch(plt.Polygon(polo_pts, closed=True, fc='#d0d8e8', ec=TX, lw=1.8))
-        ax1.text(2.15, 2.8, 'Polo\nprincipal', ha='center', fontsize=9.5,
+        # Polo principal (forma de U — dois braços laterais + topo)
+        # Braço esquerdo
+        ax1.add_patch(mpatches.Rectangle((0.3, 0.2), 1.0, 5.8,
+            fc='#d0d8e8', ec=TX, lw=1.8))
+        # Braço direito (sem anel)
+        ax1.add_patch(mpatches.Rectangle((3.7, 0.2), 1.0, 5.8,
+            fc='#d0d8e8', ec=TX, lw=1.8))
+        # Topo (travessa)
+        ax1.add_patch(mpatches.Rectangle((0.3, 5.5), 4.4, 0.7,
+            fc='#d0d8e8', ec=TX, lw=1.8))
+        # Anel de cobre (na parte sombreada — braço esquerdo cobre 1/3)
+        ax1.add_patch(mpatches.FancyBboxPatch((0.35, 0.3), 0.9, 5.5,
+            boxstyle='square,pad=0.0', fc='#c8a800', ec='#7a5000', lw=2.5, alpha=0.88,
+            zorder=3))
+        ax1.text(0.80, 3.0, 'Anel\nCu', ha='center', fontsize=7.5,
+                 color='#4a3000', fontweight='bold', zorder=4)
+
+        # Rótulo polo principal (dentro do U, à direita)
+        ax1.text(2.7, 3.0, 'Polo\nprincipal', ha='center', fontsize=9.5,
                  color=TX, fontweight='bold')
-        for y_slot in [1.5, 2.2, 2.9, 3.5]:
-            ax1.add_patch(mpatches.FancyBboxPatch((1.6, y_slot), 1.0, 0.5,
-                boxstyle='round,pad=0.04', fc=AZ, ec='white', lw=0.8, alpha=0.7))
-        ax1.text(2.1, 4.1, 'Enrol.\nprincipal', ha='center', fontsize=8, color=AZ)
-        ax1.add_patch(mpatches.FancyBboxPatch((3.2,0.6), 1.1, 4.5,
-            boxstyle='round,pad=0.08', fc='#c8a800', ec='#7a5000', lw=2.0, alpha=0.85))
-        ax1.text(3.75, 3.0, 'Anel\nde Cu\n(curto)', ha='center', fontsize=8,
-                 color='#4a3000', fontweight='bold')
-        ax1.add_patch(mpatches.FancyBboxPatch((1.4,0.3), 3.0, 0.22,
-            boxstyle='square,pad=0.0', fc='#b8c8e0', ec=TX, lw=0.8))
-        ax1.add_patch(mpatches.FancyBboxPatch((0.8,-0.5), 4.0, 0.6,
-            boxstyle='round,pad=0.05', fc='#c8d8f0', ec=TX, lw=1.5))
-        ax1.text(2.8, -0.2, 'Rotor (gaiola)', ha='center', fontsize=9, color=TX)
 
-        ax1.annotate('',xy=(2.0,0.53),xytext=(2.0,5.3),
-            arrowprops=dict(arrowstyle='-|>',color=AZ,lw=2.2,mutation_scale=14))
-        ax1.text(2.0,5.6,r'$\Phi_{ns}$',ha='center',fontsize=12,color=AZ,fontweight='bold')
-        ax1.annotate('',xy=(3.75,0.53),xytext=(3.75,5.3),
-            arrowprops=dict(arrowstyle='-|>',color=VM,lw=2.2,mutation_scale=14))
-        ax1.text(3.75,5.6,r'$\Phi_s$',ha='center',fontsize=12,color=VM,fontweight='bold')
-        ax1.annotate('',xy=(7.5,-0.2),xytext=(5.5,-0.2),
-            arrowprops=dict(arrowstyle='-|>',color=VD,lw=2.5,mutation_scale=15))
-        ax1.text(6.5,0.1,'Rotação',ha='center',fontsize=9.5,color=VD,fontweight='bold')
-        ax1.annotate('',xy=(6.5,3.5),xytext=(6.5,5.2),
-            arrowprops=dict(arrowstyle='<->',color=CZ,lw=1.5,mutation_scale=12))
-        ax1.text(7.2,4.3,'defasagem\ntemporal\n~40°',ha='left',fontsize=8.5,color=CZ)
+        # Face polar (entreferro)
+        ax1.add_patch(mpatches.Rectangle((0.3, 0.05), 4.4, 0.18,
+            fc='#b8c8e0', ec=TX, lw=0.8))
+
+        # Rotor
+        ax1.add_patch(mpatches.FancyBboxPatch((0.0, -1.0), 5.0, 0.75,
+            boxstyle='round,pad=0.05', fc='#c8d8f0', ec=TX, lw=1.5))
+        ax1.text(2.5, -0.65, 'Rotor (gaiola)',
+                 ha='center', fontsize=9, color=TX)
+
+        # Setas de fluxo: Φns (parte não-sombreada) e Φs (sombreada)
+        ax1.annotate('', xy=(3.0, 0.25), xytext=(3.0, 5.4),
+            arrowprops=dict(arrowstyle='-|>', color=AZ, lw=2.2, mutation_scale=14))
+        ax1.text(3.0, 5.9, r'$\Phi_{ns}$', ha='center', fontsize=12,
+                 color=AZ, fontweight='bold')
+
+        ax1.annotate('', xy=(0.80, 0.25), xytext=(0.80, 5.4),
+            arrowprops=dict(arrowstyle='-|>', color=VM, lw=2.2, mutation_scale=14))
+        ax1.text(0.80, 5.9, r'$\Phi_s$', ha='center', fontsize=12,
+                 color=VM, fontweight='bold')
+
+        # Defasagem temporal
+        ax1.annotate('', xy=(5.6, 3.8), xytext=(5.6, 5.2),
+            arrowprops=dict(arrowstyle='<->', color=CZ, lw=1.5, mutation_scale=12))
+        ax1.text(5.9, 4.5, '~40°\ntemporal', ha='left', fontsize=8, color=CZ)
+
+        # Seta de rotação
+        ax1.annotate('', xy=(4.8, -0.62), xytext=(2.5, -0.62),
+            arrowprops=dict(arrowstyle='-|>', color=VD, lw=2.5, mutation_scale=15))
+        ax1.text(3.65, -0.38, 'Rotação', ha='center', fontsize=9,
+                 color=VD, fontweight='bold')
+
         ax1.set_title('Motor de Polos Sombreados\n(polo saliente com anel de cobre)',
                       fontsize=10, fontweight='bold', color=TX, pad=6)
 
         fig.suptitle('Estrutura dos Motores de Indução Monofásicos',
                      fontsize=12, fontweight='bold', color=TX, y=1.01)
-        fig.tight_layout(pad=1.0)
+        fig.tight_layout(pad=1.2)
         return fig
 
     def fig_campos_direto_oposto():
-        """Plotly: Ff e Fb — campos direto e oposto em função do escorregamento."""
-        s = np.linspace(0.01, 1.0, 300)
-        sb = 2 - s
+        """Plotly: correntes I2f e I2b vs escorregamento s."""
+        s  = np.linspace(0.01, 0.99, 300)
+        sb = 2.0 - s
+        R2, X2 = 0.18, 0.25
 
-        # Modelo simplificado: correntes proporcionais a 1/Z
-        R2 = 0.18; X2 = 0.25
-        Zf = np.sqrt((R2/s)**2     + X2**2)
-        Zb = np.sqrt((R2/sb)**2   + X2**2)
-        If = 1.0 / Zf
-        Ib = 1.0 / Zb
+        # Correntes de rotor proporcional a 1/|Zr|
+        I2f = 1.0 / np.sqrt((R2/s)**2  + X2**2)
+        I2b = 1.0 / np.sqrt((R2/sb)**2 + X2**2)
+        norm = max(I2f.max(), I2b.max())
 
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=s, y=If/If.max(), mode="lines",
-            line=dict(color=AZ, width=2.8), name="I₂f (campo direto)",
-            hovertemplate="s=%{x:.3f}<br>I₂f=%{y:.3f} pu"))
-        fig.add_trace(go.Scatter(x=s, y=Ib/If.max(), mode="lines",
-            line=dict(color=VM, width=2.8), name="I₂b (campo oposto)",
-            hovertemplate="s=%{x:.3f}<br>I₂b=%{y:.3f} pu"))
+        fig.add_trace(go.Scatter(x=s, y=I2f/norm, mode='lines',
+            line=dict(color=AZ, width=2.8), name='I₂f (campo direto)',
+            hovertemplate='s=%{x:.3f}<br>I₂f=%{y:.3f} pu'))
+        fig.add_trace(go.Scatter(x=s, y=I2b/norm, mode='lines',
+            line=dict(color=VM, width=2.8, dash='dash'), name='I₂b (campo oposto)',
+            hovertemplate='s=%{x:.3f}<br>I₂b=%{y:.3f} pu'))
 
-        fig.add_vline(x=0, line=dict(color=CZ, width=1, dash="dot"))
-        fig.add_vline(x=1, line=dict(color=CZ, width=1, dash="dot"))
-        fig.add_annotation(x=0.08, y=0.95,
-            text="Repouso<br>(s=1)", showarrow=False,
-            font=dict(size=10, color=CZ), bgcolor="rgba(255,255,255,0.8)")
-        fig.add_annotation(x=0.92, y=0.95,
-            text="Síncrono<br>(s=0)", showarrow=False,
-            font=dict(size=10, color=CZ), bgcolor="rgba(255,255,255,0.8)",
-            xanchor="right")
+        fig.add_annotation(x=0.5, y=0.92,
+            text='Em repouso (s=1): I₂f = I₂b → torque nulo',
+            showarrow=False, font=dict(size=10, color=CZ),
+            bgcolor='rgba(255,255,255,0.85)')
 
         fig.update_layout(
-            title=dict(text="Correntes dos Campos Direto e Oposto × Escorregamento",
+            title=dict(text='Correntes dos Campos Direto e Oposto × Escorregamento',
                        font=dict(size=15, color=TX)),
-            xaxis=dict(title=dict(text="Escorregamento s", font=dict(size=14, color=TX)),
+            xaxis=dict(title=dict(text='Escorregamento s', font=dict(size=14, color=TX)),
                        tickfont=dict(size=12), range=[0, 1.02],
-                       gridcolor="rgba(128,128,128,.15)"),
-            yaxis=dict(title=dict(text="Corrente (pu)", font=dict(size=14, color=TX)),
-                       tickfont=dict(size=12),
-                       gridcolor="rgba(128,128,128,.15)"),
-            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)"),
+                       gridcolor='rgba(128,128,128,.15)'),
+            yaxis=dict(title=dict(text='Corrente (pu)', font=dict(size=14, color=TX)),
+                       tickfont=dict(size=12), range=[0, 1.08],
+                       gridcolor='rgba(128,128,128,.15)'),
+            legend=dict(font=dict(size=13), bgcolor='rgba(0,0,0,0)'),
             height=400, margin=dict(l=70, r=30, t=60, b=70))
         return fig
 
     def fig_torque_direto_oposto():
-        """Plotly: Tf, Tb e Tresultante × escorregamento."""
-        s = np.linspace(0.01, 1.99, 600)
-        sb = 2 - s
+        """Plotly: Tf, Tb (negativo) e Tnet vs escorregamento."""
+        s = np.linspace(0.01, 0.99, 400)
+        sb = 2.0 - s
+        R2, X2, Xm, V = 0.20, 0.25, 4.5, 1.0
 
-        R2 = 0.20; X2 = 0.30; Xm = 3.5; V1 = 1.0
-        ws = 1.0
+        def T_campo(sl):
+            Zr  = R2/sl + 1j*X2
+            Zm  = 1j*Xm
+            Z2e = Zm * Zr / (Zm + Zr)
+            I2  = (V/2) / Zr   # meia amplitude
+            return np.abs(I2)**2 * R2 * (1 - sl) / sl
 
-        def torque(sl, R2, X2, Xm, V1, ws):
-            Zr = R2/sl + 1j*X2
-            Zm = 1j*Xm
-            Z2eq = Zm*Zr/(Zm+Zr)
-            I1 = V1 / (1j*X2 + Z2eq)
-            E1 = I1 * Z2eq
-            I2 = E1 / Zr
-            P = 3*abs(I2)**2 * R2*(1-sl)/sl
-            return P / ws
-
-        Tf = np.array([torque(si, R2, X2, Xm, V1/2, ws) for si in s])
-        Tb = np.array([torque(si, R2, X2, Xm, V1/2, ws) for si in sb])
-        Tnet = Tf - Tb
-
-        # Only show s in [0,1] for the resultant
-        mask = (s >= 0) & (s <= 1)
+        Tf  = T_campo(s)
+        Tb  = T_campo(sb)
+        Tn  = Tf - Tb
+        sc  = 1.0 / max(Tn.max(), 1e-6)  # normaliza pelo máximo do resultante
 
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=s[mask], y=Tf[mask], mode="lines",
-            line=dict(color=AZ, width=2.2, dash="dash"),
-            name="T_f (campo direto)"))
-        fig.add_trace(go.Scatter(x=s[mask], y=-Tb[mask], mode="lines",
-            line=dict(color=VM, width=2.2, dash="dash"),
-            name="T_b (campo oposto, negativo)"))
-        fig.add_trace(go.Scatter(x=s[mask], y=Tnet[mask], mode="lines",
-            line=dict(color=VD, width=3.0),
-            name="T_resultante = T_f − T_b"))
+        fig.add_trace(go.Scatter(x=s, y=Tf*sc, mode='lines',
+            line=dict(color=AZ, width=2.5, dash='dash'), name='T_f (campo direto)',
+            hovertemplate='s=%{x:.3f}<br>T_f=%{y:.3f} pu'))
+        fig.add_trace(go.Scatter(x=s, y=-Tb*sc, mode='lines',
+            line=dict(color=VM, width=2.5, dash='dash'), name='−T_b (campo oposto)',
+            hovertemplate='s=%{x:.3f}<br>−T_b=%{y:.3f} pu'))
+        fig.add_trace(go.Scatter(x=s, y=Tn*sc, mode='lines',
+            line=dict(color=VD, width=3.2), name='T_net = T_f − T_b',
+            hovertemplate='s=%{x:.3f}<br>T_net=%{y:.3f} pu'))
 
         fig.add_hline(y=0, line=dict(color=CZ, width=1.0))
-        fig.add_annotation(x=0.5, y=max(Tnet[mask])*1.05,
-            text="<b>T_resultante</b>", showarrow=False,
-            font=dict(size=12, color=VD))
+        fig.add_vline(x=1.0, line=dict(color=CZ, width=1.0, dash='dot'))
+        fig.add_annotation(x=1.02, y=0.05, text='Repouso<br>(s=1)',
+            showarrow=False, font=dict(size=10, color=CZ), xanchor='left')
+        fig.add_annotation(x=0.02, y=0.05, text='Síncrono<br>(s→0)',
+            showarrow=False, font=dict(size=10, color=CZ))
 
         fig.update_layout(
-            title=dict(text="Torques Direto, Oposto e Resultante × Escorregamento",
+            title=dict(text='Torques Direto, Oposto e Resultante × Escorregamento',
                        font=dict(size=15, color=TX)),
-            xaxis=dict(title=dict(text="Escorregamento s", font=dict(size=14, color=TX)),
-                       tickfont=dict(size=12), range=[0, 1.02],
-                       gridcolor="rgba(128,128,128,.15)"),
-            yaxis=dict(title=dict(text="Torque (pu)", font=dict(size=14, color=TX)),
-                       tickfont=dict(size=12),
-                       gridcolor="rgba(128,128,128,.15)"),
-            legend=dict(font=dict(size=13), bgcolor="rgba(0,0,0,0)",
-                        orientation="h", y=-0.22),
+            xaxis=dict(title=dict(text='Escorregamento s', font=dict(size=14, color=TX)),
+                       tickfont=dict(size=12), range=[0, 1.05],
+                       gridcolor='rgba(128,128,128,.15)'),
+            yaxis=dict(title=dict(text='Torque (pu)', font=dict(size=14, color=TX)),
+                       tickfont=dict(size=12), range=[-0.65, 1.15],
+                       gridcolor='rgba(128,128,128,.15)'),
+            legend=dict(font=dict(size=13), bgcolor='rgba(0,0,0,0)',
+                        orientation='h', y=-0.22),
             height=440, margin=dict(l=70, r=30, t=60, b=100))
         return fig
 
     def fig_escorregamentos():
-        """Linha de velocidades com sf e sb."""
-        fig, ax = plt.subplots(figsize=(11, 3.5), facecolor='white')
+        """Linha de velocidades com sf e sb — sem sobreposições."""
+        fig, ax = plt.subplots(figsize=(11, 3.8), facecolor='white')
         ax.set_facecolor('white'); ax.axis('off')
-        ax.set_xlim(0, 13); ax.set_ylim(0, 4.5)
+        ax.set_xlim(0, 13); ax.set_ylim(0, 5.0)
 
-        ax.annotate('',xy=(12.5,2.0),xytext=(0.5,2.0),
-            arrowprops=dict(arrowstyle='-|>',color=TX,lw=1.5,mutation_scale=12))
-        ax.text(12.7,2.0,'n',ha='left',va='center',fontsize=12,color=TX,fontweight='bold')
+        # Eixo de velocidades
+        ax.annotate('', xy=(12.6, 2.0), xytext=(0.5, 2.0),
+            arrowprops=dict(arrowstyle='-|>', color=TX, lw=1.6, mutation_scale=13))
+        ax.text(12.8, 2.0, 'n', ha='left', va='center',
+                fontsize=12, color=TX, fontweight='bold')
 
-        for x, lbl, sub, cor in [
-            (1.5,  r'$-n_s$',  r'$s_b=2$',         VM),
-            (4.5,  r'$0$',     r'$s_f=s_b=1$',      CZ),
-            (8.5,  r'$n$',     r'$0<s_f<1$',         VD),
-            (11.5, r'$n_s$',   r'$s_f=0,\ s_b=2$',  AZ)]:
-            ax.plot(x, 2.0, 'o', ms=10, color=cor, zorder=5)
-            ax.plot([x,x],[1.6,2.0], color=cor, lw=1.2, ls='--')
-            ax.text(x, 1.25, lbl, ha='center', fontsize=11, color=cor, fontweight='bold')
-            ax.text(x, 0.5, sub, ha='center', fontsize=8.5, color=cor)
+        pts = [
+            (1.5,  r'$-n_s$', VM,  r'$s_b=2$'),
+            (4.5,  r'$0$',    CZ,  r'$s_f=s_b=1$'),
+            (8.5,  r'$n$',    VD,  r'$0<s_f<1$'),
+            (11.5, r'$n_s$',  AZ,  r'$s_f=0$'),
+        ]
+        for x, lbl, cor, sub in pts:
+            ax.plot(x, 2.0, 'o', ms=11, color=cor, zorder=5)
+            ax.plot([x, x], [1.65, 2.0], color=cor, lw=1.2, ls='--')
+            ax.text(x, 1.25, lbl, ha='center', fontsize=11,
+                    color=cor, fontweight='bold')
+            ax.text(x, 0.45, sub, ha='center', fontsize=8.5, color=cor)
 
-        ax.annotate('',xy=(11.5,3.0),xytext=(8.5,3.0),
-            arrowprops=dict(arrowstyle='-|>',color=AZ,lw=2.2,mutation_scale=14))
-        ax.text(10.0,3.38,r'$s_f = \dfrac{n_s - n}{n_s}$',
-                ha='center',fontsize=12,color=AZ)
-        ax.annotate('',xy=(1.5,3.85),xytext=(8.5,3.85),
-            arrowprops=dict(arrowstyle='-|>',color=VM,lw=2.2,mutation_scale=14))
-        ax.text(5.0,4.28,r'$s_b = \dfrac{n_s + n}{n_s} = 2 - s_f$',
-                ha='center',fontsize=12,color=VM)
+        # Seta sf (de n para ns — campo direto)
+        ax.annotate('', xy=(11.5, 3.15), xytext=(8.5, 3.15),
+            arrowprops=dict(arrowstyle='-|>', color=AZ, lw=2.2, mutation_scale=14))
+        ax.text(10.0, 3.55, r'$s_f = \dfrac{n_s - n}{n_s}$',
+                ha='center', fontsize=12, color=AZ)
+
+        # Seta sb (de n para -ns — campo oposto)
+        ax.annotate('', xy=(1.5, 4.1), xytext=(8.5, 4.1),
+            arrowprops=dict(arrowstyle='-|>', color=VM, lw=2.2, mutation_scale=14))
+        ax.text(5.0, 4.55, r'$s_b = \dfrac{n_s + n}{n_s} = 2 - s_f$',
+                ha='center', fontsize=12, color=VM)
 
         ax.set_title(r'Escorregamentos — Campo Direto ($s_f$) e Campo Oposto ($s_b$)',
                      fontsize=11, fontweight='bold', color=TX, pad=4)
@@ -294,79 +327,76 @@ def run():
         return fig
 
     def fig_circuito_equivalente_mono():
-        """Schemdraw: circuito equivalente do motor de indução monofásico.
-        Topologia: V1-R1-X1 série → nó A → Xmag shunt + ramo Zf (acima) + ramo Zb (abaixo).
-        """
+        """Schemdraw: circuito equivalente monofásico com Zf e Zb."""
         import tempfile, os
         with schemdraw.Drawing(show=False) as d:
-            d.config(unit=3.0, fontsize=10)
+            d.config(unit=3.2, fontsize=10)
 
-            # ── Fonte V1 e ramo série R1, X1 ─────────────────────────────
-            src = elm.SourceSin().up(d.unit * 2.6).label(r'$V_1$', loc='left')
-            elm.Line().right(d.unit * 0.4)
+            # ── Fonte e ramo série ────────────────────────────────────────
+            src = elm.SourceSin().up(d.unit * 2.8).label(r'$V_1$', loc='left')
+            elm.Line().right(d.unit * 0.3)
             elm.Resistor().right().label(r'$R_1$', loc='top')
             elm.Inductor().right().label(r'$X_1$', loc='top')
-            elm.Line().right(d.unit * 0.4)
-            d.push()  # nó A
+            elm.Line().right(d.unit * 0.3)
+            d.push()   # nó A
 
-            # ── Ramo Xmag (shunt, desce de A ao barramento inferior) ──────
-            elm.Inductor().down(d.unit * 2.6).label(r'$X_{mag}$', loc='right')
-            d.pop()   # volta ao nó A
+            # ── Ramo Xmag (shunt vertical) ───────────────────────────────
+            elm.Inductor().down(d.unit * 2.8).label(r'$X_{mag}$', loc='right')
+            d.pop()    # → nó A
 
-            # ── Ramo campo direto Zf (sobe, vai para a direita, desce) ────
+            # ── Ramo Zf (sobe, percorre 3 elementos, desce) ──────────────
             d.push()
-            elm.Line().up(d.unit * 0.65)
+            elm.Line().up(d.unit * 0.70)
             elm.Inductor().right().label(r"$\frac{1}{2}X_2'$", loc='top')
             elm.Resistor().right().label(r"$\frac{R_2'}{2s}$", loc='top')
-            elm.Resistor().right().label(r"$\frac{R_2'(1-s)}{2s}$",
-                                          loc='top').color(VD)
-            elm.Line().down(d.unit * 0.65)
-            d.pop()   # volta ao nó A
+            elm.Resistor().right().label(
+                r"$\frac{R_2'(1-s)}{2s}$", loc='top').color(VD)
+            elm.Line().down(d.unit * 0.70)
+            nC = d.here
+            d.pop()    # → nó A
 
-            # ── Ramo campo oposto Zb (desce, vai para a direita, sobe) ───
-            elm.Line().down(d.unit * 0.65)
+            # ── Ramo Zb (desce, percorre 3 elementos, sobe) ──────────────
+            elm.Line().down(d.unit * 0.70)
             elm.Inductor().right().label(r"$\frac{1}{2}X_2'$", loc='bottom')
-            elm.Resistor().right().label(r"$\frac{R_2'}{2(2{-}s)}$",
-                                          loc='bottom')
-            elm.Resistor().right().label(r"$\frac{-R_2'(s_b{-}1)}{2s_b}$",
-                                          loc='bottom').color(VM)
-            elm.Line().up(d.unit * 0.65)
+            elm.Resistor().right().label(r"$\frac{R_2'}{2(2-s)}$", loc='bottom')
+            elm.Resistor().right().label(
+                r"$\frac{-R_2'(s_b-1)}{2s_b}$", loc='bottom').color(VM)
+            elm.Line().up(d.unit * 0.70)
 
-            # ── Barramento direito: desce ao nível inferior ───────────────
+            # ── Barramento direito (desce ao nível inferior) ──────────────
             right_x = d.here[0]
-            elm.Line().down(d.unit * 2.6)
+            elm.Line().down(d.unit * 2.8)
 
-            # ── Barramento inferior: volta à fonte ────────────────────────
+            # ── Barramento inferior (volta à fonte) ───────────────────────
             elm.Line().left(right_x - src.start[0])
 
-            # Salvar e retornar buffer
             tmp = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
             tmp.close()
             d.save(tmp.name, dpi=160)
 
-        # Pós-processamento: adicionar labels de campo com matplotlib
-        import matplotlib.pyplot as plt
-        mpl_fig = d.fig.getfig()
-        ax = mpl_fig.get_axes()[0]
-        xl = ax.get_xlim(); yl = ax.get_ylim()
-        xc = (xl[0] + xl[1]) * 0.65   # posição horizontal dos ramos
-        yf = (yl[0] + yl[1]) * 0.75   # acima do centro → ramo Zf
-        yb = (yl[0] + yl[1]) * 0.25   # abaixo → ramo Zb
-        ax.text(xc, yf, 'Campo direto  $Z_f$',
-                ha='center', va='center', fontsize=9, color=AZ, fontweight='bold',
-                bbox=dict(fc='white', ec=AZ, pad=2, alpha=0.85))
-        ax.text(xc, yb, 'Campo oposto  $Z_b$',
-                ha='center', va='center', fontsize=9, color=VM, fontweight='bold',
-                bbox=dict(fc='white', ec=VM, pad=2, alpha=0.85))
-        mpl_fig.savefig(tmp.name, dpi=160, bbox_inches='tight')
-        plt.close(mpl_fig)
+            # Pós-processamento: labels dos ramos
+            mpl_fig = d.fig.getfig()
+            ax = mpl_fig.get_axes()[0]
+            xl = ax.get_xlim(); yl = ax.get_ylim()
+            xm = (xl[0] + xl[1]) * 0.67
+            yf_lbl = yl[1] - (yl[1]-yl[0]) * 0.13
+            yb_lbl = yl[0] + (yl[1]-yl[0]) * 0.13
+            ax.text(xm, yf_lbl, 'Campo direto  $Z_f$',
+                    ha='center', va='center', fontsize=9, color=AZ,
+                    fontweight='bold',
+                    bbox=dict(fc='white', ec=AZ, pad=3, alpha=0.9))
+            ax.text(xm, yb_lbl, 'Campo oposto  $Z_b$',
+                    ha='center', va='center', fontsize=9, color=VM,
+                    fontweight='bold',
+                    bbox=dict(fc='white', ec=VM, pad=3, alpha=0.9))
+            mpl_fig.savefig(tmp.name, dpi=160, bbox_inches='tight')
+            plt.close(mpl_fig)
 
         with open(tmp.name, 'rb') as fh:
             buf = io.BytesIO(fh.read())
         os.unlink(tmp.name)
         buf.seek(0)
         return buf
-
 
     def fig_metodos_partida():
         """Plotly: curvas T×n comparativas dos quatro métodos de partida."""
@@ -442,95 +472,133 @@ def run():
         return fig
 
     def fig_fase_dividida():
-        """Esquema de ligação + diagrama fasorial da partida por fase dividida."""
-        fig, axes = plt.subplots(1, 2, figsize=(12, 5), facecolor='white')
-        fig.patch.set_facecolor('white')
+        """Fase dividida: schemdraw (circuito) + matplotlib (fasorial)."""
+        import tempfile, os
 
-        # ── Painel esquerdo: esquema ──────────────────────────────────────
-        ax0 = axes[0]; ax0.set_facecolor('white'); ax0.axis('off')
-        ax0.set_xlim(0, 10); ax0.set_ylim(0, 6.5)
+        # ── Painel esquerdo: circuito em schemdraw ────────────────────────
+        with schemdraw.Drawing(show=False) as d:
+            d.config(unit=3.0, fontsize=10)
 
-        def bloco0(cx,cy,w,h,txt,cor,fs=9):
-            ax0.add_patch(mpatches.FancyBboxPatch((cx-w/2,cy-h/2),w,h,
-                boxstyle='round,pad=0.1',fc='#f0f4ff',ec=cor,lw=2.0))
-            ax0.text(cx,cy,txt,ha='center',va='center',fontsize=fs,color=TX,fontweight='bold')
+            # Fonte
+            src = elm.SourceSin().up(d.unit * 2.4).label(r'$V_1$', loc='left')
+            elm.Line().right(d.unit * 0.2)
+            d.push()   # nó topo-esquerdo
 
-        # Fonte
-        ax0.add_patch(mpatches.Circle((1.2,3.5),0.48,fc='white',ec=TX,lw=1.8))
-        ax0.text(1.2,3.5,'~',ha='center',va='center',fontsize=18,color=TX)
-        ax0.text(1.2,4.2,r'$V_1$',ha='center',fontsize=12,color=AZ,fontweight='bold')
+            # Ramo principal (topo): fio → enrolamento principal → motor
+            elm.Line().up(d.unit * 0.5)
+            elm.Inductor().right().label(r'$L_m$, $R_m$', loc='top')
+            elm.Line().right(d.unit * 0.2)
+            top_right = d.here
+            d.pop()    # → nó topo-esquerdo
 
-        # Enrol. principal (fio superior)
-        ax0.plot([1.68,2.5,2.5],[4.0,4.0,4.8],color=TX,lw=1.8)
-        bloco0(3.5,4.8,1.8,0.8,'Enrol. Principal\n(baixa R)',AZ)
-        ax0.plot([4.4,5.5],[4.8,4.8],color=TX,lw=1.8)
-        ax0.annotate('',xy=(6.5,4.8),xytext=(5.5,4.8),
-            arrowprops=dict(arrowstyle='-|>',color=AZ,lw=1.8,mutation_scale=13))
+            # Ramo auxiliar (baixo): chave centrífuga → enrolamento auxiliar
+            elm.Line().down(d.unit * 0.5)
+            # Chave centrífuga (abertura automática)
+            sw = elm.Switch().right()
+            sw.label('CC', loc='bottom')
+            elm.Inductor().right().label(r'$L_a$, $R_a$', loc='bottom')
+            elm.Line().right(d.unit * 0.2)
+            bot_right = d.here
 
-        # Enrol. auxiliar (fio inferior) + chave centrífuga
-        ax0.plot([1.68,2.5,2.5],[3.0,3.0,2.5],color=TX,lw=1.8)
-        ax0.plot([2.5,2.75],[2.5,2.9],color=LR,lw=2.2)
-        ax0.plot(2.5,2.5,'o',ms=7,color=LR); ax0.plot(2.75,2.9,'o',ms=7,color=LR)
-        ax0.text(2.3,2.05,'Chave\ncentrífuga',ha='center',fontsize=7.5,color=LR)
-        ax0.plot([2.5,3.0],[2.5,2.5],color=TX,lw=1.8)
-        bloco0(4.0,2.5,2.0,0.8,'Enrol. Auxiliar\n(alta R)',LR)
-        ax0.plot([5.0,5.5],[2.5,2.5],color=TX,lw=1.8)
-        ax0.annotate('',xy=(6.5,2.5),xytext=(5.5,2.5),
-            arrowprops=dict(arrowstyle='-|>',color=LR,lw=1.8,mutation_scale=13))
+            # Motor (carga): retângulo à direita
+            elm.Line().up(d.unit * 0.5)   # sobe ao nível do topo
 
-        # Motor
-        ax0.add_patch(mpatches.Ellipse((7.8,3.65),2.4,2.0,fc='#dce4f0',ec=TX,lw=2.0))
-        ax0.text(7.8,3.65,'Motor\n1φ',ha='center',va='center',
-                 fontsize=11,fontweight='bold',color=TX)
+            # Retorno (lado direito): desce ao barramento inferior
+            right_x = d.here[0]
+            elm.Line().down(d.unit * 2.4)
+            # Barramento inferior
+            elm.Line().left(right_x - src.start[0])
 
-        # Retorno
-        ax0.plot([8.9,9.2,9.2,1.2,1.2],[3.65,3.65,1.0,1.0,3.02],color=TX,lw=1.8)
-        ax0.set_title('Esquema de Ligação — Fase Dividida',
-                      fontsize=10.5, fontweight='bold', color=TX, pad=5)
+            tmp = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+            tmp.close()
+            d.save(tmp.name, dpi=150)
 
-        # ── Painel direito: diagrama fasorial ─────────────────────────────
-        ax1 = axes[1]; ax1.set_facecolor('white')
-        ax1.set_aspect('equal'); ax1.axis('off')
-        ax1.set_xlim(-0.3, 2.2); ax1.set_ylim(-0.85, 1.6)
-        ax1.axhline(0,color=CZ,lw=0.6,ls='--',alpha=0.5)
-        ax1.axvline(0,color=CZ,lw=0.6,ls='--',alpha=0.5)
+        # ── Painel direito: diagrama fasorial em matplotlib ───────────────
+        fig_p, ax1 = plt.subplots(figsize=(5, 5), facecolor='white')
+        ax1.set_facecolor('white'); ax1.set_aspect('equal'); ax1.axis('off')
+        ax1.set_xlim(-0.2, 1.6); ax1.set_ylim(-1.1, 1.0)
 
-        # V1 referência
-        ax1.annotate('',xy=(1.2,0),xytext=(0,0),
-            arrowprops=dict(arrowstyle='-|>',color=TX,lw=2.5,mutation_scale=15))
-        ax1.text(0.6,0.12,r'$V_1$',ha='center',fontsize=13,color=TX,fontweight='bold')
+        # Grade de eixos
+        ax1.axhline(0, color=CZ, lw=0.6, ls='--', alpha=0.5)
+        ax1.axvline(0, color=CZ, lw=0.6, ls='--', alpha=0.5)
 
-        # Im (enrol. principal — mais atrasado ~40°)
-        phi_m = -40; Im_r = math.cos(math.radians(phi_m)); Im_i = math.sin(math.radians(phi_m))
-        ax1.annotate('',xy=(Im_r,Im_i),xytext=(0,0),
-            arrowprops=dict(arrowstyle='-|>',color=AZ,lw=2.5,mutation_scale=15))
-        ax1.text(Im_r/2+0.10,Im_i/2-0.10,r'$I_m$',ha='center',fontsize=13,
-                 color=AZ,fontweight='bold')
+        # V1 — referência horizontal
+        ax1.annotate('', xy=(1.2, 0), xytext=(0, 0),
+            arrowprops=dict(arrowstyle='-|>', color=TX, lw=2.5, mutation_scale=15))
+        ax1.text(0.60, 0.10, r'$V_1$', ha='center', fontsize=13,
+                 color=TX, fontweight='bold')
 
-        # Ia (enrol. auxiliar — menos atrasado ~15°)
-        phi_a = -15; sc_a = 0.75
-        Ia_r = sc_a*math.cos(math.radians(phi_a)); Ia_i = sc_a*math.sin(math.radians(phi_a))
-        ax1.annotate('',xy=(Ia_r,Ia_i),xytext=(0,0),
-            arrowprops=dict(arrowstyle='-|>',color=LR,lw=2.5,mutation_scale=15))
-        ax1.text(Ia_r/2+0.12,Ia_i/2+0.08,r'$I_a$',ha='center',fontsize=13,
-                 color=LR,fontweight='bold')
+        # Im — enrolamento principal, mais atrasado (~40°)
+        phi_m = math.radians(-40)
+        Im_x, Im_y = math.cos(phi_m), math.sin(phi_m)
+        ax1.annotate('', xy=(Im_x, Im_y), xytext=(0, 0),
+            arrowprops=dict(arrowstyle='-|>', color=AZ, lw=2.5, mutation_scale=15))
+        ax1.text(Im_x*0.5 - 0.12, Im_y*0.5 - 0.08, r'$I_m$',
+                 ha='center', fontsize=13, color=AZ, fontweight='bold')
 
-        # Arco α
-        arc_t = np.linspace(math.radians(phi_m), math.radians(phi_a), 40)
+        # Ia — enrolamento auxiliar, menos atrasado (~15°), amplitude ~70%
+        phi_a = math.radians(-15)
+        sc_a  = 0.72
+        Ia_x, Ia_y = sc_a*math.cos(phi_a), sc_a*math.sin(phi_a)
+        ax1.annotate('', xy=(Ia_x, Ia_y), xytext=(0, 0),
+            arrowprops=dict(arrowstyle='-|>', color=LR, lw=2.5, mutation_scale=15))
+        ax1.text(Ia_x*0.5 + 0.14, Ia_y*0.5 + 0.08, r'$I_a$',
+                 ha='center', fontsize=13, color=LR, fontweight='bold')
+
+        # Arco de defasagem α
+        arc_t = np.linspace(phi_m, phi_a, 50)
         ax1.plot(0.38*np.cos(arc_t), 0.38*np.sin(arc_t), color=VD, lw=1.8)
-        ax1.text(0.46*math.cos(math.radians((phi_m+phi_a)/2))+0.04,
-                 0.46*math.sin(math.radians((phi_m+phi_a)/2)),
+        mid_t = (phi_m + phi_a) / 2
+        ax1.text(0.48*math.cos(mid_t) + 0.04, 0.48*math.sin(mid_t),
                  'α', ha='center', fontsize=13, color=VD, fontweight='bold')
 
-        ax1.text(0.0,-0.72,r'$T_{part} \propto I_m \cdot I_a \cdot \sin\alpha$',
-                 ha='center',fontsize=10.5,color=TX)
-        ax1.set_title('Diagrama Fasorial\n(defasagem entre correntes)',
-                      fontsize=10.5, fontweight='bold', color=TX, pad=5)
+        ax1.text(0.65, -0.92,
+                 r'$T_{part} \propto I_m \cdot I_a \cdot \sin\alpha$',
+                 ha='center', fontsize=11, color=TX)
+        ax1.set_title('Defasagem de Correntes\n(principal e auxiliar)',
+                      fontsize=10, fontweight='bold', color=TX, pad=5)
 
-        fig.suptitle('Partida por Fase Dividida',
-                     fontsize=12, fontweight='bold', color=TX, y=1.01)
-        fig.tight_layout(pad=0.8)
-        return fig
+        # ── Montar figura combinada: schemdraw (esq) + fasorial (dir) ────
+        from PIL import Image as PILImg
+        img_sd = PILImg.open(tmp.name).convert('RGBA')
+        os.unlink(tmp.name)
+
+        # Salvar fasorial
+        tmp2 = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+        tmp2.close()
+        fig_p.savefig(tmp2.name, dpi=150, bbox_inches='tight', facecolor='white')
+        plt.close(fig_p)
+        img_fas = PILImg.open(tmp2.name).convert('RGBA')
+        os.unlink(tmp2.name)
+
+        # Redimensionar fasorial para mesma altura que schemdraw
+        h_sd = img_sd.height
+        scale = h_sd / img_fas.height
+        new_w = int(img_fas.width * scale)
+        img_fas = img_fas.resize((new_w, h_sd), PILImg.LANCZOS)
+
+        # Combinar lado a lado
+        W = img_sd.width + new_w + 20
+        combined = PILImg.new('RGBA', (W, h_sd), (255, 255, 255, 255))
+        combined.paste(img_sd,  (0, 0))
+        combined.paste(img_fas, (img_sd.width + 20, 0))
+
+        # Título global via matplotlib
+        fig_final, ax_final = plt.subplots(figsize=(combined.width/150,
+                                                      combined.height/150 + 0.5),
+                                           facecolor='white')
+        ax_final.imshow(combined)
+        ax_final.axis('off')
+        ax_final.set_title('Partida por Fase Dividida — Circuito e Diagrama Fasorial',
+                            fontsize=11, fontweight='bold', color=TX, pad=6)
+        fig_final.tight_layout(pad=0.1)
+
+        buf = io.BytesIO()
+        fig_final.savefig(buf, format='png', dpi=130,
+                          bbox_inches='tight', facecolor='white')
+        plt.close(fig_final)
+        buf.seek(0)
+        return buf
 
     def fig_capacitor_partida():
         """Plotly: defasagem de corrente Im e Ia com capacitor vs fase dividida."""
@@ -852,7 +920,13 @@ o circuito do enrolamento auxiliar — que não foi projetado para operação co
 - Aplicações: ventiladores, bombas centrífugas, máquinas de lavar de baixo torque
 """)
 
-    show_fig(fig_fase_dividida(), width_frac=0.88)
+    buf_fd = fig_fase_dividida()
+    b64_fd = __import__("base64").b64encode(buf_fd.read()).decode()
+    st.markdown(
+        '<div class="fig-wrap"><div style="--fw:92%">'
+        f'<img src="data:image/png;base64,{b64_fd}" '
+        'style="width:100%;height:auto;display:block;"/>'
+        '</div></div>', unsafe_allow_html=True)
     st.caption(
         "**Figura 5.1** — Esquema da partida por fase dividida: dois enrolamentos "
         "com impedâncias distintas criam defasagem α entre $I_m$ e $I_a$, "
