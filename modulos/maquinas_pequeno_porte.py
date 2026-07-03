@@ -18,6 +18,8 @@ import io
 import base64
 import math
 import warnings
+import schemdraw
+import schemdraw.elements as elm
 
 
 def run():
@@ -292,91 +294,79 @@ def run():
         return fig
 
     def fig_circuito_equivalente_mono():
-        """Circuito equivalente monofásico com Zf e Zb."""
-        fig, ax = plt.subplots(figsize=(13, 6), facecolor='white')
-        ax.set_facecolor('white'); ax.axis('off')
-        ax.set_xlim(0, 14); ax.set_ylim(0, 7)
+        """Schemdraw: circuito equivalente do motor de indução monofásico.
+        Topologia: V1-R1-X1 série → nó A → Xmag shunt + ramo Zf (acima) + ramo Zb (abaixo).
+        """
+        import tempfile, os
+        with schemdraw.Drawing(show=False) as d:
+            d.config(unit=3.0, fontsize=10)
 
-        def seg(x1,y1,x2,y2,cor=TX,lw=1.8):
-            ax.plot([x1,x2],[y1,y2],color=cor,lw=lw)
+            # ── Fonte V1 e ramo série R1, X1 ─────────────────────────────
+            src = elm.SourceSin().up(d.unit * 2.6).label(r'$V_1$', loc='left')
+            elm.Line().right(d.unit * 0.4)
+            elm.Resistor().right().label(r'$R_1$', loc='top')
+            elm.Inductor().right().label(r'$X_1$', loc='top')
+            elm.Line().right(d.unit * 0.4)
+            d.push()  # nó A
 
-        def indutor(cx,cy,lbl,cor):
-            ax.add_patch(mpatches.FancyBboxPatch((cx-0.45,cy-0.28),0.9,0.56,
-                boxstyle='round,pad=0.08',fc='white',ec=cor,lw=1.8))
-            ax.text(cx,cy,lbl,ha='center',va='center',fontsize=9,color=TX)
+            # ── Ramo Xmag (shunt, desce de A ao barramento inferior) ──────
+            elm.Inductor().down(d.unit * 2.6).label(r'$X_{mag}$', loc='right')
+            d.pop()   # volta ao nó A
 
-        def resistor(cx,cy,lbl,cor):
-            ax.add_patch(mpatches.FancyBboxPatch((cx-0.55,cy-0.28),1.1,0.56,
-                boxstyle='square,pad=0.05',fc='#fff8f0',ec=cor,lw=1.8))
-            ax.text(cx,cy,lbl,ha='center',va='center',fontsize=9,color=TX)
+            # ── Ramo campo direto Zf (sobe, vai para a direita, desce) ────
+            d.push()
+            elm.Line().up(d.unit * 0.65)
+            elm.Inductor().right().label(r"$\frac{1}{2}X_2'$", loc='top')
+            elm.Resistor().right().label(r"$\frac{R_2'}{2s}$", loc='top')
+            elm.Resistor().right().label(r"$\frac{R_2'(1-s)}{2s}$",
+                                          loc='top').color(VD)
+            elm.Line().down(d.unit * 0.65)
+            d.pop()   # volta ao nó A
 
-        CY_TOP = 5.8; Y_BOT = 1.5; X_NOA = 5.0; X_NOB = 11.5
+            # ── Ramo campo oposto Zb (desce, vai para a direita, sobe) ───
+            elm.Line().down(d.unit * 0.65)
+            elm.Inductor().right().label(r"$\frac{1}{2}X_2'$", loc='bottom')
+            elm.Resistor().right().label(r"$\frac{R_2'}{2(2{-}s)}$",
+                                          loc='bottom')
+            elm.Resistor().right().label(r"$\frac{-R_2'(s_b{-}1)}{2s_b}$",
+                                          loc='bottom').color(VM)
+            elm.Line().up(d.unit * 0.65)
 
-        # Fonte V1
-        ax.add_patch(mpatches.Circle((0.9,CY_TOP),0.45,fc='white',ec=TX,lw=1.8))
-        ax.text(0.9,CY_TOP,'~',ha='center',va='center',fontsize=16,color=TX)
-        ax.text(0.9,CY_TOP+0.75,r'$V_1$',ha='center',fontsize=11,color=AZ,fontweight='bold')
+            # ── Barramento direito: desce ao nível inferior ───────────────
+            right_x = d.here[0]
+            elm.Line().down(d.unit * 2.6)
 
-        # R1, X1 no fio de topo
-        seg(1.35,CY_TOP,2.0,CY_TOP)
-        resistor(2.55,CY_TOP,r'$R_1$',TX)
-        seg(3.1,CY_TOP,3.5,CY_TOP)
-        indutor(4.0,CY_TOP,r'$X_1$',TX)
-        seg(4.45,CY_TOP,X_NOA,CY_TOP)
-        ax.plot(X_NOA,CY_TOP,'.',ms=12,color=TX,zorder=6)
+            # ── Barramento inferior: volta à fonte ────────────────────────
+            elm.Line().left(right_x - src.start[0])
 
-        # Ramo Xmag (vertical)
-        seg(X_NOA,CY_TOP,X_NOA,CY_TOP-0.9)
-        indutor(X_NOA,CY_TOP-1.35,r'$X_{mag}$',CI)
-        seg(X_NOA,CY_TOP-1.85,X_NOA,Y_BOT)
+            # Salvar e retornar buffer
+            tmp = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+            tmp.close()
+            d.save(tmp.name, dpi=160)
 
-        # Ramo Zf (campo direto, fio superior)
-        CY_ZF = 4.5
-        seg(X_NOA,CY_TOP,X_NOA,CY_ZF)
-        seg(X_NOA,CY_ZF,6.0,CY_ZF)
-        indutor(6.65,CY_ZF,r"$\frac{1}{2}X_2'$",AZ)
-        seg(7.1,CY_ZF,7.55,CY_ZF)
-        resistor(8.2,CY_ZF,r"$\frac{R_2'}{2s}$",AZ)
-        seg(8.75,CY_ZF,9.2,CY_ZF)
-        resistor(10.1,CY_ZF,r"$\frac{R_2'(1-s)}{2s}$",VD)
-        seg(11.0,CY_ZF,X_NOB,CY_ZF)
-        seg(X_NOB,CY_ZF,X_NOB,Y_BOT)
-        ax.text(7.2,CY_ZF+0.52,'Campo direto  $Z_f$',fontsize=9,color=AZ,fontweight='bold')
-        ax.text(10.1,CY_ZF+0.52,r'$P_{conv,f}$',fontsize=8,color=VD,style='italic')
+        # Pós-processamento: adicionar labels de campo com matplotlib
+        import matplotlib.pyplot as plt
+        mpl_fig = d.fig.getfig()
+        ax = mpl_fig.get_axes()[0]
+        xl = ax.get_xlim(); yl = ax.get_ylim()
+        xc = (xl[0] + xl[1]) * 0.65   # posição horizontal dos ramos
+        yf = (yl[0] + yl[1]) * 0.75   # acima do centro → ramo Zf
+        yb = (yl[0] + yl[1]) * 0.25   # abaixo → ramo Zb
+        ax.text(xc, yf, 'Campo direto  $Z_f$',
+                ha='center', va='center', fontsize=9, color=AZ, fontweight='bold',
+                bbox=dict(fc='white', ec=AZ, pad=2, alpha=0.85))
+        ax.text(xc, yb, 'Campo oposto  $Z_b$',
+                ha='center', va='center', fontsize=9, color=VM, fontweight='bold',
+                bbox=dict(fc='white', ec=VM, pad=2, alpha=0.85))
+        mpl_fig.savefig(tmp.name, dpi=160, bbox_inches='tight')
+        plt.close(mpl_fig)
 
-        # Ramo Zb (campo oposto, fio inferior)
-        CY_ZB = 2.8
-        seg(X_NOA,CY_ZB,6.0,CY_ZB)
-        ax.plot(X_NOA,CY_ZB,'.',ms=8,color=TX,zorder=5)
-        indutor(6.65,CY_ZB,r"$\frac{1}{2}X_2'$",VM)
-        seg(7.1,CY_ZB,7.55,CY_ZB)
-        resistor(8.3,CY_ZB,r"$\frac{R_2'}{2(2-s)}$",VM)
-        seg(9.1,CY_ZB,9.2,CY_ZB)
-        resistor(10.1,CY_ZB,r"$\frac{-R_2'(1-s_b)}{2s_b}$",LR)
-        seg(11.05,CY_ZB,X_NOB,CY_ZB)
-        ax.text(7.2,CY_ZB-0.55,'Campo oposto  $Z_b$',fontsize=9,color=VM,fontweight='bold')
-        ax.text(10.1,CY_ZB-0.55,r'$P_{conv,b}$',fontsize=8,color=LR,style='italic')
+        with open(tmp.name, 'rb') as fh:
+            buf = io.BytesIO(fh.read())
+        os.unlink(tmp.name)
+        buf.seek(0)
+        return buf
 
-        # Fio inferior de retorno
-        seg(0.9,Y_BOT,X_NOB,Y_BOT)
-        seg(0.9,CY_TOP-0.45,0.9,Y_BOT)
-
-        # Nó B e saída
-        ax.plot(X_NOB,CY_TOP,'.',ms=12,color=TX,zorder=6)
-        seg(X_NOB,CY_TOP,X_NOB,CY_ZF)
-        seg(X_NOB,CY_ZB,X_NOB,Y_BOT)
-        ax.annotate('',xy=(X_NOB+0.9,CY_TOP),xytext=(X_NOB,CY_TOP),
-            arrowprops=dict(arrowstyle='-|>',color=TX,lw=1.8,mutation_scale=13))
-        ax.text(X_NOB+1.0,CY_TOP+0.22,r'$I_1$',fontsize=11,color=TX,fontweight='bold')
-
-        # Ligação nó A → Zb
-        seg(X_NOA,CY_TOP,X_NOA,CY_ZB)
-
-        ax.set_title('Circuito Equivalente — Motor de Indução Monofásico\n'
-                     r'(ramo $Z_f$: campo direto · ramo $Z_b$: campo oposto)',
-                     fontsize=11, fontweight='bold', color=TX, pad=8)
-        fig.tight_layout(pad=0.5)
-        return fig
 
     def fig_metodos_partida():
         """Plotly: curvas T×n comparativas dos quatro métodos de partida."""
@@ -714,8 +704,8 @@ Um enrolamento monofásico alimentado por corrente alternada produz um
 esse campo pulsante pode ser decomposto em **dois campos girantes de mesma
 amplitude, mas em sentidos opostos**:
 
-$$\Phi(t) = \Phi_{max}\cos(\omega t) = \frac{\Phi_{max}}{2}\cos(\omega t - \theta)
-+ \frac{\Phi_{max}}{2}\cos(\omega t + \theta)$$
+$$\Phi(t) = \Phi_{max}\cos(\omega t) = \frac{\Phi_{max}}{2}\cos(\omega t - \theta) + \frac{\Phi_{max}}{2}\cos(\omega t + \theta)$$
+
 
 - **Campo direto** $\Phi_f$: gira no sentido positivo (mesmo sentido da rotação do rotor)
 - **Campo oposto** $\Phi_b$: gira no sentido negativo (contra-rotação)
@@ -816,7 +806,13 @@ $$P_{conv} = I_1^2 \left[\frac{R_2'}{2}\left(\frac{1-s}{s}\right) - \frac{R_2'}{
 $$P_{Cu,r} = I_1^2 \frac{R_2'}{2}\left(\frac{1}{s} - 1 + \frac{1}{s_b} - 1\right)$$
 """)
 
-    show_fig(fig_circuito_equivalente_mono(), width_frac=0.96)
+    buf_ckt = fig_circuito_equivalente_mono()
+    b64_ckt = base64.b64encode(buf_ckt.read()).decode()
+    st.markdown(
+        '<div class="fig-wrap"><div style="--fw:96%">'
+        f'<img src="data:image/png;base64,{b64_ckt}" '
+        'style="width:100%;height:auto;display:block;"/>'
+        '</div></div>', unsafe_allow_html=True)
     st.caption(
         "**Figura 4.1** — Circuito equivalente do motor de indução monofásico: "
         "impedâncias do estator ($R_1$, $X_1$) em série com os ramos paralelos "
