@@ -487,141 +487,86 @@ def run():
         return fig
 
     def fig_fase_dividida():
-        """Fase dividida: schemdraw (ligação) + Plotly (fasorial) → BytesIO PNG."""
+        """Fase dividida: schemdraw (circuito) + matplotlib (fasorial) — sem Kaleido."""
         import tempfile, os
 
         # ── ESQUERDA: Schemdraw ───────────────────────────────────────────
         with schemdraw.Drawing(show=False) as d:
             d.config(unit=3.0, fontsize=10.5)
-
-            # Fonte (esquerda, vertical)
             src = elm.SourceSin().up(d.unit * 2.6).label(r'$V_1$', loc='left')
-
-            # Nó do topo esquerdo → split para dois ramos
             elm.Line().right(d.unit * 0.3)
-            d.push()   # salva nó T
-
-            # Ramo PRINCIPAL (sobe, vai à direita, desce ao motor)
+            d.push()
             elm.Line().up(d.unit * 0.55)
-            elm.Inductor().right(d.unit * 1.6).label(
-                r'$L_m\ R_m$', loc='top')
+            elm.Inductor().right(d.unit * 1.6).label(r'$L_m\ R_m$', loc='top')
             elm.Line().down(d.unit * 0.55)
-            nM = d.here   # nó de entrada do motor
-            d.pop()        # → nó T
-
-            # Ramo AUXILIAR (desce, chave centrif., indutor auxiliar, sobe)
+            d.pop()
             elm.Line().down(d.unit * 0.55)
             elm.Switch().right(d.unit * 0.9).label('CC', loc='bottom')
-            elm.Inductor().right(d.unit * 1.6).label(
-                r'$L_a\ R_a$', loc='bottom')
+            elm.Inductor().right(d.unit * 1.6).label(r'$L_a\ R_a$', loc='bottom')
             elm.Line().up(d.unit * 0.55)
-            nA = d.here    # nó entrada do motor (ramo aux)
-
-            # Motor: bloco à direita do nM
-            # Conectar nM e nA: ambos devem chegar ao mesmo x
-            # Curto vertical para alinhar
             elm.Line().right(d.unit * 0.4)
-            nR = d.here   # nó direito
-
-            # Retorno: desce ao barramento, volta à fonte
-            right_x = nR[0]
+            right_x = d.here[0]
             elm.Line().down(d.unit * 2.6)
             elm.Line().left(right_x - src.start[0])
-
-            # Salvar imagem schemdraw
             tmp_sd = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
             tmp_sd.close()
             d.save(tmp_sd.name, dpi=150)
+            mpl_f = d.fig.getfig()
+            ax_sd = mpl_f.get_axes()[0]
+            xl = ax_sd.get_xlim(); yl = ax_sd.get_ylim()
+            xw = xl[1]-xl[0]; yw = yl[1]-yl[0]
+            xm = xl[1] - xw*0.12; ycm = (yl[0]+yl[1])/2
+            ax_sd.add_patch(mpatches.Ellipse(
+                (xm, ycm), xw*0.14, yw*0.62,
+                fc='#dce4f0', ec=TX, lw=2.0, zorder=4))
+            ax_sd.text(xm, ycm, 'Motor\n1φ',
+                ha='center', va='center', fontsize=9.5,
+                fontweight='bold', color=TX, zorder=5)
+            mpl_f.savefig(tmp_sd.name, dpi=150, bbox_inches='tight')
+            plt.close(mpl_f)
 
-        # Pós-processamento: adicionar bloco "Motor" e legenda
-        import matplotlib.pyplot as plt_sd
-        mpl_f = d.fig.getfig()
-        ax_sd = mpl_f.get_axes()[0]
-        xl = ax_sd.get_xlim(); yl = ax_sd.get_ylim()
-        xw = xl[1]-xl[0]; yw = yl[1]-yl[0]
-        # Bloco motor: lado direito
-        xm = xl[1] - xw*0.12; ycm = (yl[0]+yl[1])/2
-        ax_sd.add_patch(mpatches.Ellipse(
-            (xm, ycm), xw*0.14, yw*0.62,
-            fc='#dce4f0', ec=TX, lw=2.0, zorder=4))
-        ax_sd.text(xm, ycm, 'Motor\n1φ',
-            ha='center', va='center', fontsize=9.5,
-            fontweight='bold', color=TX, zorder=5)
-        ax_sd.text(xl[0]+xw*0.55, yl[1]-yw*0.05,
-            'Chave centrífuga (CC)', fontsize=8, color=LR,
-            ha='center', style='italic')
-        mpl_f.savefig(tmp_sd.name, dpi=150, bbox_inches='tight')
-        plt_sd.close(mpl_f)
+        # ── DIREITA: Diagrama fasorial em matplotlib ──────────────────────
+        fig_p, ax_p = plt.subplots(figsize=(4.5, 4.5), facecolor='white')
+        ax_p.set_facecolor('white'); ax_p.set_aspect('equal'); ax_p.axis('off')
+        ax_p.set_xlim(-0.25, 1.55); ax_p.set_ylim(-1.05, 0.55)
 
-        # ── DIREITA: Plotly fasorial ──────────────────────────────────────
-        phi_m = math.radians(-40)   # Im: atrasado 40° em relação a V1
-        phi_a = math.radians(-15)   # Ia: atrasado 15° em relação a V1
-        sc_a  = 0.72
+        # Eixos de referência
+        ax_p.axhline(0, color=CZ, lw=0.7, ls='--', alpha=0.5)
+        ax_p.axvline(0, color=CZ, lw=0.7, ls='--', alpha=0.5)
 
-        fig_p = go.Figure()
+        phi_m = math.radians(-40); phi_a = math.radians(-15); sc_a = 0.72
 
-        def arrow_p(ox, oy, dx, dy, cor, nome, dash='solid', w=2.5):
-            fig_p.add_trace(go.Scatter(
-                x=[ox, ox+dx], y=[oy, oy+dy], mode='lines',
-                line=dict(color=cor, width=w, dash=dash),
-                name=nome, showlegend=True))
-            fig_p.add_annotation(
-                x=ox+dx, y=oy+dy, ax=ox, ay=oy,
-                xref='x', yref='y', axref='x', ayref='y',
-                arrowhead=2, arrowsize=1.5, arrowwidth=w*0.9,
-                arrowcolor=cor, showarrow=True, text='')
-            fig_p.add_annotation(
-                x=ox+dx*0.50, y=oy+dy*0.50,
-                text=f'<b>{nome}</b>', showarrow=False,
-                font=dict(size=13, color=cor),
-                bgcolor='rgba(255,255,255,0.82)', borderpad=2)
+        def fasor(dx, dy, cor, lbl, lx=0, ly=0):
+            ax_p.annotate('', xy=(dx, dy), xytext=(0,0),
+                arrowprops=dict(arrowstyle='-|>', color=cor,
+                                lw=2.5, mutation_scale=15))
+            ax_p.text(dx/2+lx, dy/2+ly, lbl, ha='center', fontsize=13,
+                      color=cor, fontweight='bold')
 
-        # V1 — referência
-        arrow_p(0, 0, 1.2, 0, TX, 'V₁', w=3.0)
-        # Im — enrolamento principal (mais atrasado)
-        arrow_p(0, 0, math.cos(phi_m), math.sin(phi_m), AZ, 'Iₘ', w=2.8)
-        # Ia — enrolamento auxiliar (menos atrasado, amplitude menor)
-        arrow_p(0, 0, sc_a*math.cos(phi_a), sc_a*math.sin(phi_a), LR, 'Iₐ', w=2.8)
+        # V1 — referência horizontal
+        fasor(1.20, 0, TX, r'$V_1$', ly=0.09)
+        # Im — principal, mais atrasado
+        fasor(math.cos(phi_m), math.sin(phi_m), AZ, r'$I_m$', lx=-0.12, ly=-0.07)
+        # Ia — auxiliar, menos atrasado
+        fasor(sc_a*math.cos(phi_a), sc_a*math.sin(phi_a), LR, r'$I_a$', lx=0.12, ly=0.07)
 
-        # Arco de defasagem α
-        arc = np.linspace(phi_m, phi_a, 50)
-        fig_p.add_trace(go.Scatter(
-            x=0.42*np.cos(arc), y=0.42*np.sin(arc), mode='lines',
-            line=dict(color=VD, width=2.0, dash='dot'),
-            showlegend=False, hoverinfo='skip'))
+        # Arco α
+        arc_t = np.linspace(phi_m, phi_a, 50)
+        ax_p.plot(0.40*np.cos(arc_t), 0.40*np.sin(arc_t), color=VD, lw=1.8)
         mid = (phi_m+phi_a)/2
-        fig_p.add_annotation(
-            x=0.52*math.cos(mid), y=0.52*math.sin(mid),
-            text='<b>α</b>', showarrow=False,
-            font=dict(size=14, color=VD))
+        ax_p.text(0.50*math.cos(mid)+0.03, 0.50*math.sin(mid),
+                  'α', ha='center', fontsize=13, color=VD, fontweight='bold')
 
-        # Fórmula do torque
-        fig_p.add_annotation(
-            x=0.6, y=-0.88,
-            text=r'<b>T<sub>part</sub> ∝ Iₘ · Iₐ · sin α</b>',
-            showarrow=False, font=dict(size=12, color=TX),
-            bgcolor='rgba(255,255,255,0.85)', borderpad=4)
-
-        fig_p.add_hline(y=0, line=dict(color=CZ, width=0.7, dash='dot'))
-        fig_p.add_vline(x=0, line=dict(color=CZ, width=0.7, dash='dot'))
-
-        fig_p.update_layout(
-            title=dict(text='Defasagem de Correntes<br><sup>Im (principal, mais atrasado) · Ia (auxiliar, menos atrasado)</sup>',
-                       font=dict(size=13, color=TX)),
-            xaxis=dict(range=[-0.2, 1.5], scaleanchor='y',
-                       showgrid=True, gridcolor='rgba(128,128,128,.15)',
-                       zeroline=False, tickfont=dict(size=11)),
-            yaxis=dict(range=[-1.05, 0.6],
-                       showgrid=True, gridcolor='rgba(128,128,128,.15)',
-                       zeroline=False, tickfont=dict(size=11)),
-            legend=dict(font=dict(size=12), x=0.65, y=0.98,
-                        bgcolor='rgba(255,255,255,0.85)'),
-            height=440, margin=dict(l=40, r=20, t=60, b=40),
-            paper_bgcolor='white', plot_bgcolor='rgba(248,250,252,1)')
+        ax_p.text(0.60, -0.92,
+                  r'$T_{part} \propto I_m \cdot I_a \cdot \sin\alpha$',
+                  ha='center', fontsize=11, color=TX)
+        ax_p.set_title('Defasagem de Correntes', fontsize=10.5,
+                       fontweight='bold', color=TX, pad=5)
 
         tmp_p = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
         tmp_p.close()
-        fig_p.write_image(tmp_p.name, width=580, height=440, scale=1.5)
+        fig_p.savefig(tmp_p.name, dpi=150, bbox_inches='tight', facecolor='white')
+        plt.close(fig_p)
 
         # ── Combinar lado a lado ──────────────────────────────────────────
         from PIL import Image as PILImg
@@ -629,24 +574,20 @@ def run():
         img_p  = PILImg.open(tmp_p.name).convert('RGB')
         os.unlink(tmp_sd.name); os.unlink(tmp_p.name)
 
-        # Redimensionar Plotly para mesma altura que schemdraw
         h_sd = img_sd.height
-        scale = h_sd / img_p.height
-        nw = int(img_p.width * scale)
+        nw   = int(img_p.width * h_sd / img_p.height)
         img_p = img_p.resize((nw, h_sd), PILImg.LANCZOS)
 
-        # Colar lado a lado com margem de 20px
         gap = 20
-        W = img_sd.width + gap + nw
+        W   = img_sd.width + gap + nw
         combined = PILImg.new('RGB', (W, h_sd), (255,255,255))
         combined.paste(img_sd, (0,0))
         combined.paste(img_p,  (img_sd.width+gap, 0))
 
-        # Título global
         fig_fin, ax_f = plt.subplots(
             figsize=(W/150, h_sd/150 + 0.45), facecolor='white')
         ax_f.imshow(combined); ax_f.axis('off')
-        ax_f.set_title('Partida por Fase Dividida — Esquema de Ligação e Defasagem',
+        ax_f.set_title('Partida por Fase Dividida — Circuito de Ligação e Defasagem',
             fontsize=11, fontweight='bold', color=TX, pad=5)
         fig_fin.tight_layout(pad=0.0)
 
