@@ -323,23 +323,24 @@ def run():
         return fig
 
     def fig_circuito_equivalente_mono():
-        """Schemdraw: circuito equivalente monofásico — Zf e Zb."""
+        """Schemdraw: circuito equivalente monofásico — Zf (campo direto) e Zb (campo oposto)."""
         import tempfile, os
         with schemdraw.Drawing(show=False) as d:
             d.config(unit=3.5, fontsize=11)
 
+            # Fonte + série R1, X1
             src = elm.SourceSin().up(d.unit*3.0).label(r'$V_1$', loc='left')
             elm.Line().right(d.unit*0.3)
             elm.Resistor().right().label(r'$R_1$', loc='top')
             elm.Inductor().right().label(r'$X_1$', loc='top')
             elm.Line().right(d.unit*0.3)
-            d.push()    # nó A
+            d.push()   # nó A
 
-            # Xmag (shunt, desce)
+            # Xmag (shunt vertical)
             elm.Inductor().down(d.unit*3.0).label(r'$X_{mag}$', loc='right')
-            d.pop()     # → nó A
+            d.pop()    # → nó A
 
-            # Ramo Zf (sobe 0.75u, 3 elem, desce)
+            # Ramo Zf (sobe 0.75u, elementos, desce)
             d.push()
             elm.Line().up(d.unit*0.75)
             elm.Inductor().right().label(r"$\frac{1}{2}X_2'$", loc='top')
@@ -347,16 +348,15 @@ def run():
             elm.Resistor().right().label(
                 r"$\frac{R_2'(1-s)}{2s}$", loc='top').color(VD)
             elm.Line().down(d.unit*0.75)
-            d.pop()     # → nó A
+            d.pop()    # → nó A
 
-            # Ramo Zb (desce 0.75u, 3 elem, sobe)
+            # Ramo Zb (desce 0.75u, elementos, sobe)
             elm.Line().down(d.unit*0.75)
             elm.Inductor().right().label(r"$\frac{1}{2}X_2'$", loc='bottom')
             elm.Resistor().right().label(r"$\frac{R_2'}{2(2-s)}$", loc='bottom')
             elm.Resistor().right().label(
                 r"$\frac{-R_2'(s_b-1)}{2s_b}$", loc='bottom').color(VM)
             elm.Line().up(d.unit*0.75)
-
             right_x = d.here[0]
             elm.Line().down(d.unit*3.0)
             elm.Line().left(right_x - src.start[0])
@@ -365,31 +365,34 @@ def run():
             tmp.close()
             d.save(tmp.name, dpi=155)
 
-            # Labels em posições corretas (entre os fios dos ramos)
+            # Pós-processamento: labels dos ramos nas posições certas
             mpl_fig = d.fig.getfig()
             ax = mpl_fig.get_axes()[0]
             xl = ax.get_xlim(); yl = ax.get_ylim()
-
-            # Converter coords schemdraw → matplotlib
             bbox = d.get_bbox()
+
             def sd2ax(sx, sy):
-                fx = (sx - bbox.xmin)/(bbox.xmax - bbox.xmin)
-                fy = (sy - bbox.ymin)/(bbox.ymax - bbox.ymin)
+                fx = (sx-bbox.xmin)/(bbox.xmax-bbox.xmin)
+                fy = (sy-bbox.ymin)/(bbox.ymax-bbox.ymin)
                 return xl[0]+fx*(xl[1]-xl[0]), yl[0]+fy*(yl[1]-yl[0])
 
-            # xMid: entre nó A (≈5.5u) e extremidade direita
-            xMid_ax  = sd2ax((bbox.xmin + bbox.xmax)*0.63, 0)[0]
-            # yZf: entre fio principal (y=0) e fio Zf (y=+2.625u)
-            yZf_ax   = sd2ax(0,  1.3)[1]
-            # yZb: entre fio Zb (y=-2.625u) e fio principal
-            yZb_ax   = sd2ax(0, -1.3)[1]
+            # Rail principal: y = src.end[1] = 3.0*3.5 = 10.5 (schemdraw abs)
+            main_y  = src.end[1]
+            unit    = d.unit
+            zf_y    = main_y + 0.75*unit   # fio Zf
+            zb_y    = main_y - 0.75*unit   # fio Zb
+            lbl_zf  = (main_y + zf_y) / 2  # entre rail e Zf
+            lbl_zb  = (main_y + zb_y) / 2  # entre rail e Zb
+            lbl_x   = (bbox.xmin + bbox.xmax) * 0.67
 
-            for ytxt, lbl, cor in [
-                    (yZf_ax, 'Campo direto  $Z_f$',  AZ),
-                    (yZb_ax, 'Campo oposto  $Z_b$', VM)]:
-                ax.text(xMid_ax, ytxt, lbl,
-                    ha='center', va='center', fontsize=10,
-                    color=cor, fontweight='bold',
+            ax_xf, ax_yf = sd2ax(lbl_x, lbl_zf)
+            ax_xb, ax_yb = sd2ax(lbl_x, lbl_zb)
+
+            for xtxt, ytxt, lbl, cor in [
+                    (ax_xf, ax_yf, 'Campo direto  $Z_f$',  AZ),
+                    (ax_xb, ax_yb, 'Campo oposto  $Z_b$', VM)]:
+                ax.text(xtxt, ytxt, lbl, ha='center', va='center',
+                    fontsize=10, color=cor, fontweight='bold',
                     bbox=dict(fc='white', ec=cor, pad=3,
                               alpha=0.92, boxstyle='round'))
             mpl_fig.savefig(tmp.name, dpi=155, bbox_inches='tight')
@@ -485,37 +488,33 @@ def run():
         return fig
 
     def fig_fase_dividida():
-        """Schemdraw (circuito) + matplotlib (fasorial) — sem Kaleido."""
+        """Schemdraw (circuito ligação) + matplotlib (fasorial) — sem Kaleido."""
         import tempfile, os
 
         # ── CIRCUITO em schemdraw ─────────────────────────────────────────
         with schemdraw.Drawing(show=False) as d:
             d.config(unit=3.0, fontsize=11)
 
-            # Fonte vertical (esquerda)
             src = elm.SourceSin().up(d.unit*2.6).label(r'$V_1$', loc='left')
             elm.Line().right(d.unit*0.3)
-            d.push()   # nó do split
+            split_node = d.here   # nó de bifurcação
+            d.push()
 
-            # Ramo PRINCIPAL: sobe → Lm,Rm (2.2u) → desce
+            # Ramo PRINCIPAL: sobe → Lm,Rm → desce
             elm.Line().up(d.unit*0.6)
             elm.Inductor().right(d.unit*2.2).label(r'$L_m,\ R_m$', loc='top')
             elm.Line().down(d.unit*0.6)
-            d.pop()    # → nó do split
+            d.pop()
 
-            # Ramo AUXILIAR: desce → CC (1.0u) + La,Ra (1.2u) → sobe
-            # Total horizontal = 1.0+1.2 = 2.2u → mesmo comprimento
+            # Ramo AUXILIAR: desce → CC → La,Ra → sobe
             elm.Line().down(d.unit*0.6)
             elm.Switch().right(d.unit*1.0).label('CC', loc='bottom')
             elm.Inductor().right(d.unit*1.2).label(r'$L_a,\ R_a$', loc='bottom')
             elm.Line().up(d.unit*0.6)
-            # Ambos chegam ao mesmo x → circuito fechado
+            join_node = d.here    # nó de reunião
 
-            # Fio de saída para o motor
             elm.Line().right(d.unit*0.3)
             right_x = d.here[0]
-
-            # Rail direito + inferior
             elm.Line().down(d.unit*2.6)
             elm.Line().left(right_x - src.start[0])
 
@@ -523,26 +522,37 @@ def run():
             tmp_sd.close()
             d.save(tmp_sd.name, dpi=155)
 
-            # Pós: motor + legenda
+            # Pós: junção dots + motor + legenda
             mpl_f = d.fig.getfig()
             ax_sd = mpl_f.get_axes()[0]
             xl = ax_sd.get_xlim(); yl = ax_sd.get_ylim()
+            bbox = d.get_bbox()
+
+            def sd2ax(sx, sy):
+                fx = (sx-bbox.xmin)/(bbox.xmax-bbox.xmin)
+                fy = (sy-bbox.ymin)/(bbox.ymax-bbox.ymin)
+                return xl[0]+fx*(xl[1]-xl[0]), yl[0]+fy*(yl[1]-yl[0])
+
+            # Dots de junção
+            for sx, sy in [split_node, join_node]:
+                ax_x, ax_y = sd2ax(sx, sy)
+                ax_sd.plot(ax_x, ax_y, 'o', ms=8, color=TX, zorder=6)
+
+            # Motor
             xw = xl[1]-xl[0]; yw = yl[1]-yl[0]
-            xm = xl[1] - xw*0.07
-            ycm = (yl[0]+yl[1])/2
+            xm = xl[1] - xw*0.07; ycm = (yl[0]+yl[1])/2
             ax_sd.add_patch(mpatches.Ellipse(
                 (xm, ycm), xw*0.10, yw*0.50,
                 fc='#dce4f0', ec=TX, lw=2.0, zorder=4))
-            ax_sd.text(xm, ycm, 'Motor\n1φ',
-                ha='center', va='center', fontsize=10,
-                fontweight='bold', color=TX, zorder=5)
-            ax_sd.text(xl[0]+xw*0.30, yl[0]+yw*0.04,
+            ax_sd.text(xm, ycm, 'Motor\n1φ', ha='center', va='center',
+                fontsize=10, fontweight='bold', color=TX, zorder=5)
+            ax_sd.text(xl[0]+xw*0.30, yl[0]+yw*0.03,
                 'CC = Chave centrífuga', fontsize=9,
                 color=LR, style='italic', ha='center')
             mpl_f.savefig(tmp_sd.name, dpi=155, bbox_inches='tight')
             plt.close(mpl_f)
 
-        # ── DIAGRAMA FASORIAL em matplotlib ──────────────────────────────
+        # ── FASORIAL em matplotlib ────────────────────────────────────────
         fig_p, ax_p = plt.subplots(figsize=(4.5, 4.5), facecolor='white')
         ax_p.set_facecolor('white'); ax_p.set_aspect('equal'); ax_p.axis('off')
         ax_p.set_xlim(-0.25, 1.55); ax_p.set_ylim(-1.05, 0.55)
