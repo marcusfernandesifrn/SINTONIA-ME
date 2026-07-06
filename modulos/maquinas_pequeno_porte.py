@@ -323,85 +323,83 @@ def run():
         return fig
 
     def fig_circuito_equivalente_mono():
-        """Circuito equivalente monofásico — matplotlib puro, sem sobreposições."""
-        fig, ax = plt.subplots(figsize=(13,6.5),facecolor='white')
-        ax.set_facecolor('white'); ax.axis('off')
-        ax.set_xlim(0,14); ax.set_ylim(0,7.5)
+        """Schemdraw: circuito equivalente monofásico — Zf e Zb."""
+        import tempfile, os
+        with schemdraw.Drawing(show=False) as d:
+            d.config(unit=3.5, fontsize=11)
 
-        def seg(x1,y1,x2,y2,cor=TX,lw=1.8):
-            ax.plot([x1,x2],[y1,y2],color=cor,lw=lw)
-        def dot(x,y,s=12):
-            ax.plot(x,y,'.',ms=s,color=TX,zorder=6)
-        def caixa(cx,cy,w,h,lbl,cor,fs=9.5,fc='white'):
-            ax.add_patch(mpatches.FancyBboxPatch((cx-w/2,cy-h/2),w,h,
-                boxstyle='round,pad=0.07',fc=fc,ec=cor,lw=1.8))
-            ax.text(cx,cy,lbl,ha='center',va='center',fontsize=fs,color=TX)
+            src = elm.SourceSin().up(d.unit*3.0).label(r'$V_1$', loc='left')
+            elm.Line().right(d.unit*0.3)
+            elm.Resistor().right().label(r'$R_1$', loc='top')
+            elm.Inductor().right().label(r'$X_1$', loc='top')
+            elm.Line().right(d.unit*0.3)
+            d.push()    # nó A
 
-        # Posições chave
-        CY  = 4.5   # fio principal (R1, X1)
-        YB  = 0.8   # barramento inferior
-        YF  = 6.0   # fio do ramo Zf (acima)
-        YZB = 3.0   # fio do ramo Zb (abaixo)
-        XA  = 4.8   # nó A (bifurcação)
-        XB  = 12.8  # nó B (reunião)
+            # Xmag (shunt, desce)
+            elm.Inductor().down(d.unit*3.0).label(r'$X_{mag}$', loc='right')
+            d.pop()     # → nó A
 
-        # ── Fonte V1 ──────────────────────────────────────────────────────
-        ax.add_patch(mpatches.Circle((1.0,CY),0.45,fc='white',ec=TX,lw=1.8))
-        ax.text(1.0,CY,'~',ha='center',va='center',fontsize=16,color=TX)
-        ax.text(1.0,CY+0.72,r'$V_1$',ha='center',fontsize=12,color=AZ,fontweight='bold')
+            # Ramo Zf (sobe 0.75u, 3 elem, desce)
+            d.push()
+            elm.Line().up(d.unit*0.75)
+            elm.Inductor().right().label(r"$\frac{1}{2}X_2'$", loc='top')
+            elm.Resistor().right().label(r"$\frac{R_2'}{2s}$", loc='top')
+            elm.Resistor().right().label(
+                r"$\frac{R_2'(1-s)}{2s}$", loc='top').color(VD)
+            elm.Line().down(d.unit*0.75)
+            d.pop()     # → nó A
 
-        # ── Ramo série: R1 → X1 → nó A ───────────────────────────────────
-        seg(1.45,CY,2.1,CY)
-        caixa(2.65,CY,1.0,0.55,r'$R_1$',TX)
-        seg(3.15,CY,3.6,CY)
-        caixa(4.1,CY,0.9,0.55,r'$X_1$',TX)
-        seg(4.55,CY,XA,CY); dot(XA,CY)
+            # Ramo Zb (desce 0.75u, 3 elem, sobe)
+            elm.Line().down(d.unit*0.75)
+            elm.Inductor().right().label(r"$\frac{1}{2}X_2'$", loc='bottom')
+            elm.Resistor().right().label(r"$\frac{R_2'}{2(2-s)}$", loc='bottom')
+            elm.Resistor().right().label(
+                r"$\frac{-R_2'(s_b-1)}{2s_b}$", loc='bottom').color(VM)
+            elm.Line().up(d.unit*0.75)
 
-        # ── Xmag: nó A → YB (shunt) ──────────────────────────────────────
-        seg(XA,CY,XA,YB)
-        caixa(XA,(CY+YB)/2,1.1,0.6,r'$X_{mag}$',CI,fc='#e8f8f8')
+            right_x = d.here[0]
+            elm.Line().down(d.unit*3.0)
+            elm.Line().left(right_x - src.start[0])
 
-        # ── Ramo Zf (acima do CY) ─────────────────────────────────────────
-        # Fio diagonal de nó A até YF
-        seg(XA,CY,XA,YF)
-        seg(XA,YF,5.5,YF)
-        # Elementos Zf
-        caixa(6.2,YF,1.0,0.55,r"$\frac{1}{2}X_2'$",AZ)
-        seg(6.7,YF,7.2,YF)
-        caixa(7.9,YF,1.0,0.55,r"$\frac{R_2'}{2s}$",AZ)
-        seg(8.4,YF,8.9,YF)
-        caixa(10.1,YF,2.1,0.55,r"$\frac{R_2'(1-s)}{2s}$",VD,fc='#f0fff4')
-        seg(11.15,YF,XB,YF); seg(XB,YF,XB,CY); dot(XB,CY)
-        # Labels: "Campo direto" fica ABAIXO dos elementos de Zf
-        ax.text(8.0,YF-0.60,'Campo direto  $Z_f$',
-            ha='center',fontsize=9,color=AZ,fontweight='bold')
-        ax.text(10.1,YF-0.60,r'$P_{conv,f}$',
-            ha='center',fontsize=8,color=VD,style='italic')
+            tmp = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
+            tmp.close()
+            d.save(tmp.name, dpi=155)
 
-        # ── Ramo Zb (abaixo do CY) ────────────────────────────────────────
-        seg(XA,CY,XA,YZB)
-        seg(XA,YZB,5.5,YZB)
-        caixa(6.2,YZB,1.0,0.55,r"$\frac{1}{2}X_2'$",VM)
-        seg(6.7,YZB,7.2,YZB)
-        caixa(8.0,YZB,1.4,0.55,r"$\frac{R_2'}{2(2-s)}$",VM)
-        seg(8.7,YZB,8.9,YZB)
-        caixa(10.2,YZB,2.2,0.55,r"$\frac{-R_2'(s_b-1)}{2s_b}$",LR,fc='#fff8f0')
-        seg(11.3,YZB,XB,YZB); seg(XB,YZB,XB,YB)
-        # Labels: "Campo oposto" fica ACIMA dos elementos de Zb
-        ax.text(8.0,YZB+0.60,'Campo oposto  $Z_b$',
-            ha='center',fontsize=9,color=VM,fontweight='bold')
-        ax.text(10.2,YZB+0.60,r'$P_{conv,b}$',
-            ha='center',fontsize=8,color=LR,style='italic')
+            # Labels em posições corretas (entre os fios dos ramos)
+            mpl_fig = d.fig.getfig()
+            ax = mpl_fig.get_axes()[0]
+            xl = ax.get_xlim(); yl = ax.get_ylim()
 
-        # ── Barramento inferior + retorno fonte ───────────────────────────
-        seg(1.0,YB,XB,YB)
-        seg(1.0,CY-0.45,1.0,YB)
+            # Converter coords schemdraw → matplotlib
+            bbox = d.get_bbox()
+            def sd2ax(sx, sy):
+                fx = (sx - bbox.xmin)/(bbox.xmax - bbox.xmin)
+                fy = (sy - bbox.ymin)/(bbox.ymax - bbox.ymin)
+                return xl[0]+fx*(xl[1]-xl[0]), yl[0]+fy*(yl[1]-yl[0])
 
-        ax.set_title('Circuito Equivalente — Motor de Indução Monofásico\n'
-            r'(ramos $Z_f$ e $Z_b$ representam campos direto e oposto)',
-            fontsize=11.5,fontweight='bold',color=TX,pad=8)
-        fig.tight_layout(pad=0.4)
-        return fig
+            # xMid: entre nó A (≈5.5u) e extremidade direita
+            xMid_ax  = sd2ax((bbox.xmin + bbox.xmax)*0.63, 0)[0]
+            # yZf: entre fio principal (y=0) e fio Zf (y=+2.625u)
+            yZf_ax   = sd2ax(0,  1.3)[1]
+            # yZb: entre fio Zb (y=-2.625u) e fio principal
+            yZb_ax   = sd2ax(0, -1.3)[1]
+
+            for ytxt, lbl, cor in [
+                    (yZf_ax, 'Campo direto  $Z_f$',  AZ),
+                    (yZb_ax, 'Campo oposto  $Z_b$', VM)]:
+                ax.text(xMid_ax, ytxt, lbl,
+                    ha='center', va='center', fontsize=10,
+                    color=cor, fontweight='bold',
+                    bbox=dict(fc='white', ec=cor, pad=3,
+                              alpha=0.92, boxstyle='round'))
+            mpl_fig.savefig(tmp.name, dpi=155, bbox_inches='tight')
+            plt.close(mpl_fig)
+
+        with open(tmp.name, 'rb') as fh:
+            buf = io.BytesIO(fh.read())
+        os.unlink(tmp.name)
+        buf.seek(0)
+        return buf
 
     def fig_metodos_partida():
         """Plotly: curvas T×n dos quatro métodos — modelo físico correto."""
@@ -487,107 +485,121 @@ def run():
         return fig
 
     def fig_fase_dividida():
-        """Fase dividida: schemdraw (circuito) + matplotlib (fasorial) — sem Kaleido."""
+        """Schemdraw (circuito) + matplotlib (fasorial) — sem Kaleido."""
         import tempfile, os
 
-        # ── ESQUERDA: Schemdraw ───────────────────────────────────────────
+        # ── CIRCUITO em schemdraw ─────────────────────────────────────────
         with schemdraw.Drawing(show=False) as d:
-            d.config(unit=3.0, fontsize=10.5)
-            src = elm.SourceSin().up(d.unit * 2.6).label(r'$V_1$', loc='left')
-            elm.Line().right(d.unit * 0.3)
-            d.push()
-            elm.Line().up(d.unit * 0.55)
-            elm.Inductor().right(d.unit * 1.6).label(r'$L_m\ R_m$', loc='top')
-            elm.Line().down(d.unit * 0.55)
-            d.pop()
-            elm.Line().down(d.unit * 0.55)
-            elm.Switch().right(d.unit * 0.9).label('CC', loc='bottom')
-            elm.Inductor().right(d.unit * 1.6).label(r'$L_a\ R_a$', loc='bottom')
-            elm.Line().up(d.unit * 0.55)
-            elm.Line().right(d.unit * 0.4)
+            d.config(unit=3.0, fontsize=11)
+
+            # Fonte vertical (esquerda)
+            src = elm.SourceSin().up(d.unit*2.6).label(r'$V_1$', loc='left')
+            elm.Line().right(d.unit*0.3)
+            d.push()   # nó do split
+
+            # Ramo PRINCIPAL: sobe → Lm,Rm (2.2u) → desce
+            elm.Line().up(d.unit*0.6)
+            elm.Inductor().right(d.unit*2.2).label(r'$L_m,\ R_m$', loc='top')
+            elm.Line().down(d.unit*0.6)
+            d.pop()    # → nó do split
+
+            # Ramo AUXILIAR: desce → CC (1.0u) + La,Ra (1.2u) → sobe
+            # Total horizontal = 1.0+1.2 = 2.2u → mesmo comprimento
+            elm.Line().down(d.unit*0.6)
+            elm.Switch().right(d.unit*1.0).label('CC', loc='bottom')
+            elm.Inductor().right(d.unit*1.2).label(r'$L_a,\ R_a$', loc='bottom')
+            elm.Line().up(d.unit*0.6)
+            # Ambos chegam ao mesmo x → circuito fechado
+
+            # Fio de saída para o motor
+            elm.Line().right(d.unit*0.3)
             right_x = d.here[0]
-            elm.Line().down(d.unit * 2.6)
+
+            # Rail direito + inferior
+            elm.Line().down(d.unit*2.6)
             elm.Line().left(right_x - src.start[0])
+
             tmp_sd = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
             tmp_sd.close()
-            d.save(tmp_sd.name, dpi=150)
+            d.save(tmp_sd.name, dpi=155)
+
+            # Pós: motor + legenda
             mpl_f = d.fig.getfig()
             ax_sd = mpl_f.get_axes()[0]
             xl = ax_sd.get_xlim(); yl = ax_sd.get_ylim()
             xw = xl[1]-xl[0]; yw = yl[1]-yl[0]
-            xm = xl[1] - xw*0.12; ycm = (yl[0]+yl[1])/2
+            xm = xl[1] - xw*0.07
+            ycm = (yl[0]+yl[1])/2
             ax_sd.add_patch(mpatches.Ellipse(
-                (xm, ycm), xw*0.14, yw*0.62,
+                (xm, ycm), xw*0.10, yw*0.50,
                 fc='#dce4f0', ec=TX, lw=2.0, zorder=4))
             ax_sd.text(xm, ycm, 'Motor\n1φ',
-                ha='center', va='center', fontsize=9.5,
+                ha='center', va='center', fontsize=10,
                 fontweight='bold', color=TX, zorder=5)
-            mpl_f.savefig(tmp_sd.name, dpi=150, bbox_inches='tight')
+            ax_sd.text(xl[0]+xw*0.30, yl[0]+yw*0.04,
+                'CC = Chave centrífuga', fontsize=9,
+                color=LR, style='italic', ha='center')
+            mpl_f.savefig(tmp_sd.name, dpi=155, bbox_inches='tight')
             plt.close(mpl_f)
 
-        # ── DIREITA: Diagrama fasorial em matplotlib ──────────────────────
+        # ── DIAGRAMA FASORIAL em matplotlib ──────────────────────────────
         fig_p, ax_p = plt.subplots(figsize=(4.5, 4.5), facecolor='white')
         ax_p.set_facecolor('white'); ax_p.set_aspect('equal'); ax_p.axis('off')
         ax_p.set_xlim(-0.25, 1.55); ax_p.set_ylim(-1.05, 0.55)
-
-        # Eixos de referência
         ax_p.axhline(0, color=CZ, lw=0.7, ls='--', alpha=0.5)
         ax_p.axvline(0, color=CZ, lw=0.7, ls='--', alpha=0.5)
 
         phi_m = math.radians(-40); phi_a = math.radians(-15); sc_a = 0.72
 
-        def fasor(dx, dy, cor, lbl, lx=0, ly=0):
-            ax_p.annotate('', xy=(dx, dy), xytext=(0,0),
+        def fasor(dx, dy, cor, lbl, lx=0.0, ly=0.0):
+            ax_p.annotate('', xy=(dx, dy), xytext=(0, 0),
                 arrowprops=dict(arrowstyle='-|>', color=cor,
                                 lw=2.5, mutation_scale=15))
-            ax_p.text(dx/2+lx, dy/2+ly, lbl, ha='center', fontsize=13,
-                      color=cor, fontweight='bold')
+            ax_p.text(dx/2+lx, dy/2+ly, lbl,
+                ha='center', fontsize=13, color=cor, fontweight='bold')
 
-        # V1 — referência horizontal
         fasor(1.20, 0, TX, r'$V_1$', ly=0.09)
-        # Im — principal, mais atrasado
         fasor(math.cos(phi_m), math.sin(phi_m), AZ, r'$I_m$', lx=-0.12, ly=-0.07)
-        # Ia — auxiliar, menos atrasado
-        fasor(sc_a*math.cos(phi_a), sc_a*math.sin(phi_a), LR, r'$I_a$', lx=0.12, ly=0.07)
+        fasor(sc_a*math.cos(phi_a), sc_a*math.sin(phi_a), LR, r'$I_a$',
+              lx=0.12, ly=0.07)
 
-        # Arco α
         arc_t = np.linspace(phi_m, phi_a, 50)
         ax_p.plot(0.40*np.cos(arc_t), 0.40*np.sin(arc_t), color=VD, lw=1.8)
         mid = (phi_m+phi_a)/2
         ax_p.text(0.50*math.cos(mid)+0.03, 0.50*math.sin(mid),
-                  'α', ha='center', fontsize=13, color=VD, fontweight='bold')
-
+            'α', ha='center', fontsize=13, color=VD, fontweight='bold')
         ax_p.text(0.60, -0.92,
-                  r'$T_{part} \propto I_m \cdot I_a \cdot \sin\alpha$',
-                  ha='center', fontsize=11, color=TX)
-        ax_p.set_title('Defasagem de Correntes', fontsize=10.5,
-                       fontweight='bold', color=TX, pad=5)
+            r'$T_{part} \propto I_m \cdot I_a \cdot \sin\alpha$',
+            ha='center', fontsize=11, color=TX)
+        ax_p.set_title('Defasagem de Correntes',
+            fontsize=10.5, fontweight='bold', color=TX, pad=5)
 
         tmp_p = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
         tmp_p.close()
         fig_p.savefig(tmp_p.name, dpi=150, bbox_inches='tight', facecolor='white')
         plt.close(fig_p)
 
-        # ── Combinar lado a lado ──────────────────────────────────────────
+        # ── Combinar ─────────────────────────────────────────────────────
         from PIL import Image as PILImg
         img_sd = PILImg.open(tmp_sd.name).convert('RGB')
         img_p  = PILImg.open(tmp_p.name).convert('RGB')
         os.unlink(tmp_sd.name); os.unlink(tmp_p.name)
 
-        h_sd = img_sd.height
-        nw   = int(img_p.width * h_sd / img_p.height)
-        img_p = img_p.resize((nw, h_sd), PILImg.LANCZOS)
+        h = img_sd.height
+        nw = int(img_p.width * h / img_p.height)
+        img_p = img_p.resize((nw, h), PILImg.LANCZOS)
 
-        gap = 20
-        W   = img_sd.width + gap + nw
-        combined = PILImg.new('RGB', (W, h_sd), (255,255,255))
-        combined.paste(img_sd, (0,0))
+        gap = 24
+        W = img_sd.width + gap + nw
+        combined = PILImg.new('RGB', (W, h), (255,255,255))
+        combined.paste(img_sd, (0, 0))
         combined.paste(img_p,  (img_sd.width+gap, 0))
 
         fig_fin, ax_f = plt.subplots(
-            figsize=(W/150, h_sd/150 + 0.45), facecolor='white')
+            figsize=(W/150, h/150+0.45), facecolor='white')
         ax_f.imshow(combined); ax_f.axis('off')
-        ax_f.set_title('Partida por Fase Dividida — Circuito de Ligação e Defasagem',
+        ax_f.set_title(
+            'Partida por Fase Dividida — Circuito e Defasagem de Correntes',
             fontsize=11, fontweight='bold', color=TX, pad=5)
         fig_fin.tight_layout(pad=0.0)
 
@@ -872,7 +884,13 @@ $$P_{conv} = I_1^2 \left[\frac{R_2'}{2}\left(\frac{1-s}{s}\right) - \frac{R_2'}{
 $$P_{Cu,r} = I_1^2 \frac{R_2'}{2}\left(\frac{1}{s} - 1 + \frac{1}{s_b} - 1\right)$$
 """)
 
-    show_fig(fig_circuito_equivalente_mono(), width_frac=0.96)
+    buf_c41 = fig_circuito_equivalente_mono()
+    import base64 as _b64c
+    st.markdown(
+        '<div class="fig-wrap"><div style="--fw:98%">'
+        f'<img src="data:image/png;base64,{_b64c.b64encode(buf_c41.read()).decode()}" '
+        'style="width:100%;height:auto;display:block;"/>'
+        '</div></div>', unsafe_allow_html=True)
     st.caption(
         "**Figura 4.1** — Circuito equivalente do motor de indução monofásico: "
         "impedâncias do estator ($R_1$, $X_1$) em série com os ramos paralelos "
